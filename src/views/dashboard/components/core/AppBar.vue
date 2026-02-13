@@ -269,27 +269,20 @@
         setDrawer: 'SET_DRAWER',
       }),
 
-      logout: function(event, context) {
+      logout (event, context) {
+        if (this.$store.getters.isGuest) {
+          this.$store.commit('clearGuest')
+          router.push('/')
+          return
+        }
         const config = {
           withCredentials: true,
           crossorigin: true,
-          headers: {
-            'Content-Type': 'application/json' //,
-            // 'Access-Control-Allow-Origin': 'http://localhost:8080',
-            // 'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-            // 'Access-Control-Allow-Methods': 'GET,PUT,POST,DELETE,OPTIONS',
-            // 'Access-Control-Allow-Credentials': 'true'
-          },
+          headers: { 'Content-Type': 'application/json' },
         }
-
-        axios.get("/api/v2/logout", config)
-          .then((response)=>{
-            console.log(response)
-            router.push('/login')
-          })
-          .catch((error)=>{
-            console.log(error)
-          })
+        axios.get('/api/v2/logout', config)
+          .then(() => { router.push('/login') })
+          .catch((error) => { console.log(error) })
       },
 
       clearNotifications: function(event){

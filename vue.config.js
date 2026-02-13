@@ -1,12 +1,18 @@
 module.exports = {
-  lintOnSave: true,
-  
-  configureWebpack:{
+  // Disable ESLint during build to avoid eslint-plugin-vue / parser compatibility issues
+  lintOnSave: false,
+
+  configureWebpack: {
     devtool: 'source-map'
   },
   devServer: {
+    port: 8081,
     disableHostCheck: true,
-    proxy: 'http://localhost:8080'
+    // Proxy API and Socket to Neptune_2026 backend (run backend on port 8080 for local demo)
+    proxy: {
+      '/api': { target: 'http://localhost:8080', changeOrigin: true },
+      '/socket.io': { target: 'http://localhost:3000', ws: true }
+    }
   },
 
   transpileDependencies: ['vue-world-map', 'vuetify'],

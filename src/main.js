@@ -12,10 +12,16 @@
 // * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
 import Vue from "vue";
+import axios from "axios";
 import App from "./App.vue";
 import router from "./router";
 import store from "./store";
 import "./plugins/base";
+
+// For production: set VUE_APP_API_BASEURL in .env.production to Neptune_2026 backend URL when not same-origin
+if (process.env.VUE_APP_API_BASEURL) {
+  axios.defaults.baseURL = process.env.VUE_APP_API_BASEURL;
+}
 import "./plugins/chartist";
 import "./plugins/vee-validate";
 import "./plugins/vue-world-map";
@@ -39,10 +45,12 @@ Sentry.init({
 
 Vue.config.productionTip = false;
 
+// For production: set VUE_APP_SOCKET_URL; otherwise defaults to current hostname:3000 (Neptune_2026 Socket.IO)
+const socketUrl = process.env.VUE_APP_SOCKET_URL || "http://" + window.location.hostname + ":3000";
 Vue.use(
   new VueSocketIO({
     debug: true,
-    connection: "http://" + window.location.hostname + ":3000"
+    connection: socketUrl
     // vuex: {
     //     store,
     //     actionPrefix: 'SOCKET_',
@@ -54,36 +62,15 @@ Vue.use(
 
 router.beforeEach((to, from, next) => {
   const authRequired = to.matched.some(route => route.meta.requiresAuth);
-  const loggedin = store.getters.isLoggedIn;
-  console.log("To:", to.path, "loggedin:", loggedin, "AuthReq:", authRequired);
+  const canAccess = store.getters.canAccessApp; // logged-in user or guest
 
-  if (loggedin && to.path == "") {
-    console.log("Case -1");
-    next("/dashboard");
+  if (canAccess && (to.path === '' || to.path === '/')) {
+    next('/dashboard');
+    return;
   }
-
-  if (loggedin && authRequired) {
-    console.log("Case 0");
-    next();
-  }
-
-  if (!loggedin && !authRequired) {
-    console.log("Case 1");
-    // if (to.path !== '/login') {
-    //   console.log("Case 2")
-    //   next('/login')
-    // } else {
-    // console.log("Case 3")
-    next();
-    // }
-  } else if (!loggedin && authRequired) {
-    if (to.path !== "/login") {
-      console.log("Case 4");
-      next("/login");
-    } else {
-      console.log("Case 5");
-      next();
-    }
+  if (authRequired && !canAccess) {
+    next('/login');
+    return;
   }
   next();
 });

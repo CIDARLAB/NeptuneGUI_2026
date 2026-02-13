@@ -373,6 +373,7 @@
   import axios from 'axios'
   import { log } from 'util'
   import * as Utils from '../../utils'
+  import guestStore from '@/lib/guestStore'
 
   export default {
     name: 'DashboardDashboard',
@@ -425,30 +426,30 @@
       formattimestamp(datestring){
         return Utils.getprettytimestamp(datestring)
       },
-        refreshworkspacedata(){
+        refreshworkspacedata () {
           this.workspaces = []
           this.workspacesobjects = {}
-          this.files =[]
-          this.workspacesobjects = {}
-          let data = { 
-            user: { 
-            _id: this.$store.getters.userID
+          this.files = []
+
+          if (this.$store.getters.isGuest && !this.$store.getters.isGuestViaServer) {
+            const list = guestStore.getWorkspaces()
+            list.forEach(w => {
+              this.workspaces.push(w)
+              this.workspacesobjects[w._id] = w
+            })
+            if (this.$store.getters.currentWorkspace) {
+              this.selectworkspace(this.$store.getters.currentWorkspace._id)
             }
-        } 
-        
-        const config = {
+            return
+          }
+
+          const config = {
             withCredentials: true,
             crossorigin: true,
-            headers: {
-            'Content-Type': 'application/json' //,
-            // 'Access-Control-Allow-Origin': 'http://localhost:8080',
-            // 'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-            // 'Access-Control-Allow-Methods': 'GET,PUT,POST,DELETE,OPTIONS',
-            // 'Access-Control-Allow-Credentials': 'true'
-            },
-        }
+            headers: { 'Content-Type': 'application/json' },
+          }
 
-        axios.get('/api/v2/user', config)
+          axios.get('/api/v2/user', config)
           .then((response) => {
             console.log('User info:', response.data)
             this.$store.commit('SET_CURRENT_USER', response.data)
@@ -488,64 +489,65 @@
             });
 
         },
-        deleteworkspace (wid){
-            console.log(wid)
-            const config = {
-                data: {
-                    id: wid
-                },
-                withCredentials: true,
-                crossorigin: true,
-                headers: { 'Content-Type': 'application/json' },
-            }
-
-            axios.delete('/api/v1/workspace', config)
-                .then((response)=>{
-                    console.log("Delete Data",response)
-                    this.refreshworkspacedata()
-                    console.log("Selected workspace:", this.selectworkspace.id)
-                    this.selectworkspace(this.selectedworkspace.id)
-                })
-                .catch((error)=>{ console.log(error) })
+        deleteworkspace (wid) {
+          if (this.$store.getters.isGuest && !this.$store.getters.isGuestViaServer) {
+            guestStore.deleteWorkspace(wid)
+            this.refreshworkspacedata()
+            if (this.workspaces.length) this.selectworkspace(this.workspaces[0]._id)
+            return
+          }
+          const config = {
+            data: { id: wid },
+            withCredentials: true,
+            crossorigin: true,
+            headers: { 'Content-Type': 'application/json' },
+          }
+          axios.delete('/api/v1/workspace', config)
+            .then(() => { this.refreshworkspacedata(); if (this.workspaces.length) this.selectworkspace(this.workspaces[0]._id); })
+            .catch((error) => { console.log(error) })
         },
 
-        createworkspace() {
-            const config = {
-                withCredentials: true,
-                crossorigin: true,
-                headers: { 'Content-Type': 'application/json' },
-                name: this.newworkspacename,
-            }
-            console.log(config)
-             axios.post('/api/v1/workspace', config)
-                .then((response) => {
-                    console.log("Created new file", response)
-                    this.refreshworkspacedata()
-                })
-                .catch((errors) => {
-                    console.log("Could not create file:", errors)
-                })
+        createworkspace () {
+          if (this.$store.getters.isGuest && !this.$store.getters.isGuestViaServer) {
+            guestStore.createWorkspace(this.newworkspacename)
+            this.refreshworkspacedata()
             this.newworkspacedialog = false
+            return
+          }
+          const config = {
+            withCredentials: true,
+            crossorigin: true,
+            headers: { 'Content-Type': 'application/json' },
+            name: this.newworkspacename,
+          }
+          axios.post('/api/v1/workspace', config)
+            .then(() => { this.refreshworkspacedata() })
+            .catch((errors) => { console.log('Could not create workspace:', errors) })
+          this.newworkspacedialog = false
         },
-        createfile() {
-            const config = {
-                withCredentials: true,
-                crossorigin: true,
-                headers: { 'Content-Type': 'application/json' },
-                file_name: this.newfilename + this.extname,
-                ext: this.extname.match(/\.[0-9a-z]+$/i)[0],
-                workspaceid: this.$store.getters.currentWorkspace
+        createfile () {
+          const ext = this.extname.match(/\.[0-9a-z]+$/i) ? this.extname.match(/\.[0-9a-z]+$/i)[0] : this.extname
+          if (this.$store.getters.isGuest && !this.$store.getters.isGuestViaServer) {
+            const ws = this.$store.getters.currentWorkspace
+            if (ws && ws._id) {
+              guestStore.createFile(ws._id, this.newfilename + this.extname, ext)
+              this.refreshFiles(ws._id)
             }
-            console.log(config)
-            axios.post('/api/v1/file', config)
-                .then((response) => {
-                    console.log("Created new file", response)
-                    this.refreshworkspacedata()
-                })
-                .catch((errors) => {
-                    console.log("Could not create file:", errors)
-                })
             this.newfiledialog = false
+            return
+          }
+          const config = {
+            withCredentials: true,
+            crossorigin: true,
+            headers: { 'Content-Type': 'application/json' },
+            file_name: this.newfilename + this.extname,
+            ext,
+            workspaceid: this.$store.getters.currentWorkspace,
+          }
+          axios.post('/api/v1/file', config)
+            .then(() => { this.refreshworkspacedata() })
+            .catch((errors) => { console.log('Could not create file:', errors) })
+          this.newfiledialog = false
         },
         complete (index) {
             this.list[index] = !this.list[index]
@@ -555,45 +557,29 @@
           console.log("Refreshing Files", this.selectedworkspace.id)
           this.selectworkspace(id)
         },
-        selectworkspace(workspace_id){
-            let self = this
-            console.log("Select workspace event",workspace_id)
-            this.selectedworkspace = this.workspacesobjects[workspace_id]
-            const config = {
-                withCredentials: true,
-                crossorigin: true,
-                headers: { 'Content-Type': 'application/json' },
-            }
-            console.log("Setting workspace", workspace_id)
-            let obj = this.workspacesobjects[workspace_id]
-            if (obj != null && obj != undefined){
-              this.$store.commit('SET_WORKSPACE', obj)
-            }
-            // alert("TEST")
-            axios.get('/api/v1/files',{
-                params: {
-                    id: workspace_id
-                }})
-                .then((response)=>{
-                    console.log("File Data",response.data)
-                    self.files=[]
-                    for(let f of response.data){
-                        axios.get('/api/v1/file',{
-                            params: {
-                                id: f
-                            }})
-                            .then((response)=>{
-                                console.log(response.data)
-                                this.files.push(response.data)
-                                console.log("File Data",this.files)
-                            })
-                            .catch((error)=>{console.log(error)})
-                    }
-                })
-                .catch((error)=>{ console.log(error) })
-            
-            }
-    },
+        selectworkspace (workspace_id) {
+          const obj = this.workspacesobjects[workspace_id]
+          this.selectedworkspace = obj
+          if (obj) this.$store.commit('SET_WORKSPACE', obj)
+
+          if (this.$store.getters.isGuest && !this.$store.getters.isGuestViaServer) {
+            this.files = guestStore.getFiles(workspace_id) || []
+            return
+          }
+
+          const self = this
+          axios.get('/api/v1/files', { params: { id: workspace_id } })
+            .then((response) => {
+              self.files = []
+              const ids = response.data || []
+              ids.forEach(fid => {
+                axios.get('/api/v1/file', { params: { id: fid } })
+                  .then((res) => { self.files.push(res.data) })
+                  .catch((error) => { console.log(error) })
+              })
+            })
+            .catch((error) => { console.log(error) })
+        },
 
   }
 </script>

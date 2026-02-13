@@ -116,3 +116,8 @@ dist
 
 # Stores VSCode versions used for testing VSCode extensions
 .vscode-test
+
+# Data folder – do not commit user/admin content (structure and README are tracked)
+Data/Admin/admin.json
+Data/Temp/
+Data/Users/

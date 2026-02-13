@@ -1,7 +1,7 @@
 import { shallowMount } from '@vue/test-utils'
 import App from '@/App.vue'
 
-test('App should work', () => {
+test('App renders router-view', () => {
   const wrapper = shallowMount(App)
-  expect(wrapper.text()).toMatch('Welcome to Your Vue.js App')
+  expect(wrapper.find('router-view-stub').exists()).toBe(true)
 })

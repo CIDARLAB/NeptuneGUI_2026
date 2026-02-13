@@ -33,7 +33,7 @@
           md="auto"
         >
           <div class="body-1 font-weight-light pt-6 pt-md-0 text-center">
-            &copy; 2020, CIDAR Lab, theme by <a href="https://www.creative-tim.com/">Creative Tim</a>.
+            &copy; 2026, CIDAR Lab, theme by <a href="https://www.creative-tim.com/">Creative Tim</a>.
           </div>
         </v-col>
       </v-row>

@@ -112,6 +112,7 @@ import VueTerminal from 'vue-terminal-ui'
 import axios from 'axios'
 import { Terminal } from 'xterm'
 import router from '../../router'
+import guestStore from '@/lib/guestStore'
 
 const term = new Terminal();
 
@@ -121,54 +122,44 @@ export default {
     MonacoEditor,
     VueTerminal,
   },
-  mounted: function() {
+  mounted: function () {
     term.open(document.getElementById('terminal'))
-    term.setOption('fontSize', 10 )
-   
-    // setOption(key: 'fontSize' | 'letterSpacing' | 'lineHeight' | 'tabStopWidth' | 'scrollback', value: number): void; 
+    term.setOption('fontSize', 10)
+
     let currentfile = this.$store.getters.currentFile
     this.currentworkspace = this.$store.getters.currentWorkspace
-    console.log("Currnet workspace:",this.currentworkspace,this.currentworkspace._id )
-    if (currentfile == null || currentfile === ''){
-      return
-    }
-    console.log("Opened the editor: ", currentfile)
+    if (currentfile == null || currentfile === '') return
+
     let self = this
     self.isloading = true
-    let config = {
-        withCredentials: true,
-        crossorigin: true,
-        headers: { 'Content-Type': 'application/json' },
-        params: {
-          id: currentfile
-        }
-    }
-    axios.get('/api/v1/file',{
-        params: {
-            id: currentfile
-        }})
-        .then((response)=>{
-            console.log(response.data)
-            this.fileobject = (response.data)
-        })
-        .catch((error)=>{console.log(error)})
 
-    
-    axios.get('/api/v1/fs',{
-      params: {
-          id: currentfile
-      }})
-      .then((response)=>{
-          console.log(response.data)
-          self.isloading = false
-          if (typeof response.data !== 'string'){
-            alert('Cannot open file in default editor')
-            //this.code = response.data
-          }else{
-            this.code = response.data
-          }
+    if (this.$store.getters.isGuest && !this.$store.getters.isGuestViaServer) {
+      const wid = this.currentworkspace && this.currentworkspace._id
+      if (!wid) { self.isloading = false; return }
+      const file = guestStore.getFile(wid, currentfile)
+      if (file) {
+        this.fileobject = { id: file.id, name: file.name, ext: file.ext }
+        this.code = file.content || ''
+      }
+      self.isloading = false
+      this.downloadconfigfiles()
+      return
+    }
+
+    axios.get('/api/v1/file', { params: { id: currentfile } })
+      .then((response) => { this.fileobject = response.data })
+      .catch((error) => { console.log(error) })
+
+    axios.get('/api/v1/fs', { params: { id: currentfile } })
+      .then((response) => {
+        self.isloading = false
+        if (typeof response.data !== 'string') {
+          alert('Cannot open file in default editor')
+        } else {
+          this.code = response.data
+        }
       })
-      .catch((error)=>{console.log(error)})
+      .catch((error) => { console.log(error) })
            
             
     this.downloadconfigfiles()
@@ -235,147 +226,114 @@ export default {
 
   },
   methods: {
-    downloadconfigfiles: function(event){
-      this.configfiles= []
+    downloadconfigfiles (event) {
+      this.configfiles = []
+      const ws = this.$store.getters.currentWorkspace
+      if (!ws || !ws._id) return
+      if (this.$store.getters.isGuest && !this.$store.getters.isGuestViaServer) {
+        const files = guestStore.getFiles(ws._id) || []
+        files.forEach(f => {
+          const ext = (f.ext || '').toLowerCase()
+          if (ext === '.ini' || ext === '.json') this.configfiles.push(f)
+        })
+        return
+      }
       const config = {
         withCredentials: true,
         crossorigin: true,
         headers: { 'Content-Type': 'application/json' },
-        params: {
-          id: this.$store.getters.currentWorkspace._id
-        }
+        params: { id: ws._id },
       }
       let self = this
       axios.get('/api/v1/files', config)
         .then((response) => {
-          console.log(response)
-          for(let fid of response.data){
-            console.log("FID:" , fid)
-            const config = {
-              withCredentials: true,
-              crossorigin: true,
-              headers: { 'Content-Type': 'application/json' },
-              params: {
-                id: fid
-              }
-            }
-            console.log("Config:", config)
-            axios.get('/api/v1/file',config)
-              .then((response)=>{
-                  console.log(response.data)
-                  let ext = response.data.ext
-                  if( ext === '.ini' || ext === '.json' ){
-                    self.configfiles.push(response.data)
-                  }
-                  
+          (response.data || []).forEach((fid) => {
+            axios.get('/api/v1/file', { params: { id: fid }, withCredentials: true, headers: { 'Content-Type': 'application/json' } })
+              .then((res) => {
+                const ext = (res.data.ext || '').toLowerCase()
+                if (ext === '.ini' || ext === '.json') self.configfiles.push(res.data)
               })
-              .catch((error)=>{console.log(error)})
-
-          }
+              .catch((error) => { console.log(error) })
+          })
         })
-        .catch((error) => {
-          console.error(error)
-        })
+        .catch((error) => { console.error(error) })
     },
     createfile: function(event) {
       console.log("TEST");
     },
-    savefile() {
+    savefile () {
       let self = this
+      if (this.$store.getters.isGuest && !this.$store.getters.isGuestViaServer) {
+        const ws = this.$store.getters.currentWorkspace
+        if (ws && ws._id && this.fileobject && this.fileobject.id) {
+          guestStore.updateFile(ws._id, this.fileobject.id, this.code)
+        }
+        return
+      }
       self.isloading = true
-      console.log("save the file", this.code);
-      console.log(this.$store.getters.userID)
-      console.log(this.fileobject)
       const config = {
         withCredentials: true,
         crossorigin: true,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
       }
-
-      // console.log("fileid: " + req.body.fileid);
-      // console.log("name: " + req.body.name);
-      // console.log("name: " + req.body.text);
-
-      axios.put('/api/v1/file',{
+      axios.put('/api/v1/file', {
         fileid: this.fileobject.id,
         name: this.fileobject.name,
         text: this.code,
       }, config)
-        .then((response) => {
-          console.log(response)
-          self.isloading = false
-        })
-        .catch((error) => {
-          console.log(error)
-        })
-
+        .then(() => { self.isloading = false })
+        .catch((error) => { console.log(error) })
     },
-    compilefile: function(event) {
+    compilefile (event) {
+      if (this.$store.getters.isGuest) {
+        alert('Compiling requires a registered account. Please log in to run the compiler.')
+        return
+      }
       let self = this
-      console.log("compile the file");
       self.isloading = true
-      this.compiledialog = false;
+      this.compiledialog = false
       const config = {
         withCredentials: true,
         crossorigin: true,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
       }
-
-      console.log("Selected config",this.$store.getters.currentWorkspace)
-      let data = {
-        sourcefileid: this.fileobject.id,   //(self.currentFile()).id,
-        sourcefilename: this.fileobject.name,   //(self.currentFile()).name,
-        configfileid: this.selectedconfig.id,   //(self.currentConfigFile()).id,
-        configfilename: this.selectedconfig.name,   //(self.currentConfigFile()).name,
-        workspace:    this.$store.getters.currentWorkspace._id,
-        user: this.$store.getters.currentUser.email,           //localStorage.Email
+      const data = {
+        sourcefileid: this.fileobject.id,
+        sourcefilename: this.fileobject.name,
+        configfileid: this.selectedconfig.id,
+        configfilename: this.selectedconfig.name,
+        workspace: this.$store.getters.currentWorkspace._id,
+        user: this.$store.getters.currentUser.email,
       }
-
+      const ext = this.fileobject.name.match(/\.[0-9a-z]+$/i) ? this.fileobject.name.match(/\.[0-9a-z]+$/i)[0] : ''
       let endpoint = ''
-
-      if (this.fileobject.name.match(/\.[0-9a-z]+$/i)[0] === '.uf' || this.fileobject.name.match(/\.[0-9a-z]+$/i)[0] === '.mint'){
-        endpoint = '/api/v1/fluigi'
-      }else if(this.fileobject.name.match(/\.[0-9a-z]+$/i)[0] === '.lfr' || this.fileobject.name.match(/\.[0-9a-z]+$/i)[0] === '.v'){
-        endpoint = '/api/v1/mushroommapper'
-      }else{
-        alert('Unknown File Type !')
-        return
-      }
-
+      if (ext === '.uf' || ext === '.mint') endpoint = '/api/v1/fluigi'
+      else if (ext === '.lfr' || ext === '.v') endpoint = '/api/v1/mushroommapper'
+      else { alert('Unknown File Type !'); return }
       axios.post(endpoint, data, config)
         .then((response) => {
-          console.log('Jobid:', response.data)
-          let jobid = response.data
+          const jobid = response.data
           self.$socket.emit('monitor', jobid)
         })
-        .catch((error) => {
-          console.error(error)
-        })
-
-      //we get jobid from the response
-      
+        .catch((error) => { console.error(error) })
     },
-    deletefile: function(event) {
-        let fid = this.fileobject.id
-        let wid = this.$store.getters.currentWorkspace._id
-        console.log(fid, wid)
-        const config = {
-          data: {
-            fileid: fid,
-            workspaceid: wid
-          },
-          withCredentials: true,
-          crossorigin: true,
-          headers: { 'Content-Type': 'application/json' },
-        }
-
-        axios.delete('/api/v1/file', config)
-              .then((response)=>{
-                console.log("Delete Data",response)
-                router.push('/dashboard')
-              })
-              .catch((error)=>{ console.log(error) })
-
+    deletefile (event) {
+      const fid = this.fileobject.id
+      const wid = this.$store.getters.currentWorkspace && this.$store.getters.currentWorkspace._id
+      if (this.$store.getters.isGuest && !this.$store.getters.isGuestViaServer) {
+        if (wid) guestStore.deleteFile(wid, fid)
+        router.push('/dashboard')
+        return
+      }
+      const config = {
+        data: { fileid: fid, workspaceid: wid },
+        withCredentials: true,
+        crossorigin: true,
+        headers: { 'Content-Type': 'application/json' },
+      }
+      axios.delete('/api/v1/file', config)
+        .then(() => { router.push('/dashboard') })
+        .catch((error) => { console.log(error) })
     },
     downloadfile: function(event) {
       console.log("download the file");

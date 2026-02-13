@@ -72,9 +72,9 @@
 
                   <v-text-field
                     color="primary"
-                    label="Email..."
-                    prepend-icon="mdi-email"
-                    v-model="email"
+                    label="Username..."
+                    prepend-icon="mdi-account"
+                    v-model="username"
                   />
 
                   <v-text-field
@@ -127,6 +127,8 @@
 <script>
     import axios from 'axios'
     import router from '../../router'
+    import * as localAuth from '@/lib/localAuth'
+
     export default {
         name: 'PagesRegister',
 
@@ -136,7 +138,7 @@
         },
 
         data: () => ({
-        email: '',
+        username: '',
         password: '',
         repeat_password: '',
         alertmessage: '',
@@ -157,28 +159,38 @@
         }),
 
         methods:{
-        registerUser: function(){
-            //Check if the passwords match
-            if(this.password !== this.repeat_password){
-            this.alertmessage = 'Passwords do not match'
-            return
+        registerUser () {
+            if (this.password !== this.repeat_password) {
+              this.alertmessage = 'Passwords do not match'
+              return
+            }
+            this.alertmessage = ''
+
+            const payload = { username: this.username.trim(), password: this.password }
+
+            if (process.env.VUE_APP_USE_LOCAL_AUTH === 'true') {
+              localAuth.register({ email: payload.username, password: payload.password })
+                .then((res) => {
+                  this.$store.commit('updateUser', res.user)
+                  this.$router.push('/dashboard')
+                })
+                .catch((e) => { this.alertmessage = e.message || 'Registration failed' })
+              return
             }
 
-            //Since the passwords are correct, we are going to post the registration
-            axios.post('/api/v2/register', {
-                'email': this.email,
-                'password': this.password
-            })
-            .then(response => {
-                console.log(response)
-                //TODO: If successful create the user and forward the person the login sreen
+            axios.post('/api/v2/register', payload, { withCredentials: true })
+              .then((response) => {
                 this.$store.commit('updateUser', response.data.user)
                 this.$router.push('/dashboard')
-            })
-            .catch(e => {
-                console.error(e.message)
-                this.alertmessage = e.message
-            })
+              })
+              .catch((e) => {
+                const data = e.response && e.response.data
+                if (e.response && e.response.status === 409 && (data && data.code === 'USERNAME_TAKEN')) {
+                  this.alertmessage = 'Username already taken. Please choose another.'
+                } else {
+                  this.alertmessage = (data && data.message) || e.message || 'Registration failed'
+                }
+              })
         }
         }
     }

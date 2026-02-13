@@ -35,15 +35,23 @@
           </template>
 
           <v-card-text class="text-center">
-            <div class="text-center grey--text body-1 font-weight-light">
-              Or <a href="./register"> Register </a>
+            <div class="text-center grey--text body-1 font-weight-light mb-2">
+              Or <router-link to="/register">Register</router-link>
             </div>
+            <v-btn
+              outlined
+              small
+              class="mb-3"
+              @click="continueAsGuest"
+            >
+              Continue as Guest
+            </v-btn>
 
             <v-text-field
               color="secondary"
-              label="Email..."
-              prepend-icon="mdi-email"
-              v-model="email"
+              label="Username..."
+              prepend-icon="mdi-account"
+              v-model="username"
             />
 
             <v-text-field
@@ -74,6 +82,8 @@
 <script>
   import router from '../../router'
   import axios from 'axios'
+  import * as localAuth from '@/lib/localAuth'
+
   export default {
     name: 'PagesLogin',
 
@@ -82,32 +92,43 @@
     },
 
     data: () => ({
-      email: '',
+      username: '',
       password: '',
     }),
 
     methods: {
-      login: function(event) {
+      login (event) {
         event.preventDefault()
-        console.log(this.email, this.password)
+        const data = { username: this.username.trim(), password: this.password }
 
-        let data = {    
-            email: this.email,    
-            password: this.password    
+        if (process.env.VUE_APP_USE_LOCAL_AUTH === 'true') {
+          localAuth.login({ email: data.username, password: data.password })
+            .then((res) => {
+              this.$store.commit('updateUser', res.user)
+              router.push('/dashboard')
+            })
+            .catch((e) => { console.error('Cannot log in', e.message) })
+          return
         }
-        let self = this
 
-        axios.post("/api/v2/login", data)    
-            .then((response) => {    
-                // console.log("Logged in",response)
-                self.$store.commit('updateUser', response.data.user)    
-                router.push("/dashboard")
-
-            })    
-            .catch((errors) => {    
-                console.log("Cannot log in", errors)    
-            })    
-      }
-    }
+        axios.post('/api/v2/login', data, { withCredentials: true })
+          .then((response) => {
+            this.$store.commit('updateUser', response.data.user)
+            router.push('/dashboard')
+          })
+          .catch((errors) => { console.error('Cannot log in', errors) })
+      },
+      continueAsGuest () {
+        axios.post('/api/v2/guest', {}, { withCredentials: true })
+          .then((res) => {
+            this.$store.commit('setGuestViaServer', res.data.user)
+            router.push('/dashboard')
+          })
+          .catch(() => {
+            this.$store.commit('setGuest')
+            router.push('/dashboard')
+          })
+      },
+    },
   }
 </script>
