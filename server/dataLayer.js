@@ -170,9 +170,12 @@ function createFile (session, workspaceId, fileName, ext) {
   if (!ws) return null
   const fileList = getFiles(session, workspaceId)
   const id = String(Date.now())
-  const file = { id, name: fileName, ext: ext || '', content: '' }
+  const now = new Date().toISOString()
+  const file = { id, name: fileName, ext: ext || '', content: '', updated_at: now }
   fileList.push(file)
   saveFiles(session, workspaceId, fileList)
+  ws.updated_at = now
+  saveWorkspaces(session, workspaces)
   return file
 }
 
@@ -180,8 +183,16 @@ function updateFileContent (session, workspaceId, fileId, content) {
   const list = getFiles(session, workspaceId)
   const f = list.find(x => String(x.id) === String(fileId))
   if (!f) return null
+  const now = new Date().toISOString()
   f.content = content
+  f.updated_at = now
   saveFiles(session, workspaceId, list)
+  const workspaces = getWorkspaces(session)
+  const ws = workspaces.find(w => String(w._id) === String(workspaceId))
+  if (ws) {
+    ws.updated_at = now
+    saveWorkspaces(session, workspaces)
+  }
   return f
 }
 

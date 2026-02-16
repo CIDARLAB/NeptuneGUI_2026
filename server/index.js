@@ -7,7 +7,11 @@ const express = require('express')
 const cookieParser = require('cookie-parser')
 const path = require('path')
 const { v4: uuidv4 } = require('uuid')
+const axios = require('axios')
 const data = require('./dataLayer')
+
+// Optional: forward compile to Neptune_2026 (e.g. http://localhost:5000)
+const NEPTUNE_COMPILE_URL = process.env.NEPTUNE_COMPILE_URL || ''
 
 const app = express()
 const PORT = process.env.PORT || 8080
@@ -194,15 +198,31 @@ app.get('/api/v1/downloadFile', requireAuth, (req, res) => {
   res.status(404).json({ error: 'File not found' })
 })
 
-// Placeholder for compile/jobs (Neptune_2026 backend would implement these)
-app.post('/api/v1/fluigi', requireAuth, (req, res) => {
-  res.status(501).json({ error: 'Compile not implemented in local server. Use Neptune_2026 backend for compilation.' })
+// Compile: proxy to Neptune_2026 when NEPTUNE_COMPILE_URL is set
+function proxyCompile (req, res, path) {
+  if (!NEPTUNE_COMPILE_URL) {
+    return res.status(501).json({ error: 'Compile not configured. Set NEPTUNE_COMPILE_URL to Neptune_2026 URL (e.g. http://localhost:5000) or see RUN_LFR.md.' })
+  }
+  const url = NEPTUNE_COMPILE_URL.replace(/\/$/, '') + path
+  axios.post(url, req.body, { timeout: 60000, validateStatus: () => true })
+    .then((axRes) => res.status(axRes.status).json(axRes.data))
+    .catch((err) => res.status(502).json({ error: 'Neptune_2026 compile error', message: err.message }))
+}
+app.post('/api/v1/fluigi', requireAuth, (req, res) => proxyCompile(req, res, '/api/v1/fluigi'))
+app.post('/api/v1/mushroommapper', requireAuth, (req, res) => proxyCompile(req, res, '/api/v1/mushroommapper'))
+app.get('/api/v1/jobs', requireAuth, (req, res) => {
+  if (!NEPTUNE_COMPILE_URL) return res.json([])
+  axios.get(NEPTUNE_COMPILE_URL.replace(/\/$/, '') + '/api/v1/jobs', { headers: req.headers, validateStatus: () => true })
+    .then((axRes) => res.json(axRes.data || []))
+    .catch(() => res.json([]))
 })
-app.post('/api/v1/mushroommapper', requireAuth, (req, res) => {
-  res.status(501).json({ error: 'Compile not implemented in local server. Use Neptune_2026 backend for compilation.' })
+app.get('/api/v1/job', requireAuth, (req, res) => {
+  if (!NEPTUNE_COMPILE_URL) return res.json({ status: 'unknown' })
+  const base = NEPTUNE_COMPILE_URL.replace(/\/$/, '')
+  axios.get(base + '/api/v1/job', { params: req.query, timeout: 10000, validateStatus: () => true })
+    .then((axRes) => res.json(axRes.data || { status: 'unknown' }))
+    .catch(() => res.json({ status: 'unknown' }))
 })
-app.get('/api/v1/jobs', requireAuth, (req, res) => res.json([]))
-app.get('/api/v1/job', requireAuth, (req, res) => res.json({ status: 'unknown' }))
 
 app.listen(PORT, () => {
   console.log('Neptune Data server running at http://localhost:' + PORT)

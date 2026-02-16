@@ -129,6 +129,8 @@
           hover-reveal
           color="info"
           type="Line"
+          :active-jobs="jobActiveCount"
+          :completed-jobs="jobCompletedCount"
         >
           <template v-slot:reveal-actions>
             <v-tooltip bottom>
@@ -159,7 +161,7 @@
                   v-on="on"
                   v-on:click="selectworkspace(workspace._id)"
                 >
-                  <v-icon>mdi-view-split-vertical</v-icon>
+                  <v-icon color="primary">mdi-view-split-vertical</v-icon>
                 </v-btn>
               </template>
 
@@ -200,65 +202,14 @@
 
         <v-col
             cols="12"
-            sm="3"
-            lg="3"
             align="center"
+            class="d-flex align-center justify-center py-6 px-4"
         >
-            <div class="my-2">
-            <v-tooltip top>
-                <template v-slot:activator="{ on }">
-                <v-btn 
-                    v-on="on" 
-                    class="newbutton" 
-                    color="success" 
-                    fab 
-                    x-large 
-                    dark
-                    @click="newworkspacedialog = true"
-                    >
-                    <v-icon>mdi-plus</v-icon>
-                </v-btn>
-                </template>
-                <span>Create New Workspace</span>
-            </v-tooltip>
-                <v-dialog
-                    v-model="newworkspacedialog"
-                    max-width="300px"
-                    >
-                    <v-card>
-                    <v-card-title>
-                        Create New Workspace
-                    </v-card-title>
-                    <v-card-text>
-                        <v-text-field
-                            v-model="newworkspacename"
-                            label="Workspace Name"
-                            ></v-text-field>
-                    </v-card-text>
-                    <v-card-actions>
-                        <v-spacer></v-spacer>
-                        <v-btn
-                            color="success"
-                            text
-                            @click="createworkspace()"
-                            >
-                            Create
-                        </v-btn>
-
-                        <v-btn
-                            color="primary"
-                            text
-                            @click="newworkspacedialog = false"
-                            >
-                            Cancel
-                        </v-btn>
-
-                    </v-card-actions>
-                    </v-card>
-                </v-dialog>
-
-
-            </div>
+            <p class="create-workspace-hint text-center ma-0">
+                To create a new workspace, go to
+                <router-link to="/editor" class="editor-link">Editor</router-link>
+                and save; that will create a new workspace.
+            </p>
         </v-col>
 
     </v-row>
@@ -289,7 +240,7 @@
                         :value="file.ext"
                         :name="file.name"
                         sub-icon="mdi-clockwise-outline"
-                        :sub-text=" 'Modified: ' + formattimestamp(file.updated_at)"
+                        :sub-text="'Modified: ' + (file.updated_at ? formattimestamp(file.updated_at) : '—')"
                         :id="file.id"
                         :workspaceid="selectedworkspace._id"
                         v-on:onFileDeleted="refreshFiles"
@@ -400,6 +351,8 @@
         files: [],
         workspaces:[],
         workspacesobjects: {},
+        jobActiveCount: 0,
+        jobCompletedCount: 0,
         actions: [
             {
             color: 'info',
@@ -430,6 +383,8 @@
           this.workspaces = []
           this.workspacesobjects = {}
           this.files = []
+          this.jobActiveCount = 0
+          this.jobCompletedCount = 0
 
           if (this.$store.getters.isGuest && !this.$store.getters.isGuestViaServer) {
             const list = guestStore.getWorkspaces()
@@ -458,36 +413,48 @@
             console.error(error)
           })
 
-        axios.get('/api/v1/workspaces', config)
-            .then((response)=>{
-                console.log(response)
-                console.log("TEST:", this.workspaces)
-                for (let wid of response.data){
-                    console.log(wid)
-                    axios.get('/api/v1/workspace',{
-                    params: {
-                        workspace_id: wid
-                    }}).then((response)=>{
-                        console.log(response.data)
-                        this.workspaces.push(response.data)
-                        this.workspacesobjects[response.data._id] = (response.data)
-
-                        if (this.$store.getters.currentWorkspace != null && this.$store.getters.currentWorkspace != undefined){
-                            console.log(" current workspace",this.$store.getters.currentWorkspace, this.selectedworkspace)
+          axios.get('/api/v1/workspaces', config)
+            .then((response) => {
+                for (let wid of response.data || []) {
+                    axios.get('/api/v1/workspace', { params: { workspace_id: wid }, ...config })
+                    .then((res) => {
+                        this.workspaces.push(res.data)
+                        this.workspacesobjects[res.data._id] = res.data
+                        if (this.$store.getters.currentWorkspace != null && this.$store.getters.currentWorkspace !== undefined) {
                             this.selectworkspace(this.$store.getters.currentWorkspace._id)
                         }
-
                     })
-                    .catch((error)=>{console.log(error)})
+                    .catch((error) => { console.log(error) })
                 }
-
-                console.log(this.workspaces)
-
+                this.fetchJobCounts(config)
             })
-            .catch((error)=>{
-            console.log(error)
-            });
-
+            .catch((error) => { console.log(error) })
+        },
+        fetchJobCounts (config) {
+          axios.get('/api/v1/jobs', config)
+            .then((response) => {
+              const ids = response.data || []
+              if (ids.length === 0) return
+              let active = 0
+              let completed = 0
+              const check = (i) => {
+                if (i >= ids.length) {
+                  this.jobActiveCount = active
+                  this.jobCompletedCount = completed
+                  return
+                }
+                axios.get('/api/v1/job', { params: { job_id: ids[i] }, ...config })
+                  .then((res) => {
+                    const status = (res.data && res.data.status && String(res.data.status).toLowerCase()) || ''
+                    if (['done', 'completed', 'success', 'failed', 'error'].includes(status)) completed++
+                    else active++
+                    check(i + 1)
+                  })
+                  .catch(() => { check(i + 1) })
+              }
+              check(0)
+            })
+            .catch(() => {})
         },
         deleteworkspace (wid) {
           if (this.$store.getters.isGuest && !this.$store.getters.isGuestViaServer) {
@@ -580,11 +547,30 @@
             })
             .catch((error) => { console.log(error) })
         },
-
+    },
   }
 </script>
 <style>
-    .newbutton{
-        margin-top: 85px;
+    /* Workspace card action buttons: ensure icons are visible */
+    #dashboard .v-btn.info .v-icon { color: #00CAE3 !important; }
+    #dashboard .v-btn.primary .v-icon { color: #006994 !important; }
+    #dashboard .v-btn.error .v-icon { color: #f44336 !important; }
+
+    /* Create workspace hint: more space, larger and prominent text */
+    .create-workspace-hint {
+        font-size: calc(1.1rem + 2pt);
+        line-height: 1.6;
+        color: rgba(0, 0, 0, 0.87);
+    }
+    .theme--dark .create-workspace-hint {
+        color: rgba(255, 255, 255, 0.87);
+    }
+    .create-workspace-hint .editor-link {
+        color: #006994;
+        font-weight: 600;
+        text-decoration: underline;
+    }
+    .create-workspace-hint .editor-link:hover {
+        color: #00838F;
     }
 </style>

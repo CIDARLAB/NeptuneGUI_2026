@@ -36,12 +36,13 @@ function getWorkspaces () {
   return load().workspaces
 }
 
-function createWorkspace (name) {
+function createWorkspace (name, notes) {
   const data = load()
   const id = String(data.nextWorkspaceId++)
   const workspace = {
     _id: id,
     name: name || 'Guest Workspace',
+    notes: notes || '',
     files: [],
     updated_at: new Date().toISOString(),
   }
@@ -73,13 +74,16 @@ function createFile (workspaceId, fileName, ext) {
   if (!w) return null
   if (!w.files) w.files = []
   const id = String(data.nextFileId++)
+  const now = new Date().toISOString()
   const file = {
     id,
     name: fileName,
     content: '',
     ext: ext || '',
+    updated_at: now,
   }
   w.files.push(file)
+  w.updated_at = now
   save(data)
   return file
 }
@@ -90,7 +94,10 @@ function updateFile (workspaceId, fileId, content) {
   if (!w || !w.files) return null
   const f = w.files.find(x => String(x.id) === String(fileId))
   if (!f) return null
+  const now = new Date().toISOString()
   f.content = content
+  f.updated_at = now
+  w.updated_at = now
   save(data)
   return f
 }

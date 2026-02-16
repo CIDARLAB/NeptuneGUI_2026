@@ -11,11 +11,11 @@
       :src="require(`@/assets/${src || 'Microfluidics_Getty_931135590_luchschen_LabOnChip-e1564581280987.jpg'}`)"
       gradient="to top, rgba(0, 0, 0, .5), rgba(0, 0, 0, .5)"
       min-height="100%"
+      max-height="100vh"
     >
       <v-responsive
         :style="styles"
-        min-height="100vh"
-        class="d-flex align-center"
+        class="d-flex align-start pages-view-responsive"
       >
         <router-view />
       </v-responsive>
@@ -39,10 +39,11 @@
         return this.srcs[this.$route.path]
       },
       styles () {
-        const paddingTop = this.$vuetify.breakpoint.mdAndUp ? 175 : 100
-        const paddingBottom = this.$vuetify.breakpoint.mdAndUp ? 175 : 150
+        const paddingBottom = this.$vuetify.breakpoint.mdAndUp ? 80 : 60
         return {
-          padding: `${paddingTop}px 0 ${paddingBottom}px 0`,
+          height: '100vh',
+          boxSizing: 'border-box',
+          padding: '15vh 0 ' + paddingBottom + 'px 0',
         }
       },
     },

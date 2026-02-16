@@ -7,7 +7,7 @@
     <v-row justify="center">
       <v-slide-y-transition appear>
         <base-material-card
-          color="success"
+          color="primary"
           light
           max-width="100%"
           width="400"
@@ -65,9 +65,8 @@
 
             <pages-btn
               large
-              color=""
+              color="primary"
               depressed
-              class="v-btn--text success--text"
               v-on:click="login"
             >
               Let's Go

@@ -8,23 +8,25 @@
     height="75"
   >
     <v-btn
-      class="mr-3"
+      class="mr-3 sidebar-toggle-btn"
       elevation="1"
       fab
       small
+      color="primary"
       @click="$vuetify.breakpoint.smAndDown ? setDrawer(!drawer) : $emit('input', !value)"
     >
-      <v-icon v-if="value">
-        mdi-view-quilt
-      </v-icon>
-
-      <v-icon v-else>
-        mdi-dots-vertical
-      </v-icon>
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="sidebar-toggle-icon" aria-hidden="true">
+        <circle cx="5" cy="6" r="1.5" fill="currentColor" />
+        <line x1="10" y1="6" x2="22" y2="6" />
+        <circle cx="5" cy="12" r="1.5" fill="currentColor" />
+        <line x1="10" y1="12" x2="22" y2="12" />
+        <circle cx="5" cy="18" r="1.5" fill="currentColor" />
+        <line x1="10" y1="18" x2="22" y2="18" />
+      </svg>
     </v-btn>
 
     <v-toolbar-title
-      class="hidden-sm-and-down font-weight-light"
+      class="hidden-sm-and-down font-weight-light dashboard-appbar-title"
       v-text="$route.name"
     />
 
@@ -53,15 +55,6 @@
 
     <div class="mx-3" />
 
-    <v-btn
-      class="ml-2"
-      min-width="0"
-      v-on:click="$router.push('dashboard')"
-      text
-    >
-      <v-icon>mdi-view-dashboard</v-icon>
-    </v-btn>
-
     <v-menu
       bottom
       left
@@ -84,7 +77,7 @@
             overlap
             bordered
           >
-            <v-icon>mdi-bell</v-icon>
+            <v-icon color="primary">mdi-bell</v-icon>
           </v-badge>
         </v-btn>
       </template>
@@ -94,26 +87,23 @@
         nav
       >
         <div>
+          <app-bar-item :key="'alerts-page'" to="/alerts">
+            <v-list-item-title v-text="'Alerts'" />
+          </app-bar-item>
+          <v-divider class="mb-2 mt-2" :key="'nd'" />
           <app-bar-item
             v-for="(n, i) in notifications"
             :key="`item-${i}`"
           >
             <v-list-item-title v-text="n.text" />
           </app-bar-item>
-          
           <v-divider
+            v-if="notifications.length"
             class="mb-2 mt-2"
           />
-
-          <app-bar-item
-            :key="3"
-          >
-            <v-list-item-title
-            v-text="'Clear Notifications'" 
-            v-on:click="clearNotifications"            
-            />
+          <app-bar-item :key="'clear'" @click.native="clearNotifications">
+            <v-list-item-title v-text="'Clear Notifications'" />
           </app-bar-item>
-
         </div>
       </v-list>
     </v-menu>
@@ -134,7 +124,7 @@
           v-bind="attrs"
           v-on="on"
         >
-          <v-icon>mdi-account</v-icon>
+          <v-icon color="primary">mdi-account</v-icon>
         </v-btn>
       </template>
 
@@ -143,33 +133,28 @@
         flat
         nav
       >
-          <app-bar-item
-            :key="1"
-          >
-            <v-list-item-title
-            v-text="'Profile'" 
-            />
-          </app-bar-item>
-          <app-bar-item
-            :key="2"
-          >
-            <v-list-item-title
-            v-text="'Settings'" 
-            />
-          </app-bar-item>
-          
-          <v-divider
-            class="mb-2 mt-2"
-          />
-
-          <app-bar-item
-            :key="3"
-          >
-            <v-list-item-title
-            v-text="'Logout'" 
-            v-on:click="logout"            
-            />
-          </app-bar-item>
+          <!-- Logged-in user: Profile, Settings, Logout -->
+          <template v-if="!isGuest">
+            <app-bar-item :key="1">
+              <v-list-item-title v-text="'Profile'" />
+            </app-bar-item>
+            <app-bar-item :key="2">
+              <v-list-item-title v-text="'Settings'" />
+            </app-bar-item>
+            <v-divider class="mb-2 mt-2" :key="'d1'" />
+            <app-bar-item :key="3" @click.native="logout">
+              <v-list-item-title v-text="'Logout'" />
+            </app-bar-item>
+          </template>
+          <!-- Guest: Login / Register, go to login or register page -->
+          <template v-else>
+            <app-bar-item :key="'guest-login'" to="/login">
+              <v-list-item-title v-text="'Login'" />
+            </app-bar-item>
+            <app-bar-item :key="'guest-register'" to="/register">
+              <v-list-item-title v-text="'Register'" />
+            </app-bar-item>
+          </template>
 
         <!-- <template v-for="(p, i) in profile">
           <v-divider
@@ -259,6 +244,9 @@
 
     computed: {
       ...mapState(['drawer']),
+      isGuest () {
+        return this.$store.getters.isGuest
+      },
       totalNotifications: function() {
         return this.notifications.length
       }
@@ -292,3 +280,28 @@
     },
   }
 </script>
+<style scoped>
+/* Left sidebar toggle: dot + line per row, white */
+#app-bar .sidebar-toggle-btn .sidebar-toggle-icon {
+  color: #ffffff;
+}
+#app-bar .sidebar-toggle-btn .sidebar-toggle-icon line {
+  stroke: currentColor;
+}
+#app-bar .sidebar-toggle-btn .sidebar-toggle-icon circle {
+  fill: currentColor;
+}
+#app-bar .v-btn.fab .v-icon {
+  color: #ffffff !important;
+  opacity: 1;
+}
+/* Right-side buttons (bell, account): use theme primary blue */
+#app-bar .v-btn:not(.fab) .v-icon {
+  color: #006994 !important;
+  opacity: 1;
+}
+/* Dashboard / Editor page title: larger font */
+.dashboard-appbar-title {
+  font-size: 2.5rem;
+}
+</style>

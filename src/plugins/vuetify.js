@@ -5,10 +5,11 @@ import '@/sass/overrides.sass'
 
 Vue.use(Vuetify)
 
+// Neptune-style teal/blue
 const theme = {
-  primary: '#E91E63',
-  secondary: '#9C27b0',
-  accent: '#9C27b0',
+  primary: '#006994',
+  secondary: '#00838F',
+  accent: '#00ACC1',
   info: '#00CAE3',
 }
 

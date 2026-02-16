@@ -16,6 +16,7 @@ import axios from "axios";
 import App from "./App.vue";
 import router from "./router";
 import store from "./store";
+import "@mdi/font/css/materialdesignicons.css";
 import "./plugins/base";
 
 // For production: set VUE_APP_API_BASEURL in .env.production to Neptune_2026 backend URL when not same-origin
@@ -74,6 +75,8 @@ router.beforeEach((to, from, next) => {
   }
   next();
 });
+
+document.title = 'Neptune';
 
 new Vue({
   router,

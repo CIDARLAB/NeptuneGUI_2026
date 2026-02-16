@@ -29,6 +29,12 @@ export default new Router({
           component: () => import('@/views/pages/Register'),
           meta: { requiresAuth: false }
         },
+        {
+          name: 'License',
+          path: 'license',
+          component: () => import('@/views/pages/License'),
+          meta: { requiresAuth: false }
+        },
       ],
     },
     {
@@ -71,6 +77,24 @@ export default new Router({
           name: 'User Profile',
           path: 'user',
           component: () => import('@/views/dashboard/pages/UserProfile'),
+          meta: { requiresAuth: true }
+        },
+        {
+          name: 'Profile',
+          path: 'profile',
+          component: () => import('@/views/dashboard/pages/Profile'),
+          meta: { requiresAuth: true }
+        },
+        {
+          name: 'Settings',
+          path: 'settings',
+          component: () => import('@/views/dashboard/pages/SettingsPage'),
+          meta: { requiresAuth: true }
+        },
+        {
+          name: 'Alerts',
+          path: 'alerts',
+          component: () => import('@/views/dashboard/pages/AlertsPage'),
           meta: { requiresAuth: true }
         },
         {

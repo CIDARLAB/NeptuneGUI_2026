@@ -19,16 +19,14 @@
       />
     </template>
 
-    <v-list-item two-line>
+    <v-list-item two-line class="drawer-logo-item">
       <v-list-item-content>
-        <v-list-item-title class="text-uppercase font-weight-regular display-2">
-          <span class="logo-mini">
-            <img
-            height="25px"
+        <v-list-item-title class="d-flex align-center">
+          <img
             :src="logo"
-            />
-            </span>
-          <span class="logo-normal">Neptune</span>
+            class="drawer-logo-img"
+            contain
+          />
         </v-list-item-title>
       </v-list-item-content>
     </v-list-item>
@@ -76,8 +74,6 @@
 </template>
 
 <script>
-  import { mdiFileMultipleOutline } from '@mdi/js';
-  import { mdiDatabase } from '@mdi/js';
   // Utilities
   import {
     mapState,
@@ -94,7 +90,7 @@
     },
 
     data: () => ({
-      logo: require('@/assets/NeptuneLogo.png'),
+      logo: require('@/assets/neptune2026_logo.png'),
       items: [
         {
           icon: 'mdi-view-dashboard',
@@ -107,12 +103,12 @@
           to: '/editor',
         },
         {
-          icon: mdiFileMultipleOutline,
+          icon: 'mdi-file-multiple-outline',
           title: 'Solutions',
           to: '/solutions',
         },
         {
-          icon: mdiDatabase,
+          icon: 'mdi-database',
           title: 'Component Library',
           to: '/library',
         },
@@ -399,5 +395,21 @@
     border-radius: 50%;
     text-align: center;
     overflow: hidden;
+  }
+  .drawer-logo-item .v-list-item__content {
+    padding-left: 25%;
+  }
+  .v-navigation-drawer--mini-variant .drawer-logo-item .v-list-item__content {
+    padding-left: 0;
+    justify-content: center;
+  }
+  .drawer-logo-img {
+    max-height: 40px;
+    width: auto;
+    object-fit: contain;
+    display: block;
+  }
+  .v-navigation-drawer--mini-variant .drawer-logo-img {
+    max-height: 32px;
   }
 </style>

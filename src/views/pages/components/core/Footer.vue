@@ -17,9 +17,17 @@
           cols="6"
           md="auto"
         >
+          <router-link
+            v-if="link.to"
+            :to="link.to"
+            class="mr-0 footer-link"
+          >
+            {{ link.text }}
+          </router-link>
           <a
+            v-else
             :href="link.href"
-            class="mr-0"
+            class="mr-0 footer-link"
             rel="noopener"
             target="_blank"
             v-text="link.text"
@@ -33,7 +41,7 @@
           md="auto"
         >
           <div class="body-1 font-weight-light pt-6 pt-md-0 text-center">
-            &copy; 2026, CIDAR Lab, theme by <a href="https://www.creative-tim.com/">Creative Tim</a>.
+            &copy; 2026, CIDAR Lab
           </div>
         </v-col>
       </v-row>
@@ -47,22 +55,10 @@
 
     data: () => ({
       links: [
-        {
-          href: 'http://cidarlab.org',
-          text: 'CIDAR Lab',
-        },
-        {
-          href: '/about',
-          text: 'About',
-        },
-        {
-          href: 'https://github.com/CIDARLAB/',
-          text: 'Github',
-        },
-        {
-          href: '#',
-          text: 'Licenses',
-        },
+        { href: 'http://cidarlab.org', text: 'CIDAR Lab' },
+        { href: 'https://github.com/CIDARLAB/Neptune_2026/blob/main/README.md', text: 'About' },
+        { href: 'https://github.com/CIDARLAB/NeptuneGUI_2026', text: 'GitHub' },
+        { to: '/license', text: 'Licenses' },
       ],
     }),
   }
@@ -70,7 +66,7 @@
 
 <style lang="sass">
   #pages-core-footer
-    a
+    a.footer-link, .footer-link
       color: #FFFFFF
       font-size: .825rem
       font-weight: 500

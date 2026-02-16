@@ -7,9 +7,9 @@
   >
     <template v-slot:heading>
       <div align="center">
-      Completed Jobs: ??
+      Completed Jobs: {{ completedJobs }}
       <br/>
-      Active Jobs: ??
+      Active Jobs: {{ activeJobs }}
       </div>
     </template>
 
@@ -71,7 +71,14 @@
         type: String,
         required: false,
       },
-
+      activeJobs: {
+        type: Number,
+        default: 0,
+      },
+      completedJobs: {
+        type: Number,
+        default: 0,
+      },
     },
   }
 </script>

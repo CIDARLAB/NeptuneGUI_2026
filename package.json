@@ -15,6 +15,7 @@
     "server:install": "cd server && npm install"
   },
   "dependencies": {
+    "@mdi/font": "^7.4.47",
     "@mdi/js": "^4.8.95",
     "@sentry/tracing": "^6.1.0",
     "@sentry/vue": "^6.1.0",
