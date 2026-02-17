@@ -90,7 +90,7 @@
     },
 
     data: () => ({
-      logo: require('@/assets/neptune2026_logo.png'),
+      logo: require('@/assets/Neptune2026_logo.png'),
       items: [
         {
           icon: 'mdi-view-dashboard',

@@ -68,8 +68,8 @@
                 size="64"
               >
               <img
-                src="/images/NeptuneLogo.png"
-                alt="John"
+                :src="require('@/assets/Neptune2026_logo_white_text.png')"
+                alt="Neptune logo"
               >
               </v-list-item-avatar>
             </v-list-item>
@@ -93,7 +93,7 @@
               cols="12"
               md="6"
             >
-              <img src="/images/neptunedark.png" width="100%" />
+              <img :src="require('@/assets/Neptune2026_logo_black_text.png')" width="100%" />
               <br />
               <br />
               <br />
@@ -240,7 +240,7 @@
                         :value="file.ext"
                         :name="file.name"
                         sub-icon="mdi-clockwise-outline"
-                        :sub-text="'Modified: ' + (file.updated_at ? formattimestamp(file.updated_at) : '—')"
+                        :sub-text="'Last edited: ' + (file.updated_at ? formattimestamp(file.updated_at) : (file.created_at ? formattimestamp(file.created_at) : '—'))"
                         :id="file.id"
                         :workspaceid="selectedworkspace._id"
                         v-on:onFileDeleted="refreshFiles"

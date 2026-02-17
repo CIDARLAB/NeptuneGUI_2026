@@ -8,7 +8,7 @@
       <v-col cols="12" md="8" class="text-center">
         <v-slide-y-transition appear>
           <v-img
-            :src="require('@/assets/neptune2026_logo_notext.png')"
+            :src="require('@/assets/Neptune2026_logo_black_text.png')"
             height="120px"
             contain
             class="mx-auto mb-6"

@@ -80,6 +80,7 @@ function createFile (workspaceId, fileName, ext) {
     name: fileName,
     content: '',
     ext: ext || '',
+    created_at: now,
     updated_at: now,
   }
   w.files.push(file)
@@ -88,7 +89,7 @@ function createFile (workspaceId, fileName, ext) {
   return file
 }
 
-function updateFile (workspaceId, fileId, content) {
+function updateFile (workspaceId, fileId, content, newName) {
   const data = load()
   const w = data.workspaces.find(ws => String(ws._id) === String(workspaceId))
   if (!w || !w.files) return null
@@ -96,6 +97,7 @@ function updateFile (workspaceId, fileId, content) {
   if (!f) return null
   const now = new Date().toISOString()
   f.content = content
+  if (newName != null && String(newName).trim() !== '') f.name = String(newName).trim()
   f.updated_at = now
   w.updated_at = now
   save(data)

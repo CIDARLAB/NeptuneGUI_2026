@@ -170,7 +170,7 @@ app.put('/api/v1/file', requireAuth, (req, res) => {
   if (!fileid) return res.status(400).json({ error: 'fileid required' })
   const workspaces = data.getWorkspaces(req.session)
   for (const w of workspaces) {
-    const updated = data.updateFileContent(req.session, w._id, fileid, text)
+    const updated = data.updateFileContent(req.session, w._id, fileid, text, name)
     if (updated) return res.json(updated)
   }
   res.status(404).json({ error: 'File not found' })

@@ -1,3 +1,5 @@
+@use 'sass:color'
+
 .v-application .v-navigation-drawer .v-navigation-drawer__content .v-list-item .v-list-item__content .v-list-item__title.display-2
   font-size: 18px !important
   margin-top: 12px
@@ -69,8 +71,8 @@
   margin-right: 15px
 
 .theme--dark.v-navigation-drawer .v-divider
-  background-color: rgba(181, 181, 181, 0.2)
-  border-color: rgba(181, 181, 181, 0.1)
+  background-color: color.change(#b5b5b5, $alpha: 0.2)
+  border-color: color.change(#b5b5b5, $alpha: 0.1)
   width: calc(100% - 30px)
   margin-left: 15px
 

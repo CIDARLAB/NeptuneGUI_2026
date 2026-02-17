@@ -51,8 +51,20 @@
           />
           <v-list-item three-line v-if="fileobject.name">
             <v-list-item-content>
-              <v-list-item-title class="headline mb-1"><span v-text="fileobject.name"></span></v-list-item-title>
-              <v-list-item-subtitle>Current workspace: <span v-text="currentWorkspaceLabel"></span></v-list-item-subtitle>
+              <div class="d-flex align-center flex-wrap">
+                <v-text-field
+                  v-model="editableFileBaseName"
+                  label="File name"
+                  placeholder="Script name"
+                  outlined
+                  dense
+                  hide-details
+                  class="editor-page-filename-input flex-grow-1 mr-2"
+                  style="max-width: 280px;"
+                />
+                <span class="editor-page-filename-ext">.{{ selectedScriptLanguage }}</span>
+              </div>
+              <v-list-item-subtitle class="mt-1">Current workspace: <span v-text="currentWorkspaceLabel"></span></v-list-item-subtitle>
             </v-list-item-content>
           </v-list-item>
           <v-list-item three-line v-else class="new-script-filename-row">
@@ -123,7 +135,7 @@
         />
       </v-card-text>
       <v-card-actions>
-        <v-btn color="primary" text @click="compiledialog = false">Close</v-btn>
+        <v-btn color="primary" text @click="compiledialog = false; $router.push('/dashboard')">Close</v-btn>
         <v-btn color="info" text @click="compilefile">Compile</v-btn>
       </v-card-actions>
     </v-card>
@@ -211,15 +223,6 @@ export default {
       term.open(terminalEl)
       term.setOption('fontSize', 12)
       term.write('Neptune> ')
-      term.onData((data) => {
-        if (self.$socket && self.$socket.connected) {
-          self.$socket.emit('stdin', data)
-        }
-        term.write(data)
-        if (data === '\r' || data === '\n') {
-          term.write('\r\nNeptune> ')
-        }
-      })
     }
 
     const currentfile = this.$store.getters.currentFile
@@ -321,7 +324,17 @@ export default {
       existingWorkspaceDialog: false,
       selectedExistingWorkspaceId: null,
       existingWorkspacesList: [],
+      editableFileBaseName: '',
     }
+  },
+  watch: {
+    fileobject: {
+      handler (n) {
+        if (n && n.name) this.editableFileBaseName = n.name.replace(/\.[^.]+$/, '') || n.name
+        else this.editableFileBaseName = ''
+      },
+      immediate: true,
+    },
   },
   computed: {
     currentWorkspaceLabel () {
@@ -448,12 +461,23 @@ export default {
     },
     saveFile () {
       if (this.fileobject.id && this.currentworkspace && this.currentworkspace._id) {
+        const ext = '.' + this.selectedScriptLanguage
+        const base = (this.editableFileBaseName || this.fileobject.name || 'script').trim().replace(/\.(mint|lfr)$/i, '') || 'script'
+        const newName = base + ext
         const config = { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
         if (this.$store.getters.isGuest && !this.$store.getters.isGuestViaServer) {
-          guestStore.updateFile(this.currentworkspace._id, this.fileobject.id, this.code)
+          guestStore.updateFile(this.currentworkspace._id, this.fileobject.id, this.code, newName)
+          this.fileobject.name = newName
+          this.$router.push('/dashboard')
           return
         }
-        axios.put('/api/v1/file', { fileid: this.fileobject.id, text: this.code }, config)
+        const payload = { fileid: this.fileobject.id, text: this.code }
+        if (newName !== (this.fileobject.name || '')) payload.name = newName
+        axios.put('/api/v1/file', payload, config)
+          .then(() => {
+            this.fileobject.name = newName
+            this.$router.push('/dashboard')
+          })
           .catch((err) => {
             const msg = (err.response && err.response.data && (err.response.data.error || err.response.data.message)) || err.message
             alert('Could not save file. ' + (msg ? String(msg) : 'Please try again.'))
@@ -469,14 +493,23 @@ export default {
         alert('Save the file first (e.g. Save file to a new workspace), then use Save file and compile.')
         return
       }
+      const ext = '.' + this.selectedScriptLanguage
+      const base = (this.editableFileBaseName || this.fileobject.name || 'script').trim().replace(/\.(mint|lfr)$/i, '') || 'script'
+      const newName = base + ext
       const config = { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
       if (this.$store.getters.isGuest && !this.$store.getters.isGuestViaServer) {
-        guestStore.updateFile(this.currentworkspace._id, this.fileobject.id, this.code)
+        guestStore.updateFile(this.currentworkspace._id, this.fileobject.id, this.code, newName)
+        this.fileobject.name = newName
         this.compiledialog = true
         return
       }
-      axios.put('/api/v1/file', { fileid: this.fileobject.id, text: this.code }, config)
-        .then(() => { this.compiledialog = true })
+      const payload = { fileid: this.fileobject.id, text: this.code }
+      if (newName !== (this.fileobject.name || '')) payload.name = newName
+      axios.put('/api/v1/file', payload, config)
+        .then(() => {
+          this.fileobject.name = newName
+          this.compiledialog = true
+        })
         .catch((err) => {
           const msg = (err.response && err.response.data && (err.response.data.error || err.response.data.message)) || err.message
           alert('Could not save file. ' + (msg ? String(msg) : 'Please try again.'))
@@ -490,7 +523,9 @@ export default {
     openExistingWorkspaceDialog () {
       if (this.$store.getters.isGuest && !this.$store.getters.isGuestViaServer) {
         this.existingWorkspacesList = guestStore.getWorkspaces()
-        this.selectedExistingWorkspaceId = (this.existingWorkspacesList[0] && this.existingWorkspacesList[0]._id) || null
+        const curId = this.currentworkspace && this.currentworkspace._id
+        const inList = this.existingWorkspacesList.some(w => String(w._id) === String(curId))
+        this.selectedExistingWorkspaceId = inList ? curId : (this.existingWorkspacesList[0] && this.existingWorkspacesList[0]._id) || null
         this.existingWorkspaceDialog = true
         return
       }
@@ -504,7 +539,9 @@ export default {
         })
         .then((list) => {
           this.existingWorkspacesList = list.filter(Boolean)
-          this.selectedExistingWorkspaceId = (this.existingWorkspacesList[0] && this.existingWorkspacesList[0]._id) || null
+          const curId = this.currentworkspace && this.currentworkspace._id
+          const inList = this.existingWorkspacesList.some(w => String(w._id) === String(curId))
+          this.selectedExistingWorkspaceId = inList ? curId : (this.existingWorkspacesList[0] && this.existingWorkspacesList[0]._id) || null
           this.existingWorkspaceDialog = true
         })
         .catch(() => {})
@@ -513,22 +550,26 @@ export default {
       const wsId = this.selectedExistingWorkspaceId
       if (!wsId) return
       const ext = '.' + this.selectedScriptLanguage
-      const base = (this.fileobject.name || this.newScriptBaseName || 'script').trim().replace(/\.(mint|lfr)$/i, '') || 'script'
+      const base = (this.editableFileBaseName || this.fileobject.name || this.newScriptBaseName || 'script').trim().replace(/\.(mint|lfr)$/i, '') || 'script'
       const fileName = base + ext
       const config = { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
       if (this.$store.getters.isGuest && !this.$store.getters.isGuestViaServer) {
         const file = guestStore.createFile(wsId, fileName, ext)
         if (file) guestStore.updateFile(wsId, file.id, this.code)
         this.existingWorkspaceDialog = false
+        this.$router.push('/dashboard')
         return
       }
       axios.post('/api/v1/file', { workspaceid: wsId, file_name: fileName, ext }, config)
         .then((res) => {
           const fileId = res.data.id
           if (fileId && this.code) {
-            return axios.put('/api/v1/file', { fileid: fileId, text: this.code }, config).then(() => { this.existingWorkspaceDialog = false })
+            return axios.put('/api/v1/file', { fileid: fileId, text: this.code }, config)
           }
+        })
+        .then(() => {
           this.existingWorkspaceDialog = false
+          this.$router.push('/dashboard')
         })
         .catch((err) => {
           const msg = (err.response && err.response.data && (err.response.data.error || err.response.data.message)) || err.message
@@ -706,7 +747,7 @@ export default {
       if (this.$socket && this.$socket.connected) {
         this.$socket.emit('cli', { command: cmd })
       }
-      term.write('\r\n$ ' + cmd + '\r\n')
+      term.write('\r\nNeptune> ' + cmd + '\r\n')
       this.cliCommand = ''
     },
   }

@@ -2,6 +2,24 @@ module.exports = {
   // Disable ESLint during build to avoid eslint-plugin-vue / parser compatibility issues
   lintOnSave: false,
 
+  // Deprecations: we fixed global built-ins (rgba→color) in our partials; import/legacy-js-api come from Vue CLI/Vuetify
+  css: {
+    loaderOptions: {
+      sass: {
+        sassOptions: {
+          quietDeps: true,
+          silenceDeprecations: ['import', 'legacy-js-api'],
+        },
+      },
+      scss: {
+        sassOptions: {
+          quietDeps: true,
+          silenceDeprecations: ['import', 'legacy-js-api'],
+        },
+      },
+    },
+  },
+
   configureWebpack: {
     devtool: 'source-map'
   },
