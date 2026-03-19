@@ -147,7 +147,7 @@
             icon: 'mdi-code-tags',
             iconColor: 'primary',
             title: 'Open Source',
-            text: 'Source code available at https://github.com/CIDARLAB',
+            text: 'Neptune engine: https://github.com/CIDARLAB/Neptune_2026\nGUI: https://github.com/CIDARLAB/NeptuneGUI_2026',
             },
             {
             icon: 'mdi-code-tags',
@@ -201,4 +201,5 @@
     .v-list-item__subtitle
       -webkic-line-clamp: initial
       -webkit-box-orient: initial
+      white-space: pre-line
 </style>

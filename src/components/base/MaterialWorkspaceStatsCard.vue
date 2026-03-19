@@ -28,6 +28,7 @@
       </span> 
       <span class="text--darken-4"> {{ name }} </span>
       <v-btn 
+        v-if="(ext || '').toLowerCase() !== '.log' && (ext || '').toLowerCase() !== '.json'"
         text 
         icon 
         color="blue"
@@ -42,6 +43,23 @@
         @click="deletefile(id)"
         >
           <v-icon>mdi-delete</v-icon>
+      </v-btn>
+      <v-btn
+        text
+        icon
+        color="green"
+        @click="$emit('download', { id, name })"
+      >
+        <v-icon>mdi-download</v-icon>
+      </v-btn>
+      <v-btn
+        v-if="(ext || '').toLowerCase() === '.json'"
+        text
+        icon
+        color="purple"
+        @click="$emit('view3duf', { id, name })"
+      >
+        <v-icon>mdi-vector-square</v-icon>
       </v-btn>
       <v-divider />
     </v-col>
@@ -118,6 +136,10 @@
         type: String,
         default: undefined
       },
+      ext: {
+        type: String,
+        default: undefined,
+      },
     },
 
     methods: {
@@ -142,6 +164,11 @@
               .catch((error)=>{ console.log(error) })
       },
       editfile(id){
+        // For .log and .json files, keep cards read-only (no editor open)
+        const lowerExt = (this.ext || '').toLowerCase()
+        if (lowerExt === '.log' || lowerExt === '.json') {
+          return
+        }
         console.log("edit:",id)
         this.$store.commit('SET_CURRENT_FILE', id)
         router.push('/editor')

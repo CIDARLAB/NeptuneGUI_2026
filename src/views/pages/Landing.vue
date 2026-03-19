@@ -33,16 +33,16 @@
             <span class="landing-btn-text">Register</span>
           </v-btn>
           <v-btn
-            outlined
             class="ma-2"
+            color="silverGrey"
             large
             @click="continueAsGuest"
           >
-            <span class="landing-btn-text">Continue as Guest</span>
+            <span class="landing-btn-text">Guest Mode</span>
           </v-btn>
         </div>
-        <p class="mt-3 grey--text landing-guest-text">
-          Guest: try the app without an account. Your data is temporary and will be cleared when you close the tab.
+        <p class="mt-3 landing-guest-text">
+          GUEST MODE: use without an account. Data is stored in this browser; you can export to a file (any path) and later restore by importing that file.
         </p>
       </v-col>
     </v-row>
@@ -51,11 +51,12 @@
 
 <style scoped>
 .landing-btn-text {
-  font-size: 1rem;
+  font-size: 1.125rem; /* +2pt from 1rem */
   font-weight: 500;
 }
 .landing-guest-text {
-  font-size: 1.125rem;
+  font-size: 16pt;
+  color: rgba(255, 255, 255, 0.95);
 }
 </style>
 

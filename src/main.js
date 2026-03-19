@@ -50,8 +50,9 @@ Vue.config.productionTip = false;
 const socketUrl = process.env.VUE_APP_SOCKET_URL || "http://" + window.location.hostname + ":3000";
 Vue.use(
   new VueSocketIO({
-    debug: true,
-    connection: socketUrl
+    debug: false,
+    connection: socketUrl,
+    options: { reconnection: false }
     // vuex: {
     //     store,
     //     actionPrefix: 'SOCKET_',

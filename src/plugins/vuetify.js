@@ -11,6 +11,7 @@ const theme = {
   secondary: '#00838F',
   accent: '#00ACC1',
   info: '#00CAE3',
+  silverGrey: '#8d99a0', // cool silver grey to pair with primary
 }
 
 export default new Vuetify({

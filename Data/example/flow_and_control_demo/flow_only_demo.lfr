@@ -1,0 +1,8 @@
+// Example 1: Flow-layer only (no control).
+// Two inlets mix into one outlet. Should compile to MINT + JSON with flow components/channels only.
+module flow_only_demo(
+    finput inlet_1, inlet_2,
+    foutput outlet_1
+);
+    assign outlet_1 = inlet_1 + inlet_2;
+endmodule

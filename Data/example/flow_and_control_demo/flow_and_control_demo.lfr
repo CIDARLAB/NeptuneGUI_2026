@@ -1,0 +1,23 @@
+// Example: Flow + Control.
+// inlet1, inlet2 -> mixer -> outlet;  inlet3 -> outlet.
+// If c==1: output from mixer; else output from inlet3.
+module flow_and_control_demo(
+    finput inlet1, inlet2, inlet3,
+    foutput outlet,
+    control c
+);
+    flow mixer;
+    assign mixer = inlet1 + inlet2;
+
+    distribute@(c)
+    begin
+        if (c == 1)
+        begin
+            outlet <= mixer;
+        end
+        else
+        begin
+            outlet <= inlet3;
+        end
+    end
+endmodule

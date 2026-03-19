@@ -1,5 +1,5 @@
 <template>
-  <v-container fluid>
+  <v-container fluid class="solutions-page">
     <v-row>
       <v-col
         cols="12"
@@ -51,6 +51,18 @@
                 >
                 mdi-download
               </v-icon>
+              </v-btn>
+              <v-btn
+                color="purple"
+                class="ml-1"
+                fab
+                icon
+                x-small
+                @click="openWorkspace(job)"
+              >
+                <v-icon small>
+                  mdi-folder-open
+                </v-icon>
               </v-btn>
               <v-btn
                 color="blue"
@@ -235,6 +247,19 @@
 
         }
       },
+      openWorkspace (job) {
+        if (!job || !job.files || !job.files.length) return
+        const firstFileId = job.files[0]
+        axios.get('/api/v1/file', { params: { id: firstFileId } })
+          .then((response) => {
+            const wid = response.data.workspaceid || response.data.workspace_id
+            if (!wid) return
+            this.$router.push({ path: '/dashboard', query: { workspace: wid } })
+          })
+          .catch((error) => {
+            console.log(error)
+          })
+      },
       complete (index) {
         this.list[index] = !this.list[index]
       },
@@ -290,6 +315,15 @@
   }
 </script>
 
+<style lang="sass" scoped>
+.solutions-page,
+.solutions-page .v-data-table,
+.solutions-page th,
+.solutions-page td,
+.solutions-page .v-card__title,
+.solutions-page .body-2
+  font-size: 12pt !important
+</style>
 <style lang="sass">
   #coloured-line
     .ct-series-a .ct-line,

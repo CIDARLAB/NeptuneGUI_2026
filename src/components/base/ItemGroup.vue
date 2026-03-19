@@ -76,10 +76,20 @@
     computed: {
       ...mapState(['barColor']),
       children () {
-        return this.item.children.map(item => ({
-          ...item,
-          to: !item.to ? undefined : `${this.item.group}/${item.to}`,
-        }))
+        return this.item.children.map(item => {
+          if (!item.to) return { ...item, to: undefined }
+
+          // If child provides an absolute route (starts with '/'), use it as-is.
+          if (typeof item.to === 'string' && item.to.charAt(0) === '/') {
+            return { ...item, to: item.to }
+          }
+
+          // Otherwise, prefix with this group's base path.
+          return {
+            ...item,
+            to: `${this.item.group}/${item.to}`,
+          }
+        })
       },
       computedText () {
         if (!this.item || !this.item.title) return ''

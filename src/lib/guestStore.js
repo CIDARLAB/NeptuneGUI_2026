@@ -1,13 +1,13 @@
 /**
- * In-memory + sessionStorage store for guest users.
- * Data is lost when the tab is closed (sessionStorage).
+ * Guest workspace storage: localStorage so data survives tab close.
+ * Guest can export to a file (save to a path) and later import from that file to restore.
  */
 
 const KEY = 'neptune_guest_data'
 
 function load () {
   try {
-    const raw = sessionStorage.getItem(KEY)
+    const raw = localStorage.getItem(KEY)
     return raw ? JSON.parse(raw) : { workspaces: [], nextWorkspaceId: 1, nextFileId: 1 }
   } catch (e) {
     return { workspaces: [], nextWorkspaceId: 1, nextFileId: 1 }
@@ -16,10 +16,37 @@ function load () {
 
 function save (data) {
   try {
-    sessionStorage.setItem(KEY, JSON.stringify(data))
+    localStorage.setItem(KEY, JSON.stringify(data))
   } catch (e) {
     console.warn('Guest store: could not save', e)
   }
+}
+
+/** Export full snapshot for saving to a file (user can choose path via Save As). */
+function exportData () {
+  return load()
+}
+
+/** Import from a previously exported JSON; replaces current guest data. */
+function importData (data) {
+  if (!data || !Array.isArray(data.workspaces)) return false
+  let nextW = 1
+  let nextF = 1
+  data.workspaces.forEach(w => {
+    const wid = Number(w._id)
+    if (!isNaN(wid)) nextW = Math.max(nextW, wid + 1)
+    ;(w.files || []).forEach(f => {
+      const fid = Number(f.id)
+      if (!isNaN(fid)) nextF = Math.max(nextF, fid + 1)
+    })
+  })
+  const normalized = {
+    workspaces: data.workspaces,
+    nextWorkspaceId: data.nextWorkspaceId != null ? data.nextWorkspaceId : nextW,
+    nextFileId: data.nextFileId != null ? data.nextFileId : nextF,
+  }
+  save(normalized)
+  return true
 }
 
 function getWorkspaceIds () {
@@ -125,4 +152,6 @@ export default {
   deleteFile,
   load,
   save,
+  exportData,
+  importData,
 }

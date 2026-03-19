@@ -2,20 +2,32 @@
   <v-container fluid tag="section" class="settings-page">
     <v-row justify="center">
       <v-col cols="12" md="8">
-        <v-card outlined class="pa-6 text-center">
-          <v-icon size="64" color="primary" class="mb-4">mdi-cog-outline</v-icon>
+        <v-card outlined class="pa-6">
+          <v-icon size="64" color="primary" class="mb-4 d-block text-center">mdi-cog-outline</v-icon>
           <v-card-title class="primary--text text-h5 justify-center settings-card-title">
             Settings
           </v-card-title>
-          <v-card-subtitle class="mb-4 settings-card-subtitle">
-            Coming soon
-          </v-card-subtitle>
-          <p class="grey--text mb-4">
-            Application settings will be available in a future release.
-          </p>
-          <v-btn color="primary" :to="backRoute">
-            Back to {{ backLabel }}
-          </v-btn>
+
+          <v-card-text>
+            <v-select
+              v-model="fontSize"
+              :items="fontSizeItems"
+              item-text="text"
+              item-value="value"
+              label="Font size"
+              outlined
+              dense
+              hide-details
+              class="mb-4"
+              @change="onFontSizeChange"
+            />
+          </v-card-text>
+
+          <v-card-actions class="justify-center pt-0">
+            <v-btn color="primary" :to="backRoute">
+              Back to {{ backLabel }}
+            </v-btn>
+          </v-card-actions>
         </v-card>
       </v-col>
     </v-row>
@@ -26,12 +38,36 @@
 export default {
   name: 'SettingsPage',
 
+  data () {
+    return {
+      fontSizeItems: [
+        { value: 'large', text: 'LARGE' },
+        { value: 'normal', text: 'NORMAL' },
+        { value: 'small', text: 'SMALL' },
+      ],
+    }
+  },
+
   computed: {
     backRoute () {
-      return { name: 'Dashboard' }
+      return this.$store.getters.canAccessApp ? { name: 'Dashboard' } : { path: '/' }
     },
     backLabel () {
-      return 'Dashboard'
+      return this.$store.getters.canAccessApp ? 'Dashboard' : 'Home'
+    },
+    fontSize: {
+      get () {
+        return this.$store.getters.fontSize || 'normal'
+      },
+      set (v) {
+        this.$store.commit('SET_FONT_SIZE', v)
+      },
+    },
+  },
+
+  methods: {
+    onFontSizeChange () {
+      this.$store.commit('SET_FONT_SIZE', this.fontSize)
     },
   },
 }
@@ -43,8 +79,5 @@ export default {
 }
 .settings-card-title {
   margin-bottom: 1rem;
-}
-.settings-card-subtitle {
-  margin-top: 0;
 }
 </style>

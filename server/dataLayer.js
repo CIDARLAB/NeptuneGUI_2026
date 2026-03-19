@@ -78,6 +78,72 @@ function validateUser (username, password) {
   return u.password === password ? { _id: u._id, username: u.username, email: u.email } : null
 }
 
+const RESET_EXPIRY_MS = 10 * 60 * 1000 // 10 minutes
+
+function getResetPath (username) {
+  const dir = getUserDir(username)
+  return dir ? path.join(dir, 'reset.json') : null
+}
+
+function setResetCode (username, code) {
+  const p = getResetPath(username)
+  if (!p) return false
+  const dir = path.dirname(p)
+  if (!fs.existsSync(dir)) return false
+  fs.writeFileSync(p, JSON.stringify({
+    code: String(code),
+    expiresAt: Date.now() + RESET_EXPIRY_MS,
+  }, null, 2))
+  return true
+}
+
+function getResetCode (username) {
+  const p = getResetPath(username)
+  if (!p || !fs.existsSync(p)) return null
+  try {
+    const data = JSON.parse(fs.readFileSync(p, 'utf8'))
+    if (Date.now() > (data.expiresAt || 0)) return null
+    return data.code || null
+  } catch (e) {
+    return null
+  }
+}
+
+function deleteResetCode (username) {
+  const p = getResetPath(username)
+  if (p && fs.existsSync(p)) fs.unlinkSync(p)
+}
+
+function updateUserPassword (username, newPassword) {
+  const u = getUser(username)
+  if (!u) return false
+  const userPath = getUserPath(username)
+  if (!userPath) return false
+  u.password = newPassword
+  fs.writeFileSync(userPath, JSON.stringify(u, null, 2))
+  return true
+}
+
+function updateUserProfile (oldUsername, { username: newUsername, email }) {
+  const u = getUser(oldUsername)
+  if (!u) return { error: 'User not found' }
+  const oldDir = getUserDir(oldUsername)
+  if (!oldDir || !fs.existsSync(oldDir)) return { error: 'User not found' }
+  const newName = (newUsername != null && newUsername !== '') ? String(newUsername).trim() : u.username
+  const newSafe = newName.replace(/[^a-zA-Z0-9_-]/g, '')
+  if (!newSafe) return { error: 'invalid_username' }
+  if (newName !== oldUsername) {
+    const newDir = path.join(USERS_DIR, newSafe)
+    if (fs.existsSync(newDir)) return { error: 'username_taken' }
+    fs.renameSync(oldDir, newDir)
+    u.username = newName
+  }
+  if (email !== undefined && email !== null) u.email = String(email).trim()
+  const userPath = getUserPath(u.username)
+  fs.writeFileSync(userPath, JSON.stringify(u, null, 2))
+  return { user: { _id: u._id, username: u.username, email: u.email } }
+}
+
 function getTempDir (sessionId) {
   if (!sessionId || sessionId.length > 64) return null
   return path.join(TEMP_DIR, sessionId)
@@ -203,6 +269,29 @@ function deleteFile (session, workspaceId, fileId) {
   saveFiles(session, workspaceId, list)
 }
 
+function getComponentLibraryPath (session) {
+  const dir = ensureSessionDir(session)
+  if (!dir) return null
+  return path.join(dir, 'componentLibrary.json')
+}
+
+function getComponentLibrary (session) {
+  const p = getComponentLibraryPath(session)
+  if (!p || !fs.existsSync(p)) return null
+  try {
+    return JSON.parse(fs.readFileSync(p, 'utf8'))
+  } catch (e) {
+    return null
+  }
+}
+
+function saveComponentLibrary (session, data) {
+  const p = getComponentLibraryPath(session)
+  if (!p) return false
+  fs.writeFileSync(p, JSON.stringify(data, null, 2))
+  return true
+}
+
 module.exports = {
   ensureDirs,
   getAdmin,
@@ -211,6 +300,11 @@ module.exports = {
   getUser,
   createUser,
   validateUser,
+  setResetCode,
+  getResetCode,
+  deleteResetCode,
+  updateUserPassword,
+  updateUserProfile,
   getTempDir,
   getTempOrUserDir,
   ensureSessionDir,
@@ -225,5 +319,7 @@ module.exports = {
   createFile,
   updateFileContent,
   deleteFile,
+  getComponentLibrary,
+  saveComponentLibrary,
   DATA_ROOT,
 }

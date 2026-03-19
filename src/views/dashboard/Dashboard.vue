@@ -51,71 +51,19 @@
           </v-row>
         </base-material-card>
       </v-col> -->
-      <!-- <v-col 
-        cols="12"
-        v-if="selectedworkspace == null"
-        >
-        <v-card
-        >
-          
-            <!-- <v-list-item three-line>
-              <v-list-item-content>
-                <v-list-item-title class="headline mb-1">Getting Started</v-list-item-title>
-              </v-list-item-content>
+      
 
-              <v-list-item-avatar
-                tile
-                size="64"
-              >
-              <img
-                :src="require('@/assets/Neptune2026_logo_white_text.png')"
-                alt="Neptune logo"
-              >
-              </v-list-item-avatar>
-            </v-list-item>
-            -->
-        <!-- <v-card-title>
-            <span class="headline mb-1">Getting Started</span>
-        </v-card-title>
-          <v-card-text>
-            <v-row>
-            <v-col
-              cols="12"
-              md="6"
-              class="mt-10"
-            >
-              <iframe width="100%" height="300px" src="https://www.youtube.com/embed/WO4xAA6XlrY" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-
-
-            </v-col>
-
-            <v-col
-              cols="12"
-              md="6"
-            >
-              <img :src="require('@/assets/Neptune2026_logo_black_text.png')" width="100%" />
-              <br />
-              <br />
-              <br />
-              <p>
-                Neptune is really cool its a tool that lets you synthesize microfluidic designs from a high level specification system.
-              </p>
-            </v-col>
-          </v-row>
-
-          </v-card-text>
-        </v-card>
-      </v-col> -->
-
-
-      <v-col
-        cols="12"
-      >
-        <div
-          class="font-weight-light mt-1"
-          style="font-size: 25px"
-        >
+      <v-col cols="12">
+        <div class="font-weight-light mt-1" style="font-size: 25px">
           Workspaces
+        </div>
+        <div v-if="isGuestLocal" class="guest-storage-hint mt-2">
+          <span class="guest-storage-text">
+            Guest data is stored in this browser. Export to a cache file (you choose the path) and later update from that file to restore your previous workspaces.
+          </span>
+          <v-btn small outlined color="primary" class="ml-2 mt-1" @click="exportGuestWorkspace">Export cache to file</v-btn>
+          <v-btn small outlined color="primary" class="ml-2 mt-1" @click="triggerImportGuestFile">Update cache from file</v-btn>
+          <input ref="guestImportInput" type="file" accept=".zip,application/zip" style="display: none" @change="onImportGuestFile">
         </div>
       </v-col>
       <v-col
@@ -239,11 +187,14 @@
                         title="File Type:"
                         :value="file.ext"
                         :name="file.name"
+                        :ext="file.ext"
                         sub-icon="mdi-clockwise-outline"
                         :sub-text="'Last edited: ' + (file.updated_at ? formattimestamp(file.updated_at) : (file.created_at ? formattimestamp(file.created_at) : '—'))"
                         :id="file.id"
                         :workspaceid="selectedworkspace._id"
                         v-on:onFileDeleted="refreshFiles"
+                        @download="downloadWorkspaceFile(file)"
+                        @view3duf="openJsonIn3DuF(file)"
                     />
                 </v-col>
                 <v-col
@@ -325,13 +276,12 @@
   import { log } from 'util'
   import * as Utils from '../../utils'
   import guestStore from '@/lib/guestStore'
+  import JSZip from 'jszip'
 
   export default {
     name: 'DashboardDashboard',
 
     mounted: async function() {
-        // console.log('Selected Workspace:', this.selectedworkspace, currentworkspace)
-        // console.log(this.$store.getters.userID)
         this.refreshworkspacedata()
     },
     data: () => ({
@@ -373,9 +323,168 @@
       totalSales () {
         return this.sales.reduce((acc, val) => acc + val.salesInM, 0)
       },
+      isGuestLocal () {
+        return this.$store.getters.isGuest && !this.$store.getters.isGuestViaServer
+      },
     },
 
     methods: {
+      async exportGuestWorkspace () {
+        const data = guestStore.exportData()
+        const zip = new JSZip()
+
+        // Global index for IDs etc.
+        zip.file('index.json', JSON.stringify({
+          nextWorkspaceId: data.nextWorkspaceId,
+          nextFileId: data.nextFileId,
+        }, null, 2))
+
+        // Workspaces: each workspace in its own folder
+        data.workspaces.forEach((w, idx) => {
+          const safeName = (w.name || `workspace_${w._id || idx + 1}`).replace(/[^a-zA-Z0-9_-]/g, '_')
+          const folderName = `workspace_${w._id || (idx + 1)}_${safeName}`
+          const folder = zip.folder(folderName)
+          if (!folder) return
+
+          const meta = {
+            _id: w._id,
+            name: w.name,
+            notes: w.notes,
+            updated_at: w.updated_at,
+            created_at: w.created_at,
+          }
+          folder.file('metadata.json', JSON.stringify(meta, null, 2))
+
+          ;(w.files || []).forEach((f, fi) => {
+            const base = (f.name || `file_${fi + 1}`).replace(/[^a-zA-Z0-9_-]/g, '_')
+            const ext = f.ext && f.ext.startsWith('.') ? f.ext : (f.ext ? `.${f.ext}` : '')
+            const filename = `${base}${ext || '.txt'}`
+            folder.file(filename, f.content || '')
+          })
+        })
+
+        const blob = await zip.generateAsync({ type: 'blob' })
+        const a = document.createElement('a')
+        a.href = URL.createObjectURL(blob)
+        const date = new Date()
+        const stamp = [
+          date.getFullYear(),
+          String(date.getMonth() + 1).padStart(2, '0'),
+          String(date.getDate()).padStart(2, '0'),
+          '-',
+          String(date.getHours()).padStart(2, '0'),
+          String(date.getMinutes()).padStart(2, '0'),
+        ].join('')
+        a.download = `neptune_guest_workspace_${stamp}.zip`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(a.href)
+      },
+      triggerImportGuestFile () {
+        this.$refs.guestImportInput && this.$refs.guestImportInput.click()
+      },
+      async onImportGuestFile (e) {
+        const file = e.target.files && e.target.files[0]
+        if (!file) return
+        try {
+          const zip = await JSZip.loadAsync(file)
+          const workspaces = []
+          let nextWorkspaceId = 1
+          let nextFileId = 1
+
+          // Read global index if present
+          if (zip.files['index.json']) {
+            try {
+              const indexStr = await zip.files['index.json'].async('string')
+              const index = JSON.parse(indexStr)
+              if (index.nextWorkspaceId) nextWorkspaceId = index.nextWorkspaceId
+              if (index.nextFileId) nextFileId = index.nextFileId
+            } catch (_) {}
+          }
+
+          const folderNames = Object.keys(zip.files)
+            .filter(name => name.endsWith('/'))
+            .filter(name => name.startsWith('workspace_'))
+
+          for (const folderName of folderNames) {
+            const metaFile = zip.file(`${folderName}metadata.json`)
+            if (!metaFile) continue
+            let meta
+            try {
+              const metaStr = await metaFile.async('string')
+              meta = JSON.parse(metaStr)
+            } catch (err) {
+              // eslint-disable-next-line no-console
+              console.error('Failed to parse workspace metadata', err)
+              continue
+            }
+
+            const files = []
+            Object.keys(zip.files)
+              .filter(name => name.startsWith(folderName) && name !== `${folderName}metadata.json` && !name.endsWith('/'))
+              .forEach((name, idx) => {
+                const entry = zip.files[name]
+                const short = name.substring(folderName.length)
+                const dot = short.lastIndexOf('.')
+                const fileBase = dot > 0 ? short.substring(0, dot) : short
+                const ext = dot > 0 ? short.substring(dot) : ''
+                files.push({
+                  id: String(nextFileId++),
+                  name: fileBase,
+                  ext,
+                  content: null,
+                  _entry: entry,
+                })
+              })
+
+            // Load file contents
+            for (const f of files) {
+              try {
+                // All workspace files are text-based
+                // eslint-disable-next-line no-await-in-loop
+                f.content = await f._entry.async('string')
+              } catch (err) {
+                f.content = ''
+              }
+              delete f._entry
+            }
+
+            workspaces.push({
+              _id: meta._id != null ? meta._id : String(nextWorkspaceId++),
+              name: meta.name || 'Guest Workspace',
+              notes: meta.notes || '',
+              files,
+              updated_at: meta.updated_at || new Date().toISOString(),
+              created_at: meta.created_at || undefined,
+            })
+          }
+
+          const payload = {
+            workspaces,
+            nextWorkspaceId,
+            nextFileId,
+          }
+
+          if (guestStore.importData(payload)) {
+            this.refreshworkspacedata()
+            this.$store.commit('SET_WORKSPACE', null)
+            if (this.workspaces.length) this.selectworkspace(this.workspaces[0]._id)
+          }
+        } catch (err) {
+          console.error('Import failed', err)
+        } finally {
+          e.target.value = ''
+        }
+      },
+      downloadWorkspaceFile (file) {
+        if (!file || !file.id) return
+        this.downloadfile(file)
+      },
+      openJsonIn3DuF (file) {
+        // Placeholder: for now just open 3DuF site in a new tab.
+        window.open('https://3duf.org', '_blank')
+      },
       formattimestamp(datestring){
         return Utils.getprettytimestamp(datestring)
       },
@@ -392,7 +501,10 @@
               this.workspaces.push(w)
               this.workspacesobjects[w._id] = w
             })
-            if (this.$store.getters.currentWorkspace) {
+            const target = this.$route && this.$route.query && this.$route.query.workspace
+            if (target && this.workspacesobjects[target]) {
+              this.selectworkspace(target)
+            } else if (this.$store.getters.currentWorkspace) {
               this.selectworkspace(this.$store.getters.currentWorkspace._id)
             }
             return
@@ -556,9 +668,9 @@
     #dashboard .v-btn.primary .v-icon { color: #006994 !important; }
     #dashboard .v-btn.error .v-icon { color: #f44336 !important; }
 
-    /* Create workspace hint: more space, larger and prominent text */
+    /* Create workspace hint: Editor explanation line */
     .create-workspace-hint {
-        font-size: calc(1.1rem + 2pt);
+        font-size: 14pt;
         line-height: 1.6;
         color: rgba(0, 0, 0, 0.87);
     }
@@ -570,7 +682,14 @@
         font-weight: 600;
         text-decoration: underline;
     }
-    .create-workspace-hint .editor-link:hover {
-        color: #00838F;
-    }
+.create-workspace-hint .editor-link:hover {
+    color: #00838F;
+}
+.guest-storage-hint {
+    font-size: 14pt;
+}
+.guest-storage-text {
+    display: inline-block;
+    max-width: 640px;
+}
 </style>

@@ -1,457 +1,450 @@
 <template>
   <v-container fluid>
     <v-row>
-      <span class="display-4">COMING SOON... </span>
-      <!-- <v-col
-        cols="12"
-        lg="4"
-      >
-        <base-material-chart-card
-          :data="dailySalesChart.data"
-          :options="dailySalesChart.options"
-          color="success"
-          type="Line"
-          class="px-4 py-3"
-        >
-          <h4 class="display-1 font-weight-light mt-2">
-            Rounded Line Chart
-          </h4>
-
-          <div class="grey--text font-weight-light">
-            Line Chart
-          </div>
-        </base-material-chart-card>
-      </v-col>
-
-      <v-col
-        cols="12"
-        lg="4"
-      >
-        <base-material-chart-card
-          :data="emailsSubscriptionChart.data"
-          :options="emailsSubscriptionChart.options"
-          :responsive-options="emailsSubscriptionChart.responsiveOptions"
-          color="orange darken-1"
-          type="Line"
-          class="px-4 py-3"
-        >
-          <h4 class="display-1 font-weight-light mt-2">
-            Line Chart With Points
-          </h4>
-
-          <div class="grey--text font-weight-light">
-            Straight Lines Chart
-          </div>
-        </base-material-chart-card>
-      </v-col>
-
-      <v-col
-        cols="12"
-        lg="4"
-      >
-        <base-material-chart-card
-          :data="dataCompletedTasksChart.data"
-          :options="dataCompletedTasksChart.options"
-          color="info"
-          type="Bar"
-          class="px-4 py-3"
-        >
-          <h4 class="display-1 font-weight-light mt-2">
-            Simple Bar Chart
-          </h4>
-
-          <div class="grey--text font-weight-light">
-            Last Last Campaign Performance
-          </div>
-        </base-material-chart-card>
-      </v-col>
-
-      <v-col
-        cols="12"
-        lg="6"
-      >
-        <base-material-card
-          id="coloured-line"
-          color="info"
-          icon="mdi-chart-timeline-variant"
-          class="px-4 py-3"
-        >
-          <template v-slot:after-heading>
-            <div class="display-1 mt-2 font-weight-light">
-              Coloured Line Chart
-              <span class="subtitle-1">— Rounded</span>
-            </div>
-          </template>
-
-          <chartist
-            :data="colouredLine.data"
-            :options="colouredLine.options"
-            type="Line"
-            style="max-height: 150px;"
-            class="mt-3"
-          />
-        </base-material-card>
-        <div class="py-3" />
-        <base-material-card
-          id="coloured-line"
-          color="warning"
-          icon="mdi-chart-timeline-variant"
-          class="px-4 py-3"
-        >
-          <template v-slot:after-heading>
-            <div class="display-1 font-weight-light mt-2">
-              Coloured Line Chart
-              <span class="subtitle-1">— Multiple</span>
-            </div>
-          </template>
-
-          <chartist
-            :data="multipleLine.data"
-            :options="multipleLine.options"
-            type="Line"
-            style="max-height: 150px;"
-            class="mt-3"
-          />
-        </base-material-card>
-      </v-col>
-
-      <v-col
-        cols="12"
-        lg="6"
-      >
-        <base-material-card
-          id="multiple-bar"
-          color="success"
-          icon="mdi-poll-box"
-          class="px-4 py-3"
-        >
-          <template v-slot:after-heading>
-            <div class="display-1 mt-2 font-weight-light">
-              Multiple Bars Chart
-              <span class="subtitle-1">— Bar Chart</span>
-            </div>
-          </template>
-
-          <chartist
-            :data="multipleBar.data"
-            :options="multipleBar.options"
-            type="Bar"
-            style="max-height: 150px;"
-            class="mt-3"
-          />
-        </base-material-card>
-        <div class="py-3" />
-
-        <base-material-card
-          id="pie"
-          color="success"
-          icon="mdi-chart-pie"
-          title="Pie Chart"
-          class="px-4 py-3"
-        >
-          <chartist
-            :data="pie.data"
-            :options="pie.options"
-            type="Pie"
-            style="max-height: 250px;"
-          />
-
-          <v-divider class="ma-3" />
-
-          <div class="px-3">
-            <div class="body-2 text-uppercase grey--text font-weight-bold mb-3">
-              Legend
-            </div>
-
-            <v-row
-              align="center"
-              class="ma-0"
+      <v-col cols="12">
+        <v-card>
+          <v-card-text>
+            <v-data-table
+              :headers="tableHeaders"
+              :items="components"
+              :items-per-page="10"
+              class="component-library-table"
             >
-              <v-avatar
-                class="mr-1"
-                color="info"
-                size="12"
-              />
+              <template v-slot:header.syntax="{ header }">
+                <span>{{ header.text }}</span>
+                <v-tooltip bottom max-width="280">
+                  <template v-slot:activator="{ on, attrs }">
+                    <v-icon small class="ml-1" v-bind="attrs" v-on="on">mdi-help-circle-outline</v-icon>
+                  </template>
+                  <span>Keyword used to call this component in MINT/LFR (e.g. mixer, port, valve).</span>
+                </v-tooltip>
+              </template>
+              <template v-slot:header.picture="{ header }">
+                <span>{{ header.text }}</span>
+                <v-tooltip bottom max-width="280">
+                  <template v-slot:activator="{ on, attrs }">
+                    <v-icon small class="ml-1" v-bind="attrs" v-on="on">mdi-help-circle-outline</v-icon>
+                  </template>
+                  <span>Preview image of the component (.png).</span>
+                </v-tooltip>
+              </template>
+              <template v-slot:header.mintScript="{ header }">
+                <span>{{ header.text }}</span>
+                <v-tooltip bottom max-width="280">
+                  <template v-slot:activator="{ on, attrs }">
+                    <v-icon small class="ml-1" v-bind="attrs" v-on="on">mdi-help-circle-outline</v-icon>
+                  </template>
+                  <span>MINT structural-level description code. Editable per account; guest customizations are cleared when you leave.</span>
+                </v-tooltip>
+              </template>
+              <template v-slot:header.jsonScript="{ header }">
+                <span>{{ header.text }}</span>
+                <v-tooltip bottom max-width="280">
+                  <template v-slot:activator="{ on, attrs }">
+                    <v-icon small class="ml-1" v-bind="attrs" v-on="on">mdi-help-circle-outline</v-icon>
+                  </template>
+                  <span>JSON structural-level description code. Editable per account; guest customizations are cleared when you leave.</span>
+                </v-tooltip>
+              </template>
+              <template v-slot:header.import="{ header }">
+                <span>{{ header.text }}</span>
+                <v-tooltip bottom max-width="280">
+                  <template v-slot:activator="{ on, attrs }">
+                    <v-icon small class="ml-1" v-bind="attrs" v-on="on">mdi-help-circle-outline</v-icon>
+                  </template>
+                  <span>Import to workspace: Neptune will use this customized component instead of the default assignment.</span>
+                </v-tooltip>
+              </template>
 
-              <span class="mr-3 font-weight-light">Apple</span>
-
-              <v-avatar
-                class="mr-1"
-                color="warning"
-                size="12"
-              />
-
-              <span class="mr-3 font-weight-light">Samsung</span>
-
-              <v-avatar
-                class="mr-1"
-                color="red"
-                size="12"
-              />
-
-              <span class="mr-3 font-weight-light">Windows Phone</span>
-            </v-row>
-          </div>
-        </base-material-card>
-      </v-col> -->
+              <template v-slot:item.syntax="{ item }">
+                <code class="syntax-cell">{{ item.syntax }}</code>
+              </template>
+              <template v-slot:item.picture="{ item }">
+                <img
+                  v-if="item.picture"
+                  :src="item.picture"
+                  :alt="item.syntax"
+                  class="component-picture"
+                />
+                <span v-else class="grey--text">—</span>
+              </template>
+              <template v-slot:item.mintScript="{ item }">
+                <v-btn small text color="primary" @click="openEditDialog(item, 'mintScript')">
+                  Click to edit
+                </v-btn>
+              </template>
+              <template v-slot:item.jsonScript="{ item }">
+                <v-btn small text color="primary" @click="openEditDialog(item, 'jsonScript')">
+                  Click to edit
+                </v-btn>
+              </template>
+              <template v-slot:item.import="{ item }">
+                <v-btn
+                  small
+                  class="import-btn white--text"
+                  @click="importToWorkspace(item)"
+                >
+                  Yes
+                </v-btn>
+              </template>
+              <template v-slot:body.append>
+                <tr>
+                  <td :colspan="tableHeaders.length" class="text-center py-3">
+                    <v-btn small icon color="primary" @click="addNewComponent">
+                      <v-icon small>mdi-plus</v-icon>
+                    </v-btn>
+                  </td>
+                </tr>
+              </template>
+            </v-data-table>
+          </v-card-text>
+        </v-card>
+      </v-col>
     </v-row>
+    <v-snackbar v-model="snackbar" :color="snackbarColor" :timeout="4000" bottom>
+      {{ snackbarText }}
+    </v-snackbar>
+
+    <v-dialog v-model="editDialog" max-width="700px" persistent>
+      <v-card class="component-library-edit-dialog">
+        <v-card-title class="headline component-edit-dialog-title">
+          Edit {{ editDialogField === 'mintScript' ? 'MINT script' : 'JSON script' }} for \"{{ editDialogSyntax }}\"
+        </v-card-title>
+        <v-card-text>
+          <v-textarea
+            v-model="editDialogValue"
+            outlined
+            rows="12"
+            hide-details="auto"
+            class="example-textarea"
+          />
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn text color="secondary" @click="resetEditDialogToDefault">Back to default</v-btn>
+          <v-btn text color="primary" @click="closeEditDialog">Cancel</v-btn>
+          <v-btn text color="success" @click="saveEditDialog">Save</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
 <script>
-  export default {
-    data () {
-      return {
-        colouredLine: {
-          data: {
-            labels: ["'06", "'07", "'08", "'09", "'10", "'11", "'12", "'13", "'14", "'15"],
-            series: [
-              [275, 500, 290, 55, 700, 700, 500, 750, 630, 900, 930],
-            ],
-          },
-          options: {
-            low: 0,
-            high: 1000, // creative tim: we recommend you to set the high sa the biggest value + something for a better look
-            chartPadding: {
-              top: 0,
-              right: 0,
-              bottom: 0,
-              left: 0,
-            },
-          },
-        },
-        dailySalesChart: {
-          data: {
-            labels: ['M', 'T', 'W', 'T', 'F', 'S', 'S'],
-            series: [
-              [12, 17, 7, 17, 23, 18, 38],
-            ],
-          },
-          options: {
-            low: 0,
-            high: 50, // creative tim: we recommend you to set the high sa the biggest value + something for a better look
-            chartPadding: {
-              top: 0,
-              right: 0,
-              bottom: 0,
-              left: 0,
-            },
-            showPoint: false,
-          },
-        },
-        dataCompletedTasksChart: {
-          data: {
-            labels: ['12am', '3pm', '6pm', '9pm', '12pm', '3am', '6am', '9am'],
-            series: [
-              [230, 750, 450, 300, 280, 240, 200, 190],
-            ],
-          },
-          options: {
-            low: 0,
-            high: 1000, // creative tim: we recommend you to set the high sa the biggest value + something for a better look
-            chartPadding: {
-              top: 0,
-              right: 0,
-              bottom: 0,
-              left: 0,
-            },
-          },
-        },
-        emailsSubscriptionChart: {
-          data: {
-            labels: ['Ja', 'Fe', 'Ma', 'Ap', 'Mai', 'Ju', 'Jul', 'Au', 'Se', 'Oc', 'No', 'De'],
-            series: [
-              [542, 443, 320, 780, 553, 453, 326, 434, 568, 610, 756, 895],
+import axios from 'axios'
+import guestStore from '@/lib/guestStore'
 
-            ],
-          },
-          options: {
-            lineSmooth: this.$chartist.Interpolation.none(),
-            axisX: {
-              showGrid: false,
-            },
-            low: 0,
-            high: 1000,
-            chartPadding: {
-              top: 0,
-              right: 5,
-              bottom: 0,
-              left: 0,
-            },
-          },
-          responsiveOptions: [
-            ['screen and (max-width: 640px)', {
-              seriesBarDistance: 5,
-              axisX: {
-                labelInterpolationFnc: function (value) {
-                  return value[0]
-                },
-              },
-            }],
-          ],
-        },
-        multipleBar: {
-          data: {
-            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-            series: [
-              [542, 443, 320, 780, 553, 453, 326, 434, 568, 610, 756, 895],
-              [400, 200, 250, 575, 450, 300, 285, 370, 370, 410, 620, 690],
-            ],
-          },
-          options: {
-            seriesBarDistance: 10,
-            lineSmooth: this.$chartist.Interpolation.none(),
-            axisX: {
-              showGrid: false,
-            },
-            low: 0,
-            high: 900,
-            chartPadding: {
-              top: 0,
-              right: 5,
-              bottom: 0,
-              left: 0,
-            },
-          },
-          responsiveOptions: [
-            ['screen and (max-width: 640px)', {
-              seriesBarDistance: 5,
-              axisX: {
-                labelInterpolationFnc: function (value) {
-                  return value[0]
-                },
-              },
-            }],
-          ],
-        },
-        multipleLine: {
-          data: {
-            labels: ["'06", "'07", "'08", "'09", "'10", "'11", "'12", "'13", "'14", "'15"],
-            series: [
-              [275, 500, 290, 55, 700, 700, 500, 750, 630, 900, 930],
-              [575, 600, 490, 75, 300, 400, 700, 450, 130, 200, 330],
-              [575, 300, 890, 155, 640, 540, 800, 250, 230, 400, 630],
-            ],
-          },
-          options: {
-            low: 0,
-            high: 1000, // creative tim: we recommend you to set the high sa the biggest value + something for a better look
-            chartPadding: {
-              top: 0,
-              right: 0,
-              bottom: 0,
-              left: 0,
-            },
-          },
-        },
-        pie: {
-          data: {
-            series: [62, 32, 6],
-          },
-          options: {
-            labelInterpolationFnc: (value) => `${value}%`,
-          },
-        },
-        headers: [
-          {
-            sortable: false,
-            text: 'ID',
-            value: 'id',
-          },
-          {
-            sortable: false,
-            text: 'Name',
-            value: 'name',
-          },
-          {
-            sortable: false,
-            text: 'Salary',
-            value: 'salary',
-            align: 'right',
-          },
-          {
-            sortable: false,
-            text: 'Country',
-            value: 'country',
-            align: 'right',
-          },
-          {
-            sortable: false,
-            text: 'City',
-            value: 'city',
-            align: 'right',
-          },
-        ],
-        items: [
-          {
-            id: 1,
-            name: 'Dakota Rice',
-            country: 'Niger',
-            city: 'Oud-Tunrhout',
-            salary: '$35,738',
-          },
-          {
-            id: 2,
-            name: 'Minerva Hooper',
-            country: 'Curaçao',
-            city: 'Sinaai-Waas',
-            salary: '$23,738',
-          },
-          {
-            id: 3,
-            name: 'Sage Rodriguez',
-            country: 'Netherlands',
-            city: 'Overland Park',
-            salary: '$56,142',
-          },
-          {
-            id: 4,
-            name: 'Philip Chanley',
-            country: 'Korea, South',
-            city: 'Gloucester',
-            salary: '$38,735',
-          },
-          {
-            id: 5,
-            name: 'Doris Greene',
-            country: 'Malawi',
-            city: 'Feldkirchen in Kārnten',
-            salary: '$63,542',
-          },
-        ],
-        tabs: 0,
-        list: {
-          0: false,
-          1: false,
-          2: false,
-        },
-      }
-    },
-    methods: {
-      complete (index) {
-        this.list[index] = !this.list[index]
-      },
-    },
+const DEFAULT_COMPONENTS = [
+  {
+    syntax: 'mixer',
+    picture: '',
+    mintScript:
+`// Example MINT-style definition (see Data/example)
+device mixer_1 {
+  channel in1;
+  channel in2;
+  channel out1;
+}
+`,
+    jsonScript:
+`{
+  \"component\": \"mixer\",
+  \"ports\": [\"in1\", \"in2\", \"out1\"],
+  \"type\": \"flow\"
+}
+`,
+    _id: 'mixer',
+  },
+  {
+    syntax: 'port',
+    picture: '',
+    mintScript:
+`// Example MINT-style port
+port p1 {
+  layer control;
+}
+`,
+    jsonScript:
+`{
+  \"component\": \"port\",
+  \"name\": \"p1\",
+  \"layer\": \"control\"
+}
+`,
+    _id: 'port',
+  },
+  {
+    syntax: 'valve',
+    picture: '',
+    mintScript:
+`// Example MINT-style valve
+valve v1 {
+  channel flow;
+  port control;
+}
+`,
+    jsonScript:
+`{
+  \"component\": \"valve\",
+  \"name\": \"v1\",
+  \"connections\": {
+    \"flow\": \"flow\",
+    \"control\": \"control\"
   }
+}
+`,
+    _id: 'valve',
+  },
+  {
+    syntax: 'channel',
+    picture: '',
+    mintScript:
+`// Example MINT-style channel
+channel c1 {
+  width 200um;
+  length 5mm;
+}
+`,
+    jsonScript:
+`{
+  \"component\": \"channel\",
+  \"name\": \"c1\",
+  \"width_um\": 200,
+  \"length_mm\": 5
+}
+`,
+    _id: 'channel',
+  },
+]
+
+export default {
+  name: 'Library',
+  data () {
+    return {
+      components: [],
+      snackbar: false,
+      snackbarText: '',
+      snackbarColor: 'success',
+      tableHeaders: [
+        { text: 'Syntax', value: 'syntax', sortable: true, width: '140px' },
+        { text: 'Picture', value: 'picture', sortable: false, width: '120px' },
+        { text: 'MINT script', value: 'mintScript', sortable: false, width: '180px' },
+        { text: 'JSON script', value: 'jsonScript', sortable: false, width: '180px' },
+        { text: 'Import', value: 'import', sortable: false, width: '120px', align: 'center' },
+      ],
+      editDialog: false,
+      editDialogValue: '',
+      editDialogField: null,
+      editDialogIndex: null,
+      editDialogSyntax: '',
+    }
+  },
+  mounted () {
+    this.loadComponents()
+  },
+  methods: {
+    loadComponents () {
+      const isGuest = this.$store.getters.isGuest && !this.$store.getters.isGuestViaServer
+      if (isGuest) {
+        this.components = this.cloneDefaultComponents()
+        return
+      }
+      const config = { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
+      axios.get('/api/v1/componentLibrary', config)
+        .then((res) => {
+          if (res.data && Array.isArray(res.data.components) && res.data.components.length > 0) {
+            this.components = res.data.components
+          } else {
+            this.components = this.cloneDefaultComponents()
+          }
+        })
+        .catch(() => {
+          this.components = this.cloneDefaultComponents()
+        })
+    },
+    cloneDefaultComponents () {
+      return DEFAULT_COMPONENTS.map(c => ({
+        ...c,
+        mintScript: c.mintScript || '',
+        jsonScript: c.jsonScript || '',
+        picture: c.picture || '',
+      }))
+    },
+    persistIfLoggedIn () {
+      if (this.$store.getters.isGuest && !this.$store.getters.isGuestViaServer) return
+      const config = { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
+      axios.put('/api/v1/componentLibrary', { components: this.components }, config).catch(() => {})
+    },
+    openEditDialog (item, field) {
+      const index = this.components.indexOf(item)
+      if (index === -1) return
+      this.editDialogIndex = index
+      this.editDialogField = field
+      this.editDialogSyntax = item.syntax || ''
+      this.editDialogValue = item[field] || ''
+      this.editDialog = true
+    },
+    closeEditDialog () {
+      this.editDialog = false
+      this.editDialogValue = ''
+      this.editDialogField = null
+      this.editDialogIndex = null
+      this.editDialogSyntax = ''
+    },
+    resetEditDialogToDefault () {
+      if (!this.editDialogField || !this.editDialogSyntax) return
+      const def = DEFAULT_COMPONENTS.find(
+        c => (c.syntax || '').toLowerCase() === String(this.editDialogSyntax).toLowerCase()
+      )
+      if (!def) {
+        this.snackbarText = 'No default exists for this component.'
+        this.snackbarColor = 'warning'
+        this.snackbar = true
+        return
+      }
+
+      const defaultValue = def[this.editDialogField] || ''
+
+      if (this.editDialogIndex != null) {
+        const item = this.components[this.editDialogIndex]
+        if (item) {
+          this.$set(item, this.editDialogField, defaultValue)
+        }
+      }
+
+      this.editDialogValue = defaultValue
+      this.persistIfLoggedIn()
+
+      this.snackbarText = 'Reverted to default ' + (this.editDialogField === 'mintScript' ? 'MINT' : 'JSON') + ' script.'
+      this.snackbarColor = 'success'
+      this.snackbar = true
+
+      this.closeEditDialog()
+    },
+    saveEditDialog () {
+      if (this.editDialogIndex == null || !this.editDialogField) {
+        this.closeEditDialog()
+        return
+      }
+      const item = this.components[this.editDialogIndex]
+      if (item) {
+        this.$set(item, this.editDialogField, this.editDialogValue || '')
+        this.persistIfLoggedIn()
+      }
+      this.closeEditDialog()
+    },
+    addNewComponent () {
+      const syntax = window.prompt('New component syntax (keyword):')
+      if (!syntax) return
+      const trimmed = String(syntax).trim()
+      if (!trimmed) return
+      if (this.components.some(c => (c.syntax || '').toLowerCase() === trimmed.toLowerCase())) {
+        this.snackbarText = 'Syntax already exists.'
+        this.snackbarColor = 'warning'
+        this.snackbar = true
+        return
+      }
+      this.components.push({
+        syntax: trimmed,
+        picture: '',
+        mintScript: '',
+        jsonScript: '',
+      })
+      this.persistIfLoggedIn()
+    },
+    importToWorkspace (item) {
+      const ws = this.$store.getters.currentWorkspace
+      if (!ws || !ws._id) {
+        this.snackbarText = 'Select or create a workspace first.'
+        this.snackbarColor = 'warning'
+        this.snackbar = true
+        return
+      }
+      const fileName = `_component_${(item.syntax || '').replace(/\s+/g, '_')}.json`
+      const payload = {
+        syntax: item.syntax || '',
+        mint: item.mintScript || '',
+        json: item.jsonScript || '',
+      }
+      const content = JSON.stringify(payload, null, 2)
+      const config = { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
+      if (this.$store.getters.isGuest && !this.$store.getters.isGuestViaServer) {
+        let file = guestStore.getFiles(ws._id).find(f => f.name === fileName)
+        if (!file) file = guestStore.createFile(ws._id, fileName, '.json')
+        if (file) guestStore.updateFile(ws._id, file.id, content)
+        this.snackbarText = 'Component imported to workspace (guest).'
+        this.snackbarColor = 'success'
+        this.snackbar = true
+        return
+      }
+      axios.post('/api/v1/file', { workspaceid: ws._id, file_name: fileName, ext: '.json' }, config)
+        .then((res) => {
+          const fileId = res.data.id
+          return axios.put('/api/v1/file', { fileid: fileId, text: content }, config)
+        })
+        .then(() => {
+          this.snackbarText = 'Component imported to workspace. Neptune will use this instead of default.'
+          this.snackbarColor = 'success'
+          this.snackbar = true
+        })
+        .catch((err) => {
+          const msg = (err.response && err.response.data && (err.response.data.error || err.response.data.message)) || err.message
+          this.snackbarText = 'Import failed: ' + (msg || 'please try again.')
+          this.snackbarColor = 'error'
+          this.snackbar = true
+        })
+    },
+  },
+}
 </script>
 
-<style lang="sass">
-  #coloured-line
-    .ct-series-a .ct-line,
-    .ct-series-a .ct-point
-      stroke: #00cae3 !important
-
-  #multiple-bar
-    .ct-series-a .ct-bar
-      stroke: #00cae3 !important
-
-    .ct-series-b .ct-bar
-      stroke: #f44336 !important
-
-  #pie
-    .ct-series-a .ct-slice-pie
-      fill: #00cae3 !important
-
-    .ct-series-b .ct-slice-pie
-      fill: #f44336 !important
+<style scoped>
+/* Component Library page: ALL table text 14pt */
+.component-library-table >>> .v-data-table__wrapper table,
+.component-library-table >>> .v-data-table__wrapper table th,
+.component-library-table >>> .v-data-table__wrapper table td,
+.component-library-table >>> .v-data-footer,
+.component-library-table >>> .v-data-footer * {
+  font-size: 14pt !important;
+}
+.component-library-table >>> .v-data-table__wrapper .v-btn,
+.component-library-table >>> .v-data-table__wrapper .v-btn__content,
+.component-library-table >>> .v-data-table__wrapper .v-btn__content > span {
+  font-size: 14pt !important;
+}
+.v-card .v-card__title:not(.component-edit-dialog-title) {
+  font-size: 14pt !important;
+}
+.component-library-table .syntax-cell {
+  font-family: monospace;
+  background: rgba(0, 105, 148, 0.08);
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+.component-picture {
+  max-width: 80px;
+  max-height: 60px;
+  object-fit: contain;
+}
+/* Edit dialog: title 14pt, rest 12pt */
+.component-library-edit-dialog .component-edit-dialog-title {
+  font-size: 14pt !important;
+}
+.component-library-edit-dialog .v-card__text,
+.component-library-edit-dialog .v-card__actions,
+.component-library-edit-dialog .v-btn {
+  font-size: 12pt !important;
+}
+.example-textarea >>> .v-input__slot textarea {
+  font-family: monospace;
+  font-size: 12pt;
+}
+.import-btn {
+  background-color: #4caf50 !important;
+  border-color: #4caf50 !important;
+}
+.theme--dark .import-btn {
+  background-color: #66bb6a !important;
+  border-color: #66bb6a !important;
+}
 </style>

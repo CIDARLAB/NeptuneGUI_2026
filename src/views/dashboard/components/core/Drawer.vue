@@ -33,14 +33,10 @@
 
     <v-divider class="mb-1" />
 
-    <!-- <v-list
-      dense
-      nav
-    >
+    <!-- <v-list dense nav>
       <base-item-group :item="profile" />
-    </v-list> -->
-
-    <!-- <v-divider class="mb-2" /> -->
+    </v-list>
+    <v-divider class="mb-2" /> -->
 
     <v-list
       expand
@@ -90,7 +86,7 @@
     },
 
     data: () => ({
-      logo: require('@/assets/Neptune2026_logo.png'),
+      logo: require('@/assets/Neptune2026_logo_white_text.png'),
       items: [
         {
           icon: 'mdi-view-dashboard',
@@ -287,15 +283,15 @@
           title: this.$t('avatar'),
           children: [
             {
-              href: '',
+              to: '/user',
               title: this.$t('my-profile'),
             },
             {
-              to: '',
+              to: '/profile',
               title: this.$t('edit-profile'),
             },
             {
-              to: '',
+              to: '/settings',
               title: this.$t('settings'),
             },
           ],
@@ -326,6 +322,9 @@
   @import '~vuetify/src/styles/tools/_rtl.sass'
 
   #core-navigation-drawer
+    .v-list-item,
+    .v-list-item__title
+      font-size: 14pt !important
     &.v-navigation-drawer--mini-variant
       .v-list-item
         justify-content: flex-start !important
@@ -397,11 +396,12 @@
     overflow: hidden;
   }
   .drawer-logo-item .v-list-item__content {
-    padding-left: 25%;
+    padding-left: 12px;
+    justify-content: flex-start;
   }
   .v-navigation-drawer--mini-variant .drawer-logo-item .v-list-item__content {
-    padding-left: 0;
-    justify-content: center;
+    padding-left: 12px;
+    justify-content: flex-start;
   }
   .drawer-logo-img {
     max-height: 40px;

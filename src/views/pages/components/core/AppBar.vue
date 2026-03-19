@@ -2,6 +2,7 @@
   <v-app-bar
     absolute
     color="transparent"
+    dark
     flat
     height="85"
   >
@@ -12,6 +13,15 @@
         v-text="title"
       />
       <v-spacer />
+      <v-btn
+        to="/settings"
+        text
+        dark
+        class="hidden-sm-and-down"
+      >
+        <v-icon left>mdi-cog-outline</v-icon>
+        Settings
+      </v-btn>
     </v-container>
   </v-app-bar>
 </template>
@@ -24,7 +34,7 @@
       titles: {
         '/': '',
         '/login': '',
-        '/register': 'Register',
+        '/register': '',
         '/license': 'License',
       },
     }),
@@ -32,7 +42,7 @@
     computed: {
       title () {
         const path = this.$route.path
-        return path in this.titles ? this.titles[path] : 'Neptune'
+        return path in this.titles ? this.titles[path] : ''
       },
     },
   }

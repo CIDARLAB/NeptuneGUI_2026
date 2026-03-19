@@ -35,6 +35,12 @@ export default new Router({
           component: () => import('@/views/pages/License'),
           meta: { requiresAuth: false }
         },
+        {
+          name: 'SettingsPublic',
+          path: 'settings',
+          component: () => import('@/views/dashboard/pages/SettingsPage'),
+          meta: { requiresAuth: false }
+        },
       ],
     },
     {

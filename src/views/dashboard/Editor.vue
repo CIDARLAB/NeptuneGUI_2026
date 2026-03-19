@@ -7,13 +7,36 @@
   >
     <v-row>
       <v-col cols="12" class="pt-0 d-flex align-center flex-wrap editor-toolbar">
-        <v-btn class="editor-toolbar-btn editor-toolbar-btn-1" small @click="saveFile">Save file</v-btn>
-        <v-btn class="editor-toolbar-btn editor-toolbar-btn-2" small @click="saveFileAndCompile">Save file and compile</v-btn>
-        <v-btn class="editor-toolbar-btn editor-toolbar-btn-3" small @click="saveToNewWorkspace">Save file to a new workspace</v-btn>
-        <v-btn class="editor-toolbar-btn editor-toolbar-btn-4" small @click="openExistingWorkspaceDialog">Save file to an existing workspace</v-btn>
-        <v-btn class="editor-toolbar-btn editor-toolbar-btn-5" small @click="downloadfile">Download</v-btn>
-        <v-btn class="editor-toolbar-btn editor-toolbar-btn-6" small @click="triggerUpload">Upload</v-btn>
+        <v-menu offset-y left close-on-content-click>
+          <template v-slot:activator="{ on, attrs }">
+            <v-btn class="editor-toolbar-btn editor-toolbar-btn-1" small v-bind="attrs" v-on="on">
+              Save file
+              <v-icon right small>mdi-menu-down</v-icon>
+            </v-btn>
+          </template>
+          <v-list dense>
+            <v-list-item @click="saveFile">
+              <v-list-item-title>Save file</v-list-item-title>
+            </v-list-item>
+            <v-list-item @click="saveFileAndCompile">
+              <v-list-item-title>Save file and compile</v-list-item-title>
+            </v-list-item>
+            <v-list-item @click="saveToNewWorkspace">
+              <v-list-item-title>Save file to a new workspace</v-list-item-title>
+            </v-list-item>
+            <v-list-item @click="openExistingWorkspaceDialog">
+              <v-list-item-title>Save file to an existing workspace</v-list-item-title>
+            </v-list-item>
+          </v-list>
+        </v-menu>
+        <v-btn class="editor-toolbar-btn editor-toolbar-btn-2" small @click="openCompile">Compile</v-btn>
+        <v-btn class="editor-toolbar-btn editor-toolbar-btn-3" small @click="downloadfile">Download</v-btn>
+        <v-btn class="editor-toolbar-btn editor-toolbar-btn-4" small @click="triggerUpload">Upload</v-btn>
         <v-btn class="editor-toolbar-btn editor-toolbar-btn-delete" small color="error" @click="deletefile">Delete</v-btn>
+        <v-spacer />
+        <v-btn class="editor-toolbar-btn editor-toolbar-btn-agent" small outlined color="primary" @click="sendSelectionToAgent">
+          Ask Agent about selection
+        </v-btn>
         <input ref="fileUploadInput" type="file" accept=".mint,.lfr,.uf,.v,.json,.ini,text/*" style="display: none" @change="uploadfile">
       </v-col>
     </v-row>
@@ -31,6 +54,7 @@
             class="script-language-select"
             color="primary"
             style="max-width: 260px;"
+            :menu-props="{ contentClass: 'script-language-select-menu' }"
           >
             <template v-slot:append-inner>
               <span class="script-language-arrow" aria-hidden="true">▼</span>
@@ -42,7 +66,7 @@
     </v-row>
 
     <v-row align="stretch">
-      <v-col cols="12" sm="8" class="pt-0 d-flex">
+      <v-col cols="12" class="pt-0 d-flex">
         <v-card class="mt-0 editor-script-card flex d-flex flex-column" style="width: 100%;">
           <v-progress-linear
             :indeterminate="isloading"
@@ -64,7 +88,7 @@
                 />
                 <span class="editor-page-filename-ext">.{{ selectedScriptLanguage }}</span>
               </div>
-              <v-list-item-subtitle class="mt-1">Current workspace: <span v-text="currentWorkspaceLabel"></span></v-list-item-subtitle>
+              <v-list-item-subtitle class="mt-1 editor-workspace-subtitle">Current workspace: <span v-text="currentWorkspaceLabel"></span></v-list-item-subtitle>
             </v-list-item-content>
           </v-list-item>
           <v-list-item three-line v-else class="new-script-filename-row">
@@ -82,7 +106,7 @@
                 />
                 <span class="editor-page-filename-ext">.{{ selectedScriptLanguage }}</span>
               </div>
-              <v-list-item-subtitle class="mt-1" v-text="newScriptWorkspaceSubtitle"></v-list-item-subtitle>
+              <v-list-item-subtitle class="mt-1 editor-workspace-subtitle" v-text="newScriptWorkspaceSubtitle"></v-list-item-subtitle>
             </v-list-item-content>
           </v-list-item>
           <v-card-text class="red--text text--darken-4 editor-card-text">
@@ -91,31 +115,10 @@
               class="editor"
               v-model="code"
               :language="editorLanguage"
-              :options="editorOptions"
+              :options="editorOptionsWithTheme"
               @editorWillMount="editorWillMount"
+              @editorDidMount="onEditorDidMount"
             />
-          </v-card-text>
-        </v-card>
-      </v-col>
-      <v-col cols="12" sm="4" class="pt-0 d-flex">
-        <v-card class="mt-0 neptune-console-card flex d-flex flex-column" style="width: 100%;">
-          <v-card-text class="neptune-console-content">
-            <div class="neptune-console-title">Neptune Console</div>
-            <p class="neptune-console-desc">Linked to Neptune_2026. Compile output and CLI output appear below. The terminal is output-only; use the command bar above to send input.</p>
-            <div class="d-flex align-center neptune-console-run-row">
-              <v-text-field
-                v-model="cliCommand"
-                label="Run command"
-                placeholder="e.g. compile, run script..."
-                outlined
-                dense
-                hide-details
-                class="mr-2 flex-grow-1"
-                @keydown.enter.prevent="sendCliCommand"
-              />
-              <v-btn color="primary" small @click="sendCliCommand">Run</v-btn>
-            </div>
-            <div id="terminal" class="neptune-console-terminal"></div>
           </v-card-text>
         </v-card>
       </v-col>
@@ -208,7 +211,8 @@ import { Terminal } from 'xterm'
 import router from '../../router'
 import guestStore from '@/lib/guestStore'
 
-const term = new Terminal();
+const term = new Terminal()
+let initialPromptWritten = false
 
 export default {
   name: "Editor",
@@ -218,17 +222,50 @@ export default {
   },
   mounted: function () {
     const self = this
+    this.fetchComponentLibraryAndUpdateLfrHighlighting()
+
+    this.$root.$on('agent-insert-into-editor', this.handleAgentInsert)
     const terminalEl = document.getElementById('terminal')
     if (terminalEl) {
       term.open(terminalEl)
-      term.setOption('fontSize', 12)
-      term.write('Neptune> ')
+      term.setOption('fontSize', 15)
+      if (!initialPromptWritten) {
+        term.write('Neptune> ')
+        initialPromptWritten = true
+      }
+      // Real terminal: type in the terminal; on Enter send command to Neptune_2026 (same as local terminal in project folder)
+      let lineBuffer = ''
+      term.onData((data) => {
+        const code = data.charCodeAt(0)
+        if (code === 13 || code === 10) {
+          // Enter: send line as CLI command
+          const cmd = lineBuffer.trim()
+          lineBuffer = ''
+          if (self.$socket && self.$socket.connected && cmd) {
+            self.$socket.emit('cli', { command: cmd })
+          }
+          term.write('\r\n')
+          term.write('Neptune> ')
+          return
+        }
+        if (code === 127 || code === 8) {
+          // Backspace
+          if (lineBuffer.length > 0) {
+            lineBuffer = lineBuffer.slice(0, -1)
+            term.write('\b \b')
+          }
+          return
+        }
+        lineBuffer += data
+        term.write(data)
+      })
     }
 
     const currentfile = this.$store.getters.currentFile
     this.currentworkspace = this.$store.getters.currentWorkspace || { name: '' }
     if (currentfile == null || currentfile === '') {
-      this.code = ''
+      this.selectedScriptLanguage = 'lfr'
+      this.loadExampleScript()
       return
     }
 
@@ -279,6 +316,9 @@ export default {
     //     console.log(error)
     //   })
   },
+  beforeDestroy () {
+    this.$root.$off('agent-insert-into-editor', this.handleAgentInsert)
+  },
   data () {
     return {
       isloading: false,
@@ -304,11 +344,20 @@ export default {
       editorOptions: {
         lineNumbers: 'on',
         lineNumbersMinChars: 1,
+        fontSize: 16,
         minimap: { enabled: false },
         scrollBeyondLastLine: false,
         overviewRulerLanes: 0,
+        overviewRulerBorder: false,
         hideCursorInOverviewRuler: true,
         glyphMargin: false,
+        rulers: [],
+        renderIndentGuides: false,
+        guides: {
+          indentation: false,
+          bracketPairs: false,
+          bracketPairsHorizontal: false,
+        },
         scrollbar: {
           vertical: 'auto',
           horizontal: 'auto',
@@ -335,6 +384,15 @@ export default {
       },
       immediate: true,
     },
+    selectedScriptLanguage (newVal, oldVal) {
+      if (oldVal == null) return
+      if (!this.fileobject || !this.fileobject.id) {
+        this.loadExampleScript()
+      }
+    },
+    editorLanguage () {
+      this.$nextTick(() => this.updateLfrFlowVarDecorations())
+    },
   },
   computed: {
     currentWorkspaceLabel () {
@@ -346,6 +404,10 @@ export default {
         return 'Current workspace: None. Workspace name and notes can be set when you Save.'
       }
       return 'Current workspace: ' + this.currentworkspace.name
+    },
+    editorOptionsWithTheme () {
+      const theme = this.editorLanguage === 'lfr' ? 'lfrTheme' : this.editorLanguage === 'mint' ? 'mintTheme' : 'vs'
+      return { ...this.editorOptions, theme }
     },
     editorLanguage () {
       if (this.selectedScriptLanguage === 'mint' || this.selectedScriptLanguage === 'lfr') return this.selectedScriptLanguage
@@ -387,42 +449,167 @@ export default {
 
   },
   methods: {
+    sendSelectionToAgent () {
+      const editor = this._monacoEditor
+      if (!editor) return
+      const model = editor.getModel()
+      if (!model) return
+      const selection = editor.getSelection()
+      const text = selection && !selection.isEmpty()
+        ? model.getValueInRange(selection)
+        : model.getValue()
+      const snippet = (text || '').trim()
+      if (!snippet) return
+      const payload = {
+        text: snippet,
+        language: this.selectedScriptLanguage,
+      }
+      this.$root.$emit('agent-add-message-from-editor', payload)
+    },
+    loadExampleScript () {
+      const lang = (this.selectedScriptLanguage || 'lfr').toLowerCase()
+      axios.get('/api/v1/exampleScript', {
+        params: { lang },
+        withCredentials: true,
+        headers: { 'Content-Type': 'application/json' },
+      })
+        .then((res) => {
+          if (res.data && typeof res.data.code === 'string') {
+            this.code = res.data.code
+            if (res.data.lang) this.selectedScriptLanguage = res.data.lang
+          }
+        })
+        .catch(() => {
+          this.code = ''
+        })
+    },
+    fetchComponentLibraryAndUpdateLfrHighlighting () {
+      const config = { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
+      axios.get('/api/v1/componentLibrary', config)
+        .then((res) => {
+          const components = res.data && Array.isArray(res.data.components) ? res.data.components : []
+          const syntaxList = components.map(c => (c.syntax || '').trim()).filter(Boolean)
+          this._componentLibrarySyntaxList = syntaxList.length ? syntaxList : ['mixer', 'port', 'valve', 'channel']
+          const lfrKeywords = this._baseLfrKeywords || []
+          if (this._monaco && this._buildLfrTokenProvider) {
+            this._monaco.languages.setMonarchTokensProvider('lfr', this._buildLfrTokenProvider(lfrKeywords))
+          } else {
+            this._lfrKeywordsFromLibrary = lfrKeywords
+          }
+          this.updateLfrFlowVarDecorations()
+        })
+        .catch(() => {
+          this._componentLibrarySyntaxList = this._componentLibrarySyntaxList || ['mixer', 'port', 'valve', 'channel']
+        })
+    },
+    applyPendingLfrKeywords () {
+      if (this._lfrKeywordsFromLibrary && this._monaco && this._buildLfrTokenProvider) {
+        this._monaco.languages.setMonarchTokensProvider('lfr', this._buildLfrTokenProvider(this._lfrKeywordsFromLibrary))
+        this._lfrKeywordsFromLibrary = null
+      }
+    },
+    onEditorDidMount (editor) {
+      this._monacoEditor = editor
+      this._lfrFlowVarDecorationIds = []
+      const model = editor.getModel()
+      if (!model) return
+      const updateDecorations = () => this.updateLfrFlowVarDecorations()
+      model.onDidChangeContent(updateDecorations)
+      this.$nextTick(updateDecorations)
+    },
+    updateLfrFlowVarDecorations () {
+      const editor = this._monacoEditor
+      const monaco = this._monaco
+      if (!editor || !monaco) return
+      if (this.editorLanguage !== 'lfr') {
+        if (this._lfrFlowVarDecorationIds && this._lfrFlowVarDecorationIds.length) {
+          editor.deltaDecorations(this._lfrFlowVarDecorationIds, [])
+          this._lfrFlowVarDecorationIds = []
+        }
+        return
+      }
+      const model = editor.getModel()
+      if (!model) return
+      const text = model.getValue()
+      const flowVarNames = this.collectLfrFlowVarNames(text)
+      const componentSyntax = this._componentLibrarySyntaxList || ['mixer', 'port', 'valve', 'channel']
+      const keywordSet = new Set((this._baseLfrKeywords || []).map(k => k.toLowerCase()))
+      const varNames = [...new Set([...flowVarNames, ...componentSyntax])].filter(
+        name => !keywordSet.has(name.toLowerCase())
+      )
+      if (varNames.length === 0) {
+        this._lfrFlowVarDecorationIds = editor.deltaDecorations(this._lfrFlowVarDecorationIds || [], [])
+        return
+      }
+      const ranges = []
+      const escaped = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      for (const name of varNames) {
+        const re = new RegExp('\\b' + escaped(name) + '\\b', 'g')
+        let match
+        while ((match = re.exec(text)) !== null) {
+          const start = model.getPositionAt(match.index)
+          const end = model.getPositionAt(match.index + match[0].length)
+          ranges.push({ range: new monaco.Range(start.lineNumber, start.column, end.lineNumber, end.column), options: { inlineClassName: 'lfr-flowvar-decoration' } })
+        }
+      }
+      this._lfrFlowVarDecorationIds = editor.deltaDecorations(this._lfrFlowVarDecorationIds || [], ranges)
+    },
+    collectLfrFlowVarNames (text) {
+      const names = new Set()
+      const lines = text.split(/\r?\n/)
+      for (const line of lines) {
+        const trimmed = line.trim()
+        if (trimmed.startsWith('//')) continue
+        const m = trimmed.match(/^\s*(finput|foutput)\s+(.+)$/)
+        if (!m) continue
+        const rest = m[2].replace(/\/\/.*$/, '').trim()
+        rest.split(',').forEach(part => {
+          const id = part.trim().match(/^([a-zA-Z_][a-zA-Z0-9_]*)/)
+          if (id) names.add(id[1])
+        })
+      }
+      return Array.from(names)
+    },
     editorWillMount (monaco) {
-      // Register MINT and LFR for syntax highlighting (keywords can be aligned with Neptune_2026 definitions)
-      const mintKeywords = ['channel', 'device', 'mix', 'split', 'valve', 'inlet', 'outlet', 'layer', 'port', 'flow', 'width', 'height', 'length', 'define', 'include']
-      const lfrKeywords = ['layer', 'valve', 'port', 'channel', 'inlet', 'outlet', 'mix', 'split', 'define', 'module', 'input', 'output', 'wire']
+      this._monaco = monaco
       const keywordToken = 'keyword'
+
+      // Minimal highlighting: only core structural keywords
+      const mintKeywords = ['LAYER FLOW', 'END LAYER', 'LAYER CONTROL']
+      const baseLfrKeywords = ['module', 'endmodule']
+
       const registerLang = (id, keywords) => {
         monaco.languages.register({ id })
-        monaco.languages.setMonarchTokensProvider(id, {
+        const provider = {
           tokenizer: {
             root: [
               [new RegExp('\\b(' + keywords.join('|') + ')\\b', 'i'), keywordToken],
-              [/\b\d+\.?\d*\b/, 'number'],
-              [/\/\/.*$/, 'comment'],
-              [/\/\*/, 'comment', '@comment'],
-              [/"[^"]*"/, 'string'],
-              [/'(?:[^'\\]|\\.)*'/, 'string'],
-            ],
-            comment: [
-              [/\*\//, 'comment', '@pop'],
-              [/./, 'comment'],
             ],
           },
-        })
+        }
+        monaco.languages.setMonarchTokensProvider(id, provider)
         monaco.editor.defineTheme(id + 'Theme', {
           base: 'vs',
           inherit: true,
           rules: [
             { token: keywordToken, foreground: '006994', fontStyle: 'bold' },
-            { token: 'number', foreground: '098658' },
-            { token: 'comment', foreground: '6a737d' },
-            { token: 'string', foreground: '032f62' },
           ],
         })
       }
+
       registerLang('mint', mintKeywords)
-      registerLang('lfr', lfrKeywords)
+      registerLang('lfr', baseLfrKeywords)
+    },
+
+    handleAgentInsert (payload) {
+      if (!payload || !payload.code) return
+      const language = payload.language || this.selectedScriptLanguage || 'lfr'
+      if (language !== this.selectedScriptLanguage) {
+        const ok = window.confirm(`Agent suggests code in ${language.toUpperCase()}. Switch Editor language and replace current content?`)
+        if (!ok) return
+        this.selectedScriptLanguage = language
+      }
+      this.code = payload.code
     },
     downloadconfigfiles (event) {
       this.configfiles = []
@@ -519,6 +706,13 @@ export default {
       this.newWorkspaceName = ''
       this.newWorkspaceNotes = ''
       this.saveDialog = true
+    },
+    openCompile () {
+      if (!this.fileobject || !this.fileobject.id) {
+        alert('Save the file first (use Save file from the Save file menu), then use Compile.')
+        return
+      }
+      this.compiledialog = true
     },
     openExistingWorkspaceDialog () {
       if (this.$store.getters.isGuest && !this.$store.getters.isGuestViaServer) {
@@ -678,26 +872,59 @@ export default {
         .then(() => { router.push('/dashboard') })
         .catch((error) => { console.log(error) })
     },
-    downloadfile: function(event) {
-      console.log("download the file");
-      var fileurl = new URL("/api/v1/downloadFile?id=" + this.fileobject.id, document.baseURI);
-      console.log('currentfile: ',this.fileobject.id);
-      // window.open(fileurl, '_blank');
-      let self = this
-      axios({
-        method: 'get',
-        url: fileurl,
-        responseType: 'arraybuffer'
+    downloadfile (event) {
+      const ext = '.' + (this.selectedScriptLanguage || 'mint')
+      const baseName = (this.editableFileBaseName || this.fileobject.name || this.newScriptBaseName || 'script').trim().replace(/\.(mint|lfr)$/i, '') || 'script'
+      const fileName = baseName + ext
+
+      if (this.$store.getters.isGuest && !this.$store.getters.isGuestViaServer) {
+        const blob = new Blob([this.code || ''], { type: 'text/plain;charset=utf-8' })
+        const url = window.URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.setAttribute('download', fileName)
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        window.URL.revokeObjectURL(url)
+        return
+      }
+
+      if (!this.fileobject || !this.fileobject.id) {
+        const blob = new Blob([this.code || ''], { type: 'text/plain;charset=utf-8' })
+        const url = window.URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.setAttribute('download', fileName)
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        window.URL.revokeObjectURL(url)
+        return
+      }
+
+      const self = this
+      axios.get('/api/v1/downloadFile', {
+        params: { id: this.fileobject.id },
+        responseType: 'arraybuffer',
+        withCredentials: true,
+        headers: { 'Content-Type': 'application/json' },
       })
-        .then(function(response) {
-          //response.data.pipe(fs.createWriteStream('ada_lovelace.jpg'))
-          const url = window.URL.createObjectURL(new Blob([response.data]))
+        .then((response) => {
+          const blob = new Blob([response.data], { type: 'text/plain;charset=utf-8' })
+          const url = window.URL.createObjectURL(blob)
           const link = document.createElement('a')
           link.href = url
-          link.setAttribute('download', self.fileobject.name) //or any other extension
+          link.setAttribute('download', self.fileobject.name || fileName)
           document.body.appendChild(link)
           link.click()
-      })
+          document.body.removeChild(link)
+          window.URL.revokeObjectURL(url)
+        })
+        .catch((err) => {
+          const msg = (err.response && err.response.data) ? (typeof err.response.data === 'string' ? err.response.data : (err.response.data.error || err.response.data.message)) : err.message
+          alert('Download failed. ' + (msg || 'Please try again.'))
+        })
     },
     uploadfile (event) {
       const input = event.target
@@ -741,6 +968,10 @@ export default {
       }
       reader.readAsText(file, 'UTF-8')
     },
+    focusTerminal () {
+      const textarea = document.querySelector('#terminal .xterm-helper-textarea')
+      if (textarea) textarea.focus()
+    },
     sendCliCommand () {
       const cmd = (this.cliCommand || '').trim()
       if (!cmd) return
@@ -783,13 +1014,13 @@ export default {
   min-height: 300px;
 }
 .neptune-console-title {
-  font-size: calc(1.1rem + 2pt);
+  font-size: 16pt;
   font-weight: 600;
   color: #006994;
   margin-bottom: 6px;
 }
 .neptune-console-desc {
-  font-size: calc(0.85rem + 2pt);
+  font-size: 12pt;
   color: rgba(0, 0, 0, 0.7);
   margin-bottom: 12px;
   line-height: 1.4;
@@ -800,11 +1031,11 @@ export default {
 .neptune-console-run-row {
   margin-bottom: 12px;
 }
-/* Run command: +4pt larger */
+/* Console: explanatory / run row 12pt */
 .neptune-console-run-row .v-input label,
 .neptune-console-run-row .v-input .v-input__slot input,
 .neptune-console-run-row .v-btn {
-  font-size: calc(1rem + 4pt) !important;
+  font-size: 12pt !important;
 }
 .neptune-console-run-row .v-input label {
   font-weight: 600;
@@ -822,16 +1053,19 @@ export default {
   min-height: 300px;
   height: 100% !important;
 }
-/* Hide xterm's internal helper textarea/measure elements (keep off-screen so input still works) */
-#terminal .xterm-helpers,
-.neptune-console-terminal .xterm-helpers {
+/* Keep xterm focusable so user can type in the terminal (real console). Textarea is positioned over the terminal for input. */
+#terminal .xterm-helpers {
   position: absolute !important;
-  left: -9999px !important;
-  width: 1px !important;
-  height: 1px !important;
-  overflow: hidden !important;
-  opacity: 0 !important;
+  left: 0 !important;
+  top: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
   pointer-events: none !important;
+}
+#terminal .xterm-helper-textarea {
+  pointer-events: auto !important;
+  opacity: 0 !important;
+  caret-color: #fff;
 }
 
 .fab-container {
@@ -865,27 +1099,55 @@ export default {
 .editor-page .editor-toolbar .editor-toolbar-btn-5 { background-color: #00ACC1 !important; border-color: #00ACC1 !important; }
 .editor-page .editor-toolbar .editor-toolbar-btn-6 { background-color: #00CAE3 !important; border-color: #00CAE3 !important; }
 .editor-page .editor-toolbar .editor-toolbar-btn-delete { color: #fff !important; }
-.editor-page .v-card .v-list-item__title,
-.editor-page .v-card .v-list-item__subtitle {
-  font-size: 16px;
+/* File name: label above box light grey; text inside box 14pt, dark blue */
+.editor-page .editor-page-filename-input label,
+.editor-page .new-script-filename-input label {
+  font-size: 14pt !important;
+  font-weight: 600;
+  color: #9e9e9e !important;
+}
+.editor-page .editor-page-filename-input .v-input__slot input,
+.editor-page .new-script-filename-input .v-input__slot input,
+.editor-page .new-script-filename-input .v-input__slot {
+  font-size: 14pt !important;
+  font-weight: 600;
+  color: #006994 !important;
+}
+.editor-page .v-card .v-list-item__subtitle:not(.editor-workspace-subtitle) {
+  font-size: 12pt !important;
+}
+.editor-page .v-card .v-list-item__subtitle.editor-workspace-subtitle,
+.editor-page .v-card .editor-workspace-subtitle.v-list-item__subtitle {
+  font-size: 15pt !important;
+  color: #006994 !important;
+}
+.theme--dark .editor-page .v-card .v-list-item__subtitle.editor-workspace-subtitle,
+.theme--dark .editor-page .v-card .editor-workspace-subtitle.v-list-item__subtitle {
+  color: #00ACC1 !important;
 }
 .editor-page .v-card-title,
 .editor-page .v-card-text.subtitle-1 {
-  font-size: 16px;
+  font-size: 12pt;
 }
 
-/* Script language select: bigger label + selection text */
-.editor-page .script-language-select .v-input__slot,
-.editor-page .script-language-select .v-select__selection {
-  font-size: 20px !important;
-  font-weight: 600;
-  color: #006994;
-}
+/* Script language: label above box light grey; content in box 14pt, dark blue */
 .editor-page .script-language-select label {
-  font-size: 18px !important;
+  font-size: 14pt !important;
   font-weight: 600;
+  color: #9e9e9e !important;
 }
-/* Script language: arrow inside select + text hint on the right */
+.editor-page .script-language-select .v-input__slot input,
+.editor-page .script-language-select .v-select__selection {
+  font-size: 14pt !important;
+  font-weight: 600;
+  color: #006994 !important;
+}
+/* Dropdown list options (when opened) 14pt */
+.script-language-select-menu .v-list-item,
+.script-language-select-menu .v-list-item__title {
+  font-size: 14pt !important;
+}
+/* Script language: arrow + hint 12pt (explanatory) */
 .script-language-wrapper {
   display: inline-flex;
   align-items: center;
@@ -893,16 +1155,16 @@ export default {
   gap: 12px;
 }
 .script-language-wrapper .script-language-arrow {
-  font-size: 20px;
+  font-size: 12pt;
   font-weight: bold;
-  color: #006994;
+  color: #9e9e9e;
   line-height: 1;
 }
 .theme--dark .script-language-wrapper .script-language-arrow {
-  color: #00ACC1;
+  color: #9e9e9e;
 }
 .script-language-hint {
-  font-size: calc(15px + 1pt);
+  font-size: 12pt !important;
   font-weight: 500;
   color: #006994;
 }
@@ -918,19 +1180,21 @@ export default {
   border-radius: 4px;
 }
 
-/* File name: bigger label and input text */
-.editor-page .new-script-filename-input label {
-  font-size: 18px !important;
-  font-weight: 600;
-}
-.editor-page .new-script-filename-input .v-input__slot input,
-.editor-page .new-script-filename-input .v-input__slot {
-  font-size: 18px !important;
-}
 .editor-page-filename-ext {
-  font-size: 20px;
+  font-size: 14pt;
   font-weight: 600;
   color: #006994;
+}
+/* Monaco editor code: 12pt */
+.editor .monaco-editor,
+.editor .monaco-editor .view-lines {
+  font-size: 12pt !important;
+}
+
+/* LFR: finput/foutput variable occurrences (document decoration) */
+.editor .lfr-flowvar-decoration {
+  color: #6f42c1 !important;
+  font-style: italic;
 }
 
 /* Hide Monaco overview ruler (decorationsOverviewRuler) - not needed without minimap */
@@ -938,6 +1202,13 @@ export default {
   display: none !important;
   width: 0 !important;
   min-width: 0 !important;
+}
+
+/* Hide indent guides and any vertical guide lines */
+.editor .indent-guide,
+.editor .line-numbers .indent-guide {
+  display: none !important;
+  width: 0 !important;
 }
 
 /* Line number gutter: reduce to ~1/3 of default width */

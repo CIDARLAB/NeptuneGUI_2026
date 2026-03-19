@@ -135,10 +135,10 @@
       >
           <!-- Logged-in user: Profile, Settings, Logout -->
           <template v-if="!isGuest">
-            <app-bar-item :key="1">
+            <app-bar-item :key="1" to="/user">
               <v-list-item-title v-text="'Profile'" />
             </app-bar-item>
-            <app-bar-item :key="2">
+            <app-bar-item :key="2" to="/settings">
               <v-list-item-title v-text="'Settings'" />
             </app-bar-item>
             <v-divider class="mb-2 mt-2" :key="'d1'" />
@@ -146,8 +146,11 @@
               <v-list-item-title v-text="'Logout'" />
             </app-bar-item>
           </template>
-          <!-- Guest: Login / Register, go to login or register page -->
+          <!-- Guest: Settings, Login, Register -->
           <template v-else>
+            <app-bar-item :key="'guest-settings'" to="/settings">
+              <v-list-item-title v-text="'Settings'" />
+            </app-bar-item>
             <app-bar-item :key="'guest-login'" to="/login">
               <v-list-item-title v-text="'Login'" />
             </app-bar-item>
@@ -175,6 +178,48 @@
         </template> -->
       </v-list>
     </v-menu>
+
+    <!-- Guest logout: ask to export workspace snapshot before leaving -->
+    <v-dialog
+      v-model="guestLogoutDialog"
+      max-width="480"
+      content-class="guest-logout-dialog"
+    >
+      <v-card>
+        <v-card-title class="headline">
+          Leave Neptune?
+        </v-card-title>
+        <v-card-text>
+          If you leave now, any guest-mode workspaces stored in this browser may be cleared.
+          <br><br>
+          You can export the current guest workspace to a local file and restore it later from the Dashboard
+          using “Restore from file”. Registered user workspaces stored on the server are not affected.
+          <br><br>
+          <v-checkbox
+            v-model="dontShowLogoutPromptWeek"
+            label="Do not show this message again for 1 week"
+            hide-details
+          />
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn text @click="cancelLogoutDialog">
+            Cancel
+          </v-btn>
+          <v-btn text color="error" @click="confirmGuestExitWithoutSave">
+            Exit without saving
+          </v-btn>
+          <v-btn
+            text
+            color="primary"
+            :loading="guestExporting"
+            @click="confirmGuestExportAndExit"
+          >
+            Export and exit
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-app-bar>
 </template>
 
@@ -187,6 +232,8 @@
 
   import axios from 'axios'
   import router from '../../../../router'
+  import guestStore from '@/lib/guestStore'
+  import JSZip from 'jszip'
 
   let self = this
   export default {
@@ -240,6 +287,9 @@
           action: 'logout' 
         },
       ],
+      guestLogoutDialog: false,
+      guestExporting: false,
+      dontShowLogoutPromptWeek: false,
     }),
 
     computed: {
@@ -258,25 +308,159 @@
       }),
 
       logout (event, context) {
-        if (this.$store.getters.isGuest) {
-          this.$store.commit('clearGuest')
-          router.push('/')
+        const isGuest = this.$store.getters.isGuest
+
+        // Check if user asked not to see the logout prompt for a week
+        let skipPrompt = false
+        try {
+          const raw = localStorage.getItem('neptune_logout_prompt_snooze_until')
+          if (raw) {
+            const ts = Number(raw)
+            if (!isNaN(ts) && ts > Date.now()) skipPrompt = true
+          }
+        } catch (e) {}
+
+        if (skipPrompt) {
+          // Directly perform logout according to user type
+          if (isGuest) {
+            this.$store.commit('clearGuest')
+            router.push('/')
+          } else {
+            const config = {
+              withCredentials: true,
+              crossorigin: true,
+              headers: { 'Content-Type': 'application/json' },
+            }
+            axios.get('/api/v2/logout', config)
+              .then(() => { router.push('/login') })
+              .catch((error) => { console.log(error) })
+          }
           return
         }
-        const config = {
-          withCredentials: true,
-          crossorigin: true,
-          headers: { 'Content-Type': 'application/json' },
-        }
-        axios.get('/api/v2/logout', config)
-          .then(() => { router.push('/login') })
-          .catch((error) => { console.log(error) })
+
+        // Show common prompt for both guest and registered users
+        this.dontShowLogoutPromptWeek = false
+        this.guestLogoutDialog = true
       },
 
-      clearNotifications: function(event){
+      clearNotifications: function (event) {
         console.log("test", this)
         this.notifications = []
-      }
+      },
+
+      applyLogoutPromptSnoozeIfNeeded () {
+        if (!this.dontShowLogoutPromptWeek) return
+        try {
+          const weekMs = 7 * 24 * 60 * 60 * 1000
+          const until = Date.now() + weekMs
+          localStorage.setItem('neptune_logout_prompt_snooze_until', String(until))
+        } catch (e) {}
+      },
+
+      cancelLogoutDialog () {
+        this.applyLogoutPromptSnoozeIfNeeded()
+        this.guestLogoutDialog = false
+      },
+
+      confirmGuestExitWithoutSave () {
+        const isGuest = this.$store.getters.isGuest
+        this.applyLogoutPromptSnoozeIfNeeded()
+        this.guestLogoutDialog = false
+        if (isGuest) {
+          this.$store.commit('clearGuest')
+          router.push('/')
+        } else {
+          const config = {
+            withCredentials: true,
+            crossorigin: true,
+            headers: { 'Content-Type': 'application/json' },
+          }
+          axios.get('/api/v2/logout', config)
+            .then(() => { router.push('/login') })
+            .catch((error) => { console.log(error) })
+        }
+      },
+
+      async confirmGuestExportAndExit () {
+        const isGuest = this.$store.getters.isGuest
+        this.guestExporting = true
+        try {
+          const data = guestStore.exportData()
+          const zip = new JSZip()
+
+          zip.file('index.json', JSON.stringify({
+            nextWorkspaceId: data.nextWorkspaceId,
+            nextFileId: data.nextFileId,
+          }, null, 2))
+
+          data.workspaces.forEach((w, idx) => {
+            const safeName = (w.name || `workspace_${w._id || idx + 1}`).replace(/[^a-zA-Z0-9_-]/g, '_')
+            const folderName = `workspace_${w._id || (idx + 1)}_${safeName}`
+            const folder = zip.folder(folderName)
+            if (!folder) return
+
+            const meta = {
+              _id: w._id,
+              name: w.name,
+              notes: w.notes,
+              updated_at: w.updated_at,
+              created_at: w.created_at,
+            }
+            folder.file('metadata.json', JSON.stringify(meta, null, 2))
+
+            ;(w.files || []).forEach((f, fi) => {
+              const base = (f.name || `file_${fi + 1}`).replace(/[^a-zA-Z0-9_-]/g, '_')
+              const ext = f.ext && f.ext.startsWith('.') ? f.ext : (f.ext ? `.${f.ext}` : '')
+              const filename = `${base}${ext || '.txt'}`
+              folder.file(filename, f.content || '')
+            })
+          })
+
+          const blob = await zip.generateAsync({ type: 'blob' })
+          const date = new Date()
+          const stamp = [
+            date.getFullYear(),
+            String(date.getMonth() + 1).padStart(2, '0'),
+            String(date.getDate()).padStart(2, '0'),
+            '-',
+            String(date.getHours()).padStart(2, '0'),
+            String(date.getMinutes()).padStart(2, '0'),
+          ].join('')
+          const filename = `neptune_guest_workspace_${stamp}.zip`
+          const url = URL.createObjectURL(blob)
+          const a = document.createElement('a')
+          a.href = url
+          a.download = filename
+          document.body.appendChild(a)
+          a.click()
+          document.body.removeChild(a)
+          URL.revokeObjectURL(url)
+
+          this.applyLogoutPromptSnoozeIfNeeded()
+          this.guestLogoutDialog = false
+
+          if (isGuest) {
+            this.$store.commit('clearGuest')
+            router.push('/')
+          } else {
+            const config = {
+              withCredentials: true,
+              crossorigin: true,
+              headers: { 'Content-Type': 'application/json' },
+            }
+            axios.get('/api/v2/logout', config)
+              .then(() => { router.push('/login') })
+              .catch((error) => { console.log(error) })
+          }
+        } catch (e) {
+          // If export fails, still close dialog but keep session so user can try again
+          // eslint-disable-next-line no-console
+          console.error('Failed to export guest workspace', e)
+          this.guestLogoutDialog = false
+        } finally {
+          this.guestExporting = false
+        }
+      },
     },
   }
 </script>
@@ -303,5 +487,12 @@
 /* Dashboard / Editor page title: larger font */
 .dashboard-appbar-title {
   font-size: 2.5rem;
+}
+</style>
+
+<style>
+/* Guest logout dialog (global styles because dialog is teleported outside scoped root) */
+.guest-logout-dialog .v-card__text {
+  font-size: 14px;
 }
 </style>

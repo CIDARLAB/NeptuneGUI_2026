@@ -8,6 +8,7 @@ export default new Vuex.Store({
     barColor: 'rgba(0, 0, 0, .8), rgba(0, 0, 0, .8)',
     barImage: './images/CNCpic.png',
     drawer: null,
+    fontSize: 'normal',
     isLoggedIn: false,
     isGuest: false,
     isGuestViaServer: false,
@@ -68,7 +69,10 @@ export default new Vuex.Store({
     },
     SET_CURRENT_USER (state, payload) {
       state.currentUser = payload
-    }
+    },
+    SET_FONT_SIZE (state, payload) {
+      state.fontSize = (payload && ['large', 'normal', 'small'].includes(payload)) ? payload : 'normal'
+    },
   },
   getters: {
     userID: state => state.userID,
@@ -79,6 +83,7 @@ export default new Vuex.Store({
     currentWorkspace: state => state.currentWorkspace,
     currentUser: state => state.currentUser,
     canAccessApp: state => state.isLoggedIn || state.isGuest,
+    fontSize: state => state.fontSize,
   },
   actions: {
 

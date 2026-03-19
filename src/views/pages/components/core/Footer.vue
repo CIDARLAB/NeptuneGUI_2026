@@ -40,7 +40,7 @@
           cols="12"
           md="auto"
         >
-          <div class="body-1 font-weight-light pt-6 pt-md-0 text-center">
+          <div class="body-1 font-weight-light pt-6 pt-md-0 text-center footer-copyright">
             &copy; 2026, CIDAR Lab
           </div>
         </v-col>
@@ -66,10 +66,12 @@
 
 <style lang="sass">
   #pages-core-footer
-    a.footer-link, .footer-link
-      color: #FFFFFF
-      font-size: .825rem
+    a, a.footer-link, .footer-link
+      color: #FFFFFF !important
+      font-size: 12pt !important
       font-weight: 500
       text-decoration: none
       text-transform: uppercase
+    .body-1, .footer-copyright
+      font-size: 12pt !important
 </style>

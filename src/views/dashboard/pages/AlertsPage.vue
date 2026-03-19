@@ -7,12 +7,6 @@
           <v-card-title class="primary--text text-h5 justify-center">
             Alerts & Notifications
           </v-card-title>
-          <v-card-subtitle class="mb-4">
-            Coming soon
-          </v-card-subtitle>
-          <p class="grey--text mb-4">
-            Notification history and preferences will be available in a future release.
-          </p>
           <v-btn color="primary" :to="backRoute">
             Back to {{ backLabel }}
           </v-btn>
