@@ -9,6 +9,7 @@ const path = require('path')
 const fs = require('fs')
 const { v4: uuidv4 } = require('uuid')
 const axios = require('axios')
+const JSZip = require('jszip')
 const data = require('./dataLayer')
 
 // Optional: forward compile to Neptune_2026 (e.g. http://localhost:5000)
@@ -254,6 +255,151 @@ app.get('/api/v1/downloadFile', requireAuth, (req, res) => {
   }
   res.status(404).json({ error: 'File not found' })
 })
+
+// ---------- Export: download all workspaces as a ZIP ----------
+app.get('/api/v1/exportWorkspacesZip', requireAuth, async (req, res) => {
+  try {
+    const zip = new JSZip()
+    const workspaces = data.getWorkspaces(req.session) || []
+
+    zip.file('index.json', JSON.stringify({
+      exportedAt: new Date().toISOString(),
+      user: req.session && req.session.id ? String(req.session.id) : undefined,
+      workspaceCount: workspaces.length,
+    }, null, 2))
+
+    const safe = (s) => String(s || '').replace(/[^a-zA-Z0-9_-]/g, '_')
+
+    for (let i = 0; i < workspaces.length; i++) {
+      const w = workspaces[i]
+      const wid = w && w._id != null ? String(w._id) : String(i + 1)
+      const folderName = `workspace_${wid}_${safe(w && w.name ? w.name : 'Workspace')}`
+      const folder = zip.folder(folderName)
+      if (!folder) continue
+
+      folder.file('metadata.json', JSON.stringify({
+        _id: wid,
+        name: w && w.name ? w.name : 'Workspace',
+        notes: w && w.notes ? w.notes : '',
+        updated_at: w && w.updated_at ? w.updated_at : null,
+      }, null, 2))
+
+      const files = data.getFiles(req.session, wid) || []
+      for (let j = 0; j < files.length; j++) {
+        const f = files[j]
+        const base = safe(f && f.name ? f.name : `file_${j + 1}`)
+        const ext = f && f.ext ? (String(f.ext).startsWith('.') ? String(f.ext) : `.${String(f.ext)}`) : ''
+        folder.file(`${base}${ext || '.txt'}`, (f && f.content) ? String(f.content) : '')
+      }
+    }
+
+    const buf = await zip.generateAsync({ type: 'nodebuffer' })
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-')
+    res.setHeader('Content-Type', 'application/zip')
+    res.setHeader('Content-Disposition', `attachment; filename="neptune_workspaces_${stamp}.zip"`)
+    res.send(buf)
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to export workspaces zip' })
+  }
+})
+
+// Import workspaces from a zip file.
+// Request body: application/zip (raw bytes)
+// Query:
+// - dryRun=1: only report conflicts (no changes)
+// - overwrite=1: overwrite conflicting workspaces by name
+app.post(
+  '/api/v1/importWorkspacesZip',
+  requireAuth,
+  express.raw({ type: 'application/zip', limit: '50mb' }),
+  async (req, res) => {
+    try {
+      const buf = req.body
+      if (!buf || !Buffer.isBuffer(buf) || buf.length === 0) {
+        return res.status(400).json({ error: 'Expected application/zip body' })
+      }
+
+      const dryRun = String(req.query.dryRun || '') === '1'
+      const overwrite = String(req.query.overwrite || '') === '1'
+
+      const zip = await JSZip.loadAsync(buf)
+
+      const folderNames = Object.keys(zip.files)
+        .filter(name => name.endsWith('/'))
+        .filter(name => name.startsWith('workspace_'))
+
+      const imported = []
+      for (const folderName of folderNames) {
+        const metaFile = zip.file(`${folderName}metadata.json`)
+        if (!metaFile) continue
+        let meta
+        try {
+          const metaStr = await metaFile.async('string')
+          meta = JSON.parse(metaStr)
+        } catch (_) {
+          continue
+        }
+        const name = String((meta && meta.name) || '').trim()
+        if (!name) continue
+
+        const files = Object.keys(zip.files)
+          .filter(p => p.startsWith(folderName) && p !== `${folderName}metadata.json` && !p.endsWith('/'))
+          .map(p => p.substring(folderName.length))
+        imported.push({ name, folderName, files })
+      }
+
+      const existing = data.getWorkspaces(req.session) || []
+      const byName = new Map(existing.map(w => [String(w.name || '').trim().toLowerCase(), w]))
+      const conflicts = imported
+        .map(w => {
+          const hit = byName.get(String(w.name).toLowerCase())
+          return hit ? { name: w.name, existingWorkspaceId: hit._id } : null
+        })
+        .filter(Boolean)
+
+      if (conflicts.length && !overwrite) {
+        return res.status(409).json({
+          error: 'conflicts',
+          conflicts,
+        })
+      }
+
+      if (dryRun) {
+        return res.json({ ok: true, conflicts: [], importedCount: imported.length })
+      }
+
+      const overwritten = []
+      const created = []
+
+      for (const w of imported) {
+        const hit = byName.get(String(w.name).toLowerCase())
+        if (hit && overwrite) {
+          overwritten.push(w.name)
+          data.deleteWorkspaceDeep(req.session, hit._id)
+        }
+
+        const newWs = data.createWorkspace(req.session, w.name)
+        created.push({ name: newWs.name, workspaceId: newWs._id })
+
+        for (const rel of w.files) {
+          const entry = zip.file(`${w.folderName}${rel}`)
+          if (!entry) continue
+          const content = await entry.async('string')
+          const dot = rel.lastIndexOf('.')
+          const base = dot > 0 ? rel.substring(0, dot) : rel
+          const ext = dot > 0 ? rel.substring(dot) : ''
+          const f = data.createFile(req.session, newWs._id, base, ext)
+          if (!f) continue
+          data.updateFileContent(req.session, newWs._id, f.id, content)
+        }
+      }
+
+      return res.json({ ok: true, importedCount: created.length, overwritten, created })
+    } catch (e) {
+      return res.status(500).json({ error: 'Failed to import zip' })
+    }
+  }
+)
 
 // ---------- Example scripts for Editor (from Data/example/flow_and_control_demo) ----------
 app.get('/api/v1/exampleScript', requireAuth, (req, res) => {

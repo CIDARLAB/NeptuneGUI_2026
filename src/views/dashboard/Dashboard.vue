@@ -54,8 +54,30 @@
       
 
       <v-col cols="12">
-        <div class="font-weight-light mt-1" style="font-size: 25px">
-          Workspaces
+        <div class="d-flex align-center flex-wrap">
+          <div class="font-weight-light mt-1" style="font-size: 25px">
+            Workspaces
+          </div>
+          <v-spacer />
+          <v-btn
+            v-if="isGuestLocal"
+            small
+            color="primary"
+            class="mt-1"
+            @click="exportGuestWorkspace"
+          >
+            Export cache
+          </v-btn>
+          <v-btn
+            small
+            outlined
+            color="primary"
+            class="mt-1 ml-2"
+            @click="triggerImportZip"
+          >
+            <v-icon left small>mdi-upload</v-icon>
+            Import zip
+          </v-btn>
         </div>
         <div v-if="isGuestLocal" class="guest-storage-hint mt-2">
           <span class="guest-storage-text">
@@ -65,7 +87,30 @@
           <v-btn small outlined color="primary" class="ml-2 mt-1" @click="triggerImportGuestFile">Update cache from file</v-btn>
           <input ref="guestImportInput" type="file" accept=".zip,application/zip" style="display: none" @change="onImportGuestFile">
         </div>
+        <input ref="importZipInput" type="file" accept=".zip,application/zip" style="display: none" @change="onImportZip">
       </v-col>
+
+      <v-dialog v-model="importConflictDialog" max-width="560px">
+        <v-card>
+          <v-card-title>Workspace conflicts detected</v-card-title>
+          <v-card-text>
+            The uploaded zip contains workspaces that already exist in your online account. Choose whether to overwrite them with the uploaded content.
+            <v-list dense class="mt-3">
+              <v-list-item v-for="(c, idx) in importConflicts" :key="idx">
+                <v-list-item-content>
+                  <v-list-item-title>{{ c.name }}</v-list-item-title>
+                </v-list-item-content>
+              </v-list-item>
+            </v-list>
+            <v-checkbox v-model="importOverwriteConfirmed" label="Overwrite these workspaces using the uploaded zip" class="mt-2" />
+          </v-card-text>
+          <v-card-actions>
+            <v-spacer />
+            <v-btn text color="primary" @click="closeImportConflictDialog">Cancel</v-btn>
+            <v-btn :disabled="!importOverwriteConfirmed" color="primary" @click="confirmImportOverwrite">Import and overwrite</v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
       <v-col
         cols="12"
         lg="3"
@@ -194,7 +239,7 @@
                         :workspaceid="selectedworkspace._id"
                         v-on:onFileDeleted="refreshFiles"
                         @download="downloadWorkspaceFile(file)"
-                        @view3duf="openJsonIn3DuF(file)"
+                        @view3duf="openJsonIn3DuF($event)"
                     />
                 </v-col>
                 <v-col
@@ -318,6 +363,11 @@
             },
         ],
         exts: ['.mint', '.lfr']
+        ,
+        importConflictDialog: false,
+        importConflicts: [],
+        importOverwriteConfirmed: false,
+        _pendingImportZipFile: null
     }),
     computed: {
       totalSales () {
@@ -329,6 +379,65 @@
     },
 
     methods: {
+      triggerImportZip () {
+        const el = this.$refs.importZipInput
+        if (el) el.click()
+      },
+      closeImportConflictDialog () {
+        this.importConflictDialog = false
+        this.importOverwriteConfirmed = false
+        this.importConflicts = []
+        this._pendingImportZipFile = null
+      },
+      async confirmImportOverwrite () {
+        if (!this._pendingImportZipFile) return
+        await this.importZipToServer(this._pendingImportZipFile, { overwrite: true })
+        this.closeImportConflictDialog()
+        this.refreshworkspacedata()
+      },
+      async onImportZip (e) {
+        const file = e.target.files && e.target.files[0]
+        if (!file) return
+        // allow picking same file again later
+        try { e.target.value = '' } catch (_) {}
+
+        if (this.isGuestLocal) {
+          // Reuse local guest import implementation
+          return this.onImportGuestFile({ target: { files: [file] } })
+        }
+
+        await this.importZipToServer(file, { overwrite: false })
+      },
+      async importZipToServer (file, { overwrite }) {
+        try {
+          const buf = await file.arrayBuffer()
+          const url = `/api/v1/importWorkspacesZip${overwrite ? '?overwrite=1' : '?dryRun=1'}`
+          await axios.post(url, buf, {
+            withCredentials: true,
+            headers: { 'Content-Type': 'application/zip' },
+          })
+
+          // dryRun with no conflicts, now apply (unless we already overwrote)
+          if (!overwrite) {
+            await axios.post('/api/v1/importWorkspacesZip', buf, {
+              withCredentials: true,
+              headers: { 'Content-Type': 'application/zip' },
+            })
+            this.refreshworkspacedata()
+          }
+        } catch (err) {
+          const status = err && err.response && err.response.status
+          const data = err && err.response && err.response.data
+          if (status === 409 && data && data.conflicts) {
+            this.importConflicts = data.conflicts
+            this.importOverwriteConfirmed = false
+            this._pendingImportZipFile = file
+            this.importConflictDialog = true
+            return
+          }
+          alert('Failed to import zip')
+        }
+      },
       async exportGuestWorkspace () {
         const data = guestStore.exportData()
         const zip = new JSZip()
@@ -482,8 +591,62 @@
         this.downloadfile(file)
       },
       openJsonIn3DuF (file) {
-        // Placeholder: for now just open 3DuF site in a new tab.
-        window.open('https://3duf.org', '_blank')
+        return this.openJsonIn3DuFInternal(file)
+      },
+
+      async openJsonIn3DuFInternal (file) {
+        if (!file || !file.id) return
+
+        const workspaceId =
+          file.workspaceid ||
+          (this.selectedworkspace && this.selectedworkspace._id) ||
+          null
+
+        // 3DuF expects the design JSON; we send as a string so 3DuF can JSON.parse it.
+        let jsonText = ''
+
+        if (this.$store.getters.isGuest && !this.$store.getters.isGuestViaServer) {
+          if (!workspaceId) {
+            // eslint-disable-next-line no-console
+            console.error('openJsonIn3DuF: missing guest workspaceId')
+            return
+          }
+          const f = guestStore.getFile(workspaceId, file.id)
+          jsonText = (f && f.content) ? String(f.content) : ''
+        } else {
+          const res = await axios.get('/api/v1/fs', {
+            params: { id: file.id },
+            withCredentials: true,
+            crossorigin: true,
+            headers: { 'Content-Type': 'application/json' },
+            responseType: 'text',
+          })
+          jsonText = res && res.data != null ? String(res.data) : ''
+        }
+
+        if (!jsonText) {
+          alert('Cannot load JSON content for 3DuF.')
+          return
+        }
+
+        const win = window.open('http://localhost:8082', '_blank')
+        if (!win) {
+            alert('Popup blocked. Please allow popups to open 3DuF.')
+          return
+        }
+
+        const payload = { type: 'loadDeviceFromJSON', json: jsonText }
+        // Retry briefly until 3DuF finishes initializing.
+        const start = Date.now()
+        const interval = setInterval(() => {
+          try {
+            win.postMessage(payload, '*')
+            clearInterval(interval)
+          } catch (e) {
+            if (Date.now() - start > 6000) clearInterval(interval)
+          }
+        }, 300)
+        setTimeout(() => clearInterval(interval), 6500)
       },
       formattimestamp(datestring){
         return Utils.getprettytimestamp(datestring)

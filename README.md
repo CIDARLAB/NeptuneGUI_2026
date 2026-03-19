@@ -10,15 +10,19 @@ All commands below are run from the **project root** (the folder that contains `
 # 1. Install dependencies
 npm install
 
-# 2. Start the Data server (API, port 8080)
+# 2. Start backend + frontend in one command
+#    (Ctrl+C to stop both processes)
 npm run server:install   # only needed once (or when server deps change)
-npm run server           # run this each time you want to use the app (e.g. after reboot)
-
-# 3. In a new terminal, start the frontend (port 8081)
-npm run dev
+npm run start
 ```
 
 Then open **http://localhost:8081** in your browser.
+
+## Ports and conflicts
+- Backend/API (`npm run server`): `http://localhost:8080`
+- Frontend/GUI (`npm run serve`): `http://localhost:8081`
+
+If you see `EADDRINUSE: address already in use` when starting the server, it means one of these ports is already taken by another process. Stop the process using that port and restart (or run the services on different ports, if you adjusted the code/config).
 
 - **Admin:** username `cidar`, password `12345`
 - **Guest:** click “Continue as Guest” to try without an account (data is temporary)

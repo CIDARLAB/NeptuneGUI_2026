@@ -146,7 +146,7 @@
               <v-list-item-title v-text="'Logout'" />
             </app-bar-item>
           </template>
-          <!-- Guest: Settings, Login, Register -->
+          <!-- Guest: Settings, Login, Register, Exit Guest Mode -->
           <template v-else>
             <app-bar-item :key="'guest-settings'" to="/settings">
               <v-list-item-title v-text="'Settings'" />
@@ -156,6 +156,10 @@
             </app-bar-item>
             <app-bar-item :key="'guest-register'" to="/register">
               <v-list-item-title v-text="'Register'" />
+            </app-bar-item>
+            <v-divider class="mb-2 mt-2" :key="'gd1'" />
+            <app-bar-item :key="'guest-exit'" @click.native="logout">
+              <v-list-item-title v-text="'Exit Guest Mode'" />
             </app-bar-item>
           </template>
 

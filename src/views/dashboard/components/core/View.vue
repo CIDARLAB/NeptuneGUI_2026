@@ -65,6 +65,30 @@
             <v-divider />
 
             <v-card-actions class="agent-chat-input-row">
+              <div v-if="selectionAttachment" class="agent-chat-attachment">
+                <v-btn
+                  x-small
+                  outlined
+                  color="primary"
+                  class="agent-chat-attachment-btn"
+                  @click="selectionExpanded = !selectionExpanded"
+                >
+                  Selected code ({{ (selectionAttachment.language || 'lfr').toUpperCase() }})
+                  <v-icon right x-small>{{ selectionExpanded ? 'mdi-chevron-down' : 'mdi-chevron-right' }}</v-icon>
+                </v-btn>
+                <v-btn
+                  x-small
+                  text
+                  color="primary"
+                  class="ml-1"
+                  @click="clearSelectionAttachment"
+                >
+                  Clear
+                </v-btn>
+                <div v-if="selectionExpanded" class="agent-chat-attachment-preview mt-2">
+                  <pre class="agent-chat-attachment-pre">{{ selectionAttachment.text }}</pre>
+                </div>
+              </div>
               <v-textarea
                 v-model="draft"
                 auto-grow
@@ -103,6 +127,8 @@
     data () {
       return {
         draft: '',
+        selectionAttachment: null,
+        selectionExpanded: false,
         messages: [
           {
             role: 'agent',
@@ -116,6 +142,13 @@
       }
     },
 
+    mounted () {
+      this.$root.$on('agent-set-selection', this.onAgentSelection)
+    },
+    beforeDestroy () {
+      this.$root.$off('agent-set-selection', this.onAgentSelection)
+    },
+
     computed: {
       chatVisible () {
         // For now, show the agent sidebar only on the Editor page (name defined in router.js)
@@ -124,6 +157,19 @@
     },
 
     methods: {
+      onAgentSelection (payload) {
+        if (!payload || !payload.text) return
+        this.selectionAttachment = {
+          text: String(payload.text),
+          language: payload.language || 'lfr',
+        }
+        this.selectionExpanded = false
+      },
+      clearSelectionAttachment () {
+        this.selectionAttachment = null
+        this.selectionExpanded = false
+        this.$root.$emit('agent-clear-selection')
+      },
       insertIntoEditor (message, language) {
         if (!message || !message.text) return
         const payload = {
@@ -142,6 +188,8 @@
           text,
         })
         this.draft = ''
+        this.selectionAttachment = null
+        this.selectionExpanded = false
 
         // Demo agent reply: placeholder until wired to real Qwen endpoint
         const demoReply = [
@@ -240,11 +288,30 @@
 }
 
 .agent-chat-input-row {
-  align-items: flex-end;
   padding: 8px 12px;
+  flex-direction: column;
+  align-items: stretch;
 }
 
 .agent-chat-input {
   flex: 1 1 auto;
+}
+
+.agent-chat-attachment {
+  margin-bottom: 8px;
+}
+.agent-chat-attachment-preview {
+  background: #f5f5f7;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  padding: 8px;
+  max-height: 180px;
+  overflow: auto;
+}
+.agent-chat-attachment-pre {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.35;
+  white-space: pre-wrap;
 }
 </style>

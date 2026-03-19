@@ -57,7 +57,7 @@
         text
         icon
         color="purple"
-        @click="$emit('view3duf', { id, name })"
+        @click="$emit('view3duf', { id, name, workspaceid })"
       >
         <v-icon>mdi-vector-square</v-icon>
       </v-btn>

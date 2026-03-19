@@ -203,6 +203,14 @@ function deleteWorkspace (session, workspaceId) {
   saveWorkspaces(session, list)
 }
 
+function deleteWorkspaceDeep (session, workspaceId) {
+  deleteWorkspace(session, workspaceId)
+  const p = getFilesPath(session, workspaceId)
+  try {
+    if (p && fs.existsSync(p)) fs.unlinkSync(p)
+  } catch (e) {}
+}
+
 function getFilesPath (session, workspaceId) {
   const dir = ensureSessionDir(session)
   if (!dir) return null
@@ -313,6 +321,7 @@ module.exports = {
   getWorkspaces,
   createWorkspace,
   deleteWorkspace,
+  deleteWorkspaceDeep,
   getFileIds,
   getFile,
   getFiles,

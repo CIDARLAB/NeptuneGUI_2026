@@ -66,6 +66,22 @@
       <!-- https://github.com/vuetifyjs/vuetify/pull/8574 -->
       <div />
     </v-list>
+
+    <!-- Sidebar export hint (bottom) -->
+    <v-divider class="mt-2" />
+    <div class="drawer-export-hint pa-4">
+      <div class="drawer-export-text">
+        Tip: export your workspace regularly to avoid losing work.
+      </div>
+      <v-btn
+        small
+        color="primary"
+        class="mt-3 drawer-export-btn mx-auto"
+        @click="exportWorkspacesZip"
+      >
+        Export workspaces (.zip)
+      </v-btn>
+    </div>
   </v-navigation-drawer>
 </template>
 
@@ -74,6 +90,9 @@
   import {
     mapState,
   } from 'vuex'
+
+  import JSZip from 'jszip'
+  import guestStore from '@/lib/guestStore'
 
   export default {
     name: 'DashboardCoreDrawer',
@@ -265,6 +284,9 @@
 
     computed: {
       ...mapState(['barColor', 'barImage']),
+      isGuestLocal () {
+        return this.$store.getters.isGuest && !this.$store.getters.isGuestViaServer
+      },
       drawer: {
         get () {
           return this.$store.state.drawer
@@ -306,6 +328,66 @@
     },
 
     methods: {
+      async exportWorkspacesZip () {
+        if (!this.isGuestLocal) {
+          // Logged-in users and server-backed guests: export from backend
+          const a = document.createElement('a')
+          a.href = '/api/v1/exportWorkspacesZip'
+          a.target = '_blank'
+          document.body.appendChild(a)
+          a.click()
+          document.body.removeChild(a)
+          return
+        }
+
+        // Local guest: export from browser storage
+        const data = guestStore.exportData()
+        const zip = new JSZip()
+
+        zip.file('index.json', JSON.stringify({
+          nextWorkspaceId: data.nextWorkspaceId,
+          nextFileId: data.nextFileId,
+        }, null, 2))
+
+        data.workspaces.forEach((w, idx) => {
+          const safeName = (w.name || `workspace_${w._id || idx + 1}`).replace(/[^a-zA-Z0-9_-]/g, '_')
+          const folderName = `workspace_${w._id || (idx + 1)}_${safeName}`
+          const folder = zip.folder(folderName)
+          if (!folder) return
+
+          folder.file('metadata.json', JSON.stringify({
+            _id: w._id,
+            name: w.name,
+            notes: w.notes,
+            updated_at: w.updated_at,
+            created_at: w.created_at,
+          }, null, 2))
+
+          ;(w.files || []).forEach((f, fi) => {
+            const base = (f.name || `file_${fi + 1}`).replace(/[^a-zA-Z0-9_-]/g, '_')
+            const ext = f.ext && f.ext.startsWith('.') ? f.ext : (f.ext ? `.${f.ext}` : '')
+            folder.file(`${base}${ext || '.txt'}`, f.content || '')
+          })
+        })
+
+        const blob = await zip.generateAsync({ type: 'blob' })
+        const a = document.createElement('a')
+        a.href = URL.createObjectURL(blob)
+        const date = new Date()
+        const stamp = [
+          date.getFullYear(),
+          String(date.getMonth() + 1).padStart(2, '0'),
+          String(date.getDate()).padStart(2, '0'),
+          '-',
+          String(date.getHours()).padStart(2, '0'),
+          String(date.getMinutes()).padStart(2, '0'),
+        ].join('')
+        a.download = `neptune_guest_workspace_${stamp}.zip`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(a.href)
+      },
       mapItem (item) {
         return {
           ...item,
@@ -355,6 +437,24 @@
         &__icon--text,
         &__icon:first-child
           margin-top: 10px
+
+  .drawer-export-hint
+    display: flex
+    flex-direction: column
+    align-items: center
+
+    .drawer-export-text
+      font-size: 16px
+      font-weight: 600
+      line-height: 1.35
+      color: rgba(255, 255, 255, 0.92)
+    .drawer-export-btn
+      font-size: 13px !important
+      max-width: 200px
+      width: 100%
+      white-space: normal
+      line-height: 1.2
+      padding: 6px 10px !important
 
     .v-list-group--sub-group
       .v-list-item

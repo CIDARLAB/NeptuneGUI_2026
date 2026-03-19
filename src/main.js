@@ -77,6 +77,21 @@ router.beforeEach((to, from, next) => {
   next();
 });
 
+// Warn when leaving during guest mode (tab close / refresh).
+// Note: browsers do not allow custom text or buttons in this dialog.
+window.addEventListener('beforeunload', (e) => {
+  try {
+    const isGuestLocal = store.getters.isGuest && !store.getters.isGuestViaServer;
+    if (!isGuestLocal) return;
+    e.preventDefault();
+    // Chrome requires returnValue to be set.
+    e.returnValue = '';
+    return '';
+  } catch (_) {
+    // If store is unavailable, do nothing.
+  }
+});
+
 document.title = 'Neptune';
 
 new Vue({

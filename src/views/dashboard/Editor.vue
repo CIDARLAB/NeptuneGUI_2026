@@ -225,6 +225,7 @@ export default {
     this.fetchComponentLibraryAndUpdateLfrHighlighting()
 
     this.$root.$on('agent-insert-into-editor', this.handleAgentInsert)
+    this.$root.$on('agent-clear-selection', this.clearAgentSelectionDecoration)
     const terminalEl = document.getElementById('terminal')
     if (terminalEl) {
       term.open(terminalEl)
@@ -318,6 +319,7 @@ export default {
   },
   beforeDestroy () {
     this.$root.$off('agent-insert-into-editor', this.handleAgentInsert)
+    this.$root.$off('agent-clear-selection', this.clearAgentSelectionDecoration)
   },
   data () {
     return {
@@ -449,22 +451,45 @@ export default {
 
   },
   methods: {
+    clearAgentSelectionDecoration () {
+      const editor = this._monacoEditor
+      if (!editor) return
+      if (this._agentSelectionDecorationIds && this._agentSelectionDecorationIds.length) {
+        this._agentSelectionDecorationIds = editor.deltaDecorations(this._agentSelectionDecorationIds, [])
+      }
+    },
     sendSelectionToAgent () {
       const editor = this._monacoEditor
       if (!editor) return
       const model = editor.getModel()
       if (!model) return
       const selection = editor.getSelection()
-      const text = selection && !selection.isEmpty()
-        ? model.getValueInRange(selection)
-        : model.getValue()
+      if (!selection || selection.isEmpty()) return
+      const text = model.getValueInRange(selection)
       const snippet = (text || '').trim()
       if (!snippet) return
       const payload = {
         text: snippet,
         language: this.selectedScriptLanguage,
       }
-      this.$root.$emit('agent-add-message-from-editor', payload)
+      this.$root.$emit('agent-set-selection', payload)
+
+      // Grey background highlight for the selection (Cursor-style)
+      try {
+        const monaco = this._monaco
+        if (monaco) {
+          const range = new monaco.Range(
+            selection.startLineNumber,
+            selection.startColumn,
+            selection.endLineNumber,
+            selection.endColumn
+          )
+          this._agentSelectionDecorationIds = editor.deltaDecorations(
+            this._agentSelectionDecorationIds || [],
+            [{ range, options: { inlineClassName: 'agent-selection-decoration' } }]
+          )
+        }
+      } catch (_) {}
     },
     loadExampleScript () {
       const lang = (this.selectedScriptLanguage || 'lfr').toLowerCase()
@@ -549,6 +574,11 @@ export default {
         while ((match = re.exec(text)) !== null) {
           const start = model.getPositionAt(match.index)
           const end = model.getPositionAt(match.index + match[0].length)
+          // Never decorate inside a // comment; comment styling must dominate.
+          const line = model.getLineContent(start.lineNumber) || ''
+          const commentIdx = line.indexOf('//')
+          if (commentIdx !== -1 && (start.column - 1) >= commentIdx) continue
+
           ranges.push({ range: new monaco.Range(start.lineNumber, start.column, end.lineNumber, end.column), options: { inlineClassName: 'lfr-flowvar-decoration' } })
         }
       }
@@ -583,6 +613,7 @@ export default {
         const provider = {
           tokenizer: {
             root: [
+              [/\/\/.*$/, 'comment'],
               [new RegExp('\\b(' + keywords.join('|') + ')\\b', 'i'), keywordToken],
             ],
           },
@@ -593,6 +624,8 @@ export default {
           inherit: true,
           rules: [
             { token: keywordToken, foreground: '006994', fontStyle: 'bold' },
+            // Comments have highest priority and should dominate other highlighting.
+            { token: 'comment', foreground: '008000', fontStyle: 'italic' },
           ],
         })
       }
@@ -990,6 +1023,12 @@ export default {
 .editor {
   height: 500px;
   width: 100%;
+}
+
+/* Cursor-style selection sent to agent: grey highlight */
+.agent-selection-decoration {
+  background: rgba(0, 0, 0, 0.12);
+  border-radius: 2px;
 }
 
 /* Script and Console cards: same height (row stretch), console fills column */
