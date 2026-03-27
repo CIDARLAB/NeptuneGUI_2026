@@ -133,33 +133,16 @@
         flat
         nav
       >
-          <!-- Logged-in user: Profile, Settings, Logout -->
+          <!-- App mode: Exit only -->
           <template v-if="!isGuest">
-            <app-bar-item :key="1" to="/user">
-              <v-list-item-title v-text="'Profile'" />
-            </app-bar-item>
-            <app-bar-item :key="2" to="/settings">
-              <v-list-item-title v-text="'Settings'" />
-            </app-bar-item>
-            <v-divider class="mb-2 mt-2" :key="'d1'" />
-            <app-bar-item :key="3" @click.native="logout">
-              <v-list-item-title v-text="'Logout'" />
+            <app-bar-item :key="'exit-main'" @click.native="logout">
+              <v-list-item-title v-text="'Exit'" />
             </app-bar-item>
           </template>
-          <!-- Guest: Settings, Login, Register, Exit Guest Mode -->
+          <!-- Local mode: Exit -->
           <template v-else>
-            <app-bar-item :key="'guest-settings'" to="/settings">
-              <v-list-item-title v-text="'Settings'" />
-            </app-bar-item>
-            <app-bar-item :key="'guest-login'" to="/login">
-              <v-list-item-title v-text="'Login'" />
-            </app-bar-item>
-            <app-bar-item :key="'guest-register'" to="/register">
-              <v-list-item-title v-text="'Register'" />
-            </app-bar-item>
-            <v-divider class="mb-2 mt-2" :key="'gd1'" />
             <app-bar-item :key="'guest-exit'" @click.native="logout">
-              <v-list-item-title v-text="'Exit Guest Mode'" />
+              <v-list-item-title v-text="'Exit'" />
             </app-bar-item>
           </template>
 
@@ -183,7 +166,7 @@
       </v-list>
     </v-menu>
 
-    <!-- Guest logout: ask to export workspace snapshot before leaving -->
+    <!-- Exit dialog: ask to export workspace snapshot before leaving -->
     <v-dialog
       v-model="guestLogoutDialog"
       max-width="480"
@@ -194,10 +177,10 @@
           Leave Neptune?
         </v-card-title>
         <v-card-text>
-          If you leave now, any guest-mode workspaces stored in this browser may be cleared.
+          If you leave now, your current workspaces may not be saved.
           <br><br>
-          You can export the current guest workspace to a local file and restore it later from the Dashboard
-          using “Restore from file”. Registered user workspaces stored on the server are not affected.
+          Please export your current workspaces to a local zip file before exiting.
+          Later, you can restore them from Dashboard using “Import zip”.
           <br><br>
           <v-checkbox
             v-model="dontShowLogoutPromptWeek"
@@ -205,15 +188,16 @@
             hide-details
           />
         </v-card-text>
-        <v-card-actions>
+        <v-card-actions class="guest-logout-actions">
           <v-spacer />
-          <v-btn text @click="cancelLogoutDialog">
+          <v-btn x-small text @click="cancelLogoutDialog">
             Cancel
           </v-btn>
-          <v-btn text color="error" @click="confirmGuestExitWithoutSave">
+          <v-btn x-small text color="error" @click="confirmGuestExitWithoutSave">
             Exit without saving
           </v-btn>
           <v-btn
+            x-small
             text
             color="primary"
             :loading="guestExporting"
@@ -336,7 +320,7 @@
               headers: { 'Content-Type': 'application/json' },
             }
             axios.get('/api/v2/logout', config)
-              .then(() => { router.push('/login') })
+              .then(() => { router.push('/') })
               .catch((error) => { console.log(error) })
           }
           return
@@ -380,7 +364,7 @@
             headers: { 'Content-Type': 'application/json' },
           }
           axios.get('/api/v2/logout', config)
-            .then(() => { router.push('/login') })
+            .then(() => { router.push('/') })
             .catch((error) => { console.log(error) })
         }
       },
@@ -453,7 +437,7 @@
               headers: { 'Content-Type': 'application/json' },
             }
             axios.get('/api/v2/logout', config)
-              .then(() => { router.push('/login') })
+              .then(() => { router.push('/') })
               .catch((error) => { console.log(error) })
           }
         } catch (e) {
@@ -498,5 +482,15 @@
 /* Guest logout dialog (global styles because dialog is teleported outside scoped root) */
 .guest-logout-dialog .v-card__text {
   font-size: 14px;
+}
+.guest-logout-dialog .guest-logout-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+.guest-logout-dialog .guest-logout-actions .v-btn {
+  min-width: auto;
+  font-size: 12px;
 }
 </style>

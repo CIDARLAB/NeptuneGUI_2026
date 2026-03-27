@@ -1,48 +1,22 @@
 <template>
-  <v-container
-    id="landing"
-    class="fill-height justify-center align-start"
-    tag="section"
-  >
-    <v-row justify="center" align="start">
-      <v-col cols="12" class="text-center">
-        <v-slide-y-transition appear>
-          <v-img
-            :src="require('@/assets/Neptune2026_logo.png')"
-            height="160"
-            max-height="28vh"
-            contain
-            class="mx-auto"
-          />
-        </v-slide-y-transition>
-        <div class="mt-4 d-flex flex-wrap justify-center align-center landing-buttons">
-          <v-btn
-            color="primary"
-            class="ma-2"
-            large
-            to="/login"
-          >
-            <span class="landing-btn-text">Login</span>
-          </v-btn>
-          <v-btn
-            color="secondary"
-            class="ma-2"
-            large
-            to="/register"
-          >
-            <span class="landing-btn-text">Register</span>
-          </v-btn>
-          <v-btn
-            class="ma-2"
-            color="silverGrey"
-            large
-            @click="continueAsGuest"
-          >
-            <span class="landing-btn-text">Guest Mode</span>
+  <v-container id="landing" class="fill-height landing-shell" tag="section">
+    <v-slide-y-transition appear>
+      <v-img
+        :src="require('@/assets/Neptune2026_logo_white_text.png')"
+        contain
+        class="landing-top-right-logo"
+      />
+    </v-slide-y-transition>
+
+    <v-row justify="center" align="center" class="fill-height landing-content-row">
+      <v-col cols="12" md="9" lg="8" class="text-center">
+        <div class="mt-4 d-flex justify-center align-center landing-buttons">
+          <v-btn class="ma-2" color="success" large @click="continueAsGuest">
+            <span class="landing-btn-text">Start Now!</span>
           </v-btn>
         </div>
-        <p class="mt-3 landing-guest-text">
-          GUEST MODE: use without an account. Data is stored in this browser; you can export to a file (any path) and later restore by importing that file.
+        <p class="mt-2 landing-guest-text">
+          Local mode only: no account is required. To keep your data across sessions, export your workspaces to a zip file and later restore by importing that file.
         </p>
       </v-col>
     </v-row>
@@ -50,12 +24,32 @@
 </template>
 
 <style scoped>
+.landing-shell {
+  position: relative;
+}
+
+.landing-top-right-logo {
+  position: absolute;
+  top: -80pt;
+  left: 0;
+  width: 260px;
+  max-width: 38vw;
+  z-index: 2;
+}
+
+.landing-content-row {
+  transform: translateY(-100pt);
+}
+
 .landing-btn-text {
   font-size: 1.125rem; /* +2pt from 1rem */
   font-weight: 500;
 }
 .landing-guest-text {
-  font-size: 16pt;
+  font-size: 18pt;
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
   color: rgba(255, 255, 255, 0.95);
 }
 </style>

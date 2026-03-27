@@ -71,7 +71,9 @@ router.beforeEach((to, from, next) => {
     return;
   }
   if (authRequired && !canAccess) {
-    next('/login');
+    // App now runs in no-login mode; auto-enter local mode.
+    store.commit('setGuest');
+    next('/dashboard');
     return;
   }
   next();
@@ -81,8 +83,8 @@ router.beforeEach((to, from, next) => {
 // Note: browsers do not allow custom text or buttons in this dialog.
 window.addEventListener('beforeunload', (e) => {
   try {
-    const isGuestLocal = store.getters.isGuest && !store.getters.isGuestViaServer;
-    if (!isGuestLocal) return;
+    // No-login product mode: always warn user to export before leaving.
+    if (!store.getters.canAccessApp) return;
     e.preventDefault();
     // Chrome requires returnValue to be set.
     e.returnValue = '';
@@ -93,6 +95,26 @@ window.addEventListener('beforeunload', (e) => {
 });
 
 document.title = 'Neptune';
+
+// Prefer requested favicon path; fallback to bundled logo if missing.
+(function setFavicon () {
+  const preferred = '/src/assets/neptune_2026.png'
+  const fallback = require('./assets/Neptune2026_logo.png')
+  const img = new Image()
+  img.onload = () => {
+    const link = document.querySelector("link[rel~='icon']") || document.createElement('link')
+    link.rel = 'icon'
+    link.href = preferred
+    document.head.appendChild(link)
+  }
+  img.onerror = () => {
+    const link = document.querySelector("link[rel~='icon']") || document.createElement('link')
+    link.rel = 'icon'
+    link.href = fallback
+    document.head.appendChild(link)
+  }
+  img.src = preferred
+})()
 
 new Vue({
   router,

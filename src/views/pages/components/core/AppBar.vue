@@ -14,6 +14,7 @@
       />
       <v-spacer />
       <v-btn
+        v-if="$route.path !== '/'"
         to="/settings"
         text
         dark

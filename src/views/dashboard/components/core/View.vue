@@ -2,15 +2,17 @@
   <v-content class="dashboard-core-view-content">
     <v-container fluid class="pa-0 dashboard-core-view-layout">
       <v-row no-gutters>
-        <v-col :cols="chatVisible ? 8 : 12">
-          <router-view />
+        <v-col :cols="chatVisible ? 8 : 12" class="dashboard-main-col">
+          <div class="dashboard-main-router">
+            <router-view />
+          </div>
         </v-col>
 
         <!-- Right-side Chat Agent (static demo UI, Claude-style) -->
         <v-col
           v-if="chatVisible"
           cols="4"
-          class="agent-chat-col"
+          class="agent-chat-col pa-0"
         >
           <v-card class="agent-chat-card d-flex flex-column" outlined>
             <v-card-title class="agent-chat-header">
@@ -18,7 +20,7 @@
                 Neptune Agent
               </div>
               <div class="agent-chat-subtitle">
-                Natural language → LFR suggestions
+                Natural language → LFR/MINT suggestions
               </div>
             </v-card-title>
 
@@ -31,7 +33,7 @@
                   :key="idx"
                   :class="['agent-chat-message', m.role]"
                 >
-                  <div class="agent-chat-message-role">
+                  <div :class="['agent-chat-message-role', m.role]">
                     {{ m.role === 'user' ? 'You' : 'Neptune Agent' }}
                   </div>
                   <div class="agent-chat-message-text">
@@ -89,25 +91,27 @@
                   <pre class="agent-chat-attachment-pre">{{ selectionAttachment.text }}</pre>
                 </div>
               </div>
-              <v-textarea
-                v-model="draft"
-                auto-grow
-                rows="1"
-                placeholder="Describe what you want to build in LFR, e.g. 'a 3-layer microfluidic mixer with two inputs and one output...'"
-                class="agent-chat-input"
-                hide-details
-                outlined
-                dense
-                @keydown.enter.exact.prevent="send"
-              />
-              <v-btn
-                color="primary"
-                class="ml-2"
-                :disabled="!draft.trim()"
-                @click="send"
-              >
-                Send
-              </v-btn>
+              <div class="agent-chat-input-line">
+                <v-textarea
+                  v-model="draft"
+                  auto-grow
+                  rows="1"
+                  placeholder="Describe what you want to build in LFR, e.g. 'a 3-layer microfluidic mixer with two inputs and one output...'"
+                  class="agent-chat-input"
+                  hide-details
+                  outlined
+                  dense
+                  @keydown.enter.exact.prevent="send"
+                />
+                <v-btn
+                  color="primary"
+                  class="ml-2 agent-chat-send-btn"
+                  :disabled="!draft.trim()"
+                  @click="send"
+                >
+                  Send
+                </v-btn>
+              </div>
             </v-card-actions>
           </v-card>
         </v-col>
@@ -132,11 +136,11 @@
         messages: [
           {
             role: 'agent',
-            text: 'Hi, I’m your Neptune Agent. Describe the fluidic behavior or module you want (in plain English), and I’ll suggest an LFR snippet you can paste into the Editor.',
+            text: 'Hi, I’m your Neptune Agent. Describe the fluidic behavior or module you want (in plain English), and I’ll suggest an LFR or MINT snippet you can paste into the Editor.',
           },
           {
             role: 'agent',
-            text: 'For example: “Create a 3-layer device with finput A/B, mix for 10 cycles, then route to foutput OUT.”',
+            text: 'For example: “Create a 3-layer device with finput A/B, mix for 10 cycles, then route to foutput OUT in LFR, or generate an equivalent MINT flow.”',
           },
         ],
       }
@@ -217,13 +221,19 @@
   height: 100%;
 }
 
+.dashboard-main-col,
+.dashboard-main-router {
+  height: 100%;
+}
+
 .agent-chat-col {
-  border-left: 1px solid rgba(0, 0, 0, 0.08);
+  padding-top: 0 !important;
 }
 
 .agent-chat-card {
   height: 100%;
   border-radius: 0;
+  border-left: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 .agent-chat-header {
@@ -233,12 +243,12 @@
 }
 
 .agent-chat-title {
-  font-size: 16px;
+  font-size: 20px;
   font-weight: 600;
 }
 
 .agent-chat-subtitle {
-  font-size: 12px;
+  font-size: 15px;
   opacity: 0.8;
 }
 
@@ -271,14 +281,20 @@
 }
 
 .agent-chat-message-role {
-  font-size: 11px;
+  font-size: 15px;
   font-weight: 600;
   opacity: 0.75;
   margin-bottom: 2px;
 }
 
+.agent-chat-message-role.agent {
+  font-size: 17px;
+  color: #0b3d91;
+  opacity: 1;
+}
+
 .agent-chat-message-text {
-  font-size: 13px;
+  font-size: 15px;
   white-space: pre-wrap;
   line-height: 1.4;
 }
@@ -297,6 +313,22 @@
   flex: 1 1 auto;
 }
 
+.agent-chat-input-line {
+  display: flex;
+  width: 100%;
+  align-items: flex-end;
+}
+
+.agent-chat-send-btn {
+  align-self: flex-end;
+}
+
+/* Match chat input readability to primary action button scale */
+.agent-chat-input ::v-deep textarea {
+  font-size: 15px;
+  line-height: 1.4;
+}
+
 .agent-chat-attachment {
   margin-bottom: 8px;
 }
@@ -310,8 +342,14 @@
 }
 .agent-chat-attachment-pre {
   margin: 0;
-  font-size: 12px;
+  font-size: 15px;
   line-height: 1.35;
   white-space: pre-wrap;
+}
+
+.agent-chat-actions ::v-deep .v-btn__content,
+.agent-chat-attachment ::v-deep .v-btn__content,
+.agent-chat-send-btn ::v-deep .v-btn__content {
+  font-size: 15px;
 }
 </style>

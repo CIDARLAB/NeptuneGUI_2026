@@ -20,13 +20,13 @@ export default new Router({
         {
           name: 'Login',
           path: 'login',
-          component: () => import('@/views/pages/Login'),
+          component: () => import('@/views/pages/Landing'),
           meta: { requiresAuth: false }
         },
         {
           name: 'Register',
           path: 'register',
-          component: () => import('@/views/pages/Register'),
+          component: () => import('@/views/pages/Landing'),
           meta: { requiresAuth: false }
         },
         {

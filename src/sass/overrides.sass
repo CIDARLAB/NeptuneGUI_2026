@@ -65,9 +65,50 @@
 
 html.font-size-large
   font-size: 20px
+  --ui-scale: 1.18
 
 html.font-size-normal
   font-size: 16px
+  --ui-scale: 1
 
 html.font-size-small
   font-size: 12px
+  --ui-scale: 0.82
+
+// Scale controls and logos with font-size mode (without using zoom)
+html.font-size-large .v-btn,
+html.font-size-normal .v-btn,
+html.font-size-small .v-btn
+  font-size: calc(14px * var(--ui-scale)) !important
+
+html.font-size-large .v-btn:not(.v-btn--icon):not(.v-btn--fab),
+html.font-size-normal .v-btn:not(.v-btn--icon):not(.v-btn--fab),
+html.font-size-small .v-btn:not(.v-btn--icon):not(.v-btn--fab)
+  min-height: calc(36px * var(--ui-scale)) !important
+  padding-left: calc(16px * var(--ui-scale)) !important
+  padding-right: calc(16px * var(--ui-scale)) !important
+
+html.font-size-large .v-btn.v-btn--icon,
+html.font-size-normal .v-btn.v-btn--icon,
+html.font-size-small .v-btn.v-btn--icon
+  width: calc(36px * var(--ui-scale)) !important
+  height: calc(36px * var(--ui-scale)) !important
+
+html.font-size-large .v-icon,
+html.font-size-normal .v-icon,
+html.font-size-small .v-icon
+  font-size: calc(24px * var(--ui-scale)) !important
+
+html.font-size-large .v-input,
+html.font-size-normal .v-input,
+html.font-size-small .v-input
+  font-size: calc(16px * var(--ui-scale)) !important
+
+html.font-size-large .drawer-logo-img,
+html.font-size-normal .drawer-logo-img,
+html.font-size-small .drawer-logo-img,
+html.font-size-large .landing-top-right-logo,
+html.font-size-normal .landing-top-right-logo,
+html.font-size-small .landing-top-right-logo
+  transform: scale(var(--ui-scale))
+  transform-origin: top left
