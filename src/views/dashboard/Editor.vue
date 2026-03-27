@@ -342,6 +342,7 @@ export default {
         { text: 'LFR', value: 'lfr' },
       ],
       selectedScriptLanguage: 'mint',
+      lastCompileType: '',
       newScriptBaseName: 'New Script',
       editorOptions: {
         lineNumbers: 'on',
@@ -447,6 +448,19 @@ export default {
     EOP: function(data){
       console.log(data)
       this.isloading = false
+      const compileKind = (this.lastCompileType || this.selectedScriptLanguage || 'script').toUpperCase()
+      const raw = data == null ? '' : (typeof data === 'string' ? data : JSON.stringify(data))
+      const lower = raw.toLowerCase()
+      const failed = (data && data.success === false) ||
+        (data && typeof data.code === 'number' && data.code !== 0) ||
+        lower.includes('error') ||
+        lower.includes('failed') ||
+        lower.includes('exception')
+      if (failed) {
+        alert(compileKind + ' compile failed. Please check logs/output for details.')
+      } else {
+        alert(compileKind + ' compile finished successfully.')
+      }
     }
 
   },
@@ -877,15 +891,25 @@ export default {
       }
       const ext = this.fileobject.name.match(/\.[0-9a-z]+$/i) ? this.fileobject.name.match(/\.[0-9a-z]+$/i)[0] : ''
       let endpoint = ''
-      if (ext === '.uf' || ext === '.mint') endpoint = '/api/v1/fluigi'
-      else if (ext === '.lfr' || ext === '.v') endpoint = '/api/v1/mushroommapper'
+      if (ext === '.uf' || ext === '.mint') {
+        endpoint = '/api/v1/fluigi'
+        this.lastCompileType = 'mint'
+      } else if (ext === '.lfr' || ext === '.v') {
+        endpoint = '/api/v1/mushroommapper'
+        this.lastCompileType = 'lfr'
+      }
       else { alert('Unknown File Type !'); return }
       axios.post(endpoint, data, config)
         .then((response) => {
           const jobid = response.data
           self.$socket.emit('monitor', jobid)
         })
-        .catch((error) => { console.error(error) })
+        .catch((error) => {
+          console.error(error)
+          self.isloading = false
+          const kind = (self.lastCompileType || self.selectedScriptLanguage || 'script').toUpperCase()
+          alert(kind + ' compile failed. Could not start compile job.')
+        })
     },
     deletefile (event) {
       const fid = this.fileobject.id

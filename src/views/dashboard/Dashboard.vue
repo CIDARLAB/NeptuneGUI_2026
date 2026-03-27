@@ -80,12 +80,9 @@
           </v-btn>
         </div>
         <div v-if="isGuestLocal" class="guest-storage-hint mt-2">
-          <span class="guest-storage-text">
+          <span class="guest-storage-text text-no-wrap">
             Guest data is stored in this browser. Export to a cache file (you choose the path) and later update from that file to restore your previous workspaces.
           </span>
-          <v-btn small outlined color="primary" class="ml-2 mt-1" @click="exportGuestWorkspace">Export cache to file</v-btn>
-          <v-btn small outlined color="primary" class="ml-2 mt-1" @click="triggerImportGuestFile">Update cache from file</v-btn>
-          <input ref="guestImportInput" type="file" accept=".zip,application/zip" style="display: none" @change="onImportGuestFile">
         </div>
         <input ref="importZipInput" type="file" accept=".zip,application/zip" style="display: none" @change="onImportZip">
       </v-col>
@@ -826,6 +823,9 @@
   }
 </script>
 <style>
+    #dashboard {
+        font-size: calc(1rem + 2pt);
+    }
     /* Workspace card action buttons: ensure icons are visible */
     #dashboard .v-btn.info .v-icon { color: #00CAE3 !important; }
     #dashboard .v-btn.primary .v-icon { color: #006994 !important; }

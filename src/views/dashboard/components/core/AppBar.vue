@@ -108,63 +108,15 @@
       </v-list>
     </v-menu>
 
-    <v-menu
-      bottom
-      left
-      min-width="200"
-      offset-y
-      origin="top right"
-      transition="scale-transition"
+    <v-btn
+      class="ml-2 exit-btn"
+      color="error"
+      small
+      @click="logout"
     >
-      <template v-slot:activator="{ attrs, on }">
-        <v-btn
-          class="ml-2"
-          min-width="0"
-          text
-          v-bind="attrs"
-          v-on="on"
-        >
-          <v-icon color="primary">mdi-account</v-icon>
-        </v-btn>
-      </template>
-
-      <v-list
-        :tile="false"
-        flat
-        nav
-      >
-          <!-- App mode: Exit only -->
-          <template v-if="!isGuest">
-            <app-bar-item :key="'exit-main'" @click.native="logout">
-              <v-list-item-title v-text="'Exit'" />
-            </app-bar-item>
-          </template>
-          <!-- Local mode: Exit -->
-          <template v-else>
-            <app-bar-item :key="'guest-exit'" @click.native="logout">
-              <v-list-item-title v-text="'Exit'" />
-            </app-bar-item>
-          </template>
-
-        <!-- <template v-for="(p, i) in profile">
-          <v-divider
-            v-if="p.divider"
-            :key="`divider-${i}`"
-            class="mb-2 mt-2"
-          />
-
-          <app-bar-item
-            v-else
-            :key="`item-${i}`"
-          >
-            <v-list-item-title
-            v-text="p.title" 
-            v-on:click="itemClick"            
-            />
-          </app-bar-item>
-        </template> -->
-      </v-list>
-    </v-menu>
+      <v-icon left small>mdi-exit-run</v-icon>
+      Exit
+    </v-btn>
 
     <!-- Exit dialog: ask to export workspace snapshot before leaving -->
     <v-dialog
@@ -475,6 +427,9 @@
 /* Dashboard / Editor page title: larger font */
 .dashboard-appbar-title {
   font-size: 2.5rem;
+}
+.exit-btn {
+  font-weight: 700;
 }
 </style>
 
