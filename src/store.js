@@ -11,7 +11,6 @@ export default new Vuex.Store({
     fontSize: 'normal',
     isLoggedIn: false,
     isGuest: false,
-    isGuestViaServer: false,
     userID: null,
     currentFile: null,
     currentWorkspace: null,
@@ -35,21 +34,12 @@ export default new Vuex.Store({
     },
     setGuest (state) {
       state.isGuest = true
-      state.isGuestViaServer = false
       state.isLoggedIn = true
       state.currentUser = { email: 'guest@session', isGuest: true }
       state.userID = 'guest'
     },
-    setGuestViaServer (state, user) {
-      state.isGuest = true
-      state.isGuestViaServer = true
-      state.isLoggedIn = true
-      state.currentUser = user || { email: 'guest@session', isGuest: true }
-      state.userID = (user && user._id) || 'guest'
-    },
     clearGuest (state) {
       state.isGuest = false
-      state.isGuestViaServer = false
       if (state.currentUser && state.currentUser.isGuest) {
         state.isLoggedIn = false
         state.currentUser = null
@@ -78,7 +68,6 @@ export default new Vuex.Store({
     userID: state => state.userID,
     isLoggedIn: state => state.isLoggedIn,
     isGuest: state => state.isGuest,
-    isGuestViaServer: state => state.isGuestViaServer,
     currentFile: state => state.currentFile,
     currentWorkspace: state => state.currentWorkspace,
     currentUser: state => state.currentUser,

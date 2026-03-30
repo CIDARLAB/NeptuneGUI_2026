@@ -409,7 +409,7 @@ app.get('/api/v1/exampleScript', requireAuth, (req, res) => {
   let outLang = 'lfr'
   if (lang === 'mint') {
     // MINT example script
-    file = 'flow_and_control_demo_fromLFR.mint'
+    file = 'flow_and_control_demo.mint'
     outLang = 'mint'
   } else {
     // LFR example script

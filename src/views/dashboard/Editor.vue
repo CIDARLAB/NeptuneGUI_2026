@@ -37,7 +37,7 @@
         <v-btn class="editor-toolbar-btn editor-toolbar-btn-agent" small outlined color="primary" @click="sendSelectionToAgent">
           Ask Agent about selection
         </v-btn>
-        <input ref="fileUploadInput" type="file" accept=".mint,.lfr,.uf,.v,.json,.ini,text/*" style="display: none" @change="uploadfile">
+        <input ref="fileUploadInput" type="file" accept=".lfr,.mint,.v,.uf" style="display: none" @change="uploadfile">
       </v-col>
     </v-row>
 
@@ -209,7 +209,8 @@ import VueTerminal from 'vue-terminal-ui'
 import axios from 'axios'
 import { Terminal } from 'xterm'
 import router from '../../router'
-import guestStore from '@/lib/guestStore'
+import guestStore, { EXAMPLE_WORKSPACE_NAME } from '@/lib/guestStore'
+import { EXAMPLE_LFR_SCRIPT, EXAMPLE_MINT_SCRIPT } from '@/lib/exampleScripts'
 
 const term = new Terminal()
 let initialPromptWritten = false
@@ -265,6 +266,23 @@ export default {
     const currentfile = this.$store.getters.currentFile
     this.currentworkspace = this.$store.getters.currentWorkspace || { name: '' }
     if (currentfile == null || currentfile === '') {
+      if (this.$store.getters.isGuest) {
+        guestStore.ensureExampleWorkspace()
+        const ws = guestStore.getWorkspacesSortedForDashboard().find(w => String(w.name || '').trim() === EXAMPLE_WORKSPACE_NAME)
+        if (ws && ws.files && ws.files.length) {
+          const f = ws.files.find(x => /\.lfr$/i.test(x.name)) || ws.files[0]
+          const fullWs = guestStore.getWorkspace(ws._id) || ws
+          this.$store.commit('SET_WORKSPACE', fullWs)
+          this.$store.commit('SET_CURRENT_FILE', f.id)
+          this.fileobject = { id: f.id, name: f.name, ext: f.ext }
+          this.code = f.content || ''
+          if ((f.ext || '').toLowerCase() === '.mint') this.selectedScriptLanguage = 'mint'
+          else this.selectedScriptLanguage = 'lfr'
+          self.isloading = false
+          this.downloadconfigfiles()
+          return
+        }
+      }
       this.selectedScriptLanguage = 'lfr'
       this.loadExampleScript()
       return
@@ -272,7 +290,7 @@ export default {
 
     self.isloading = true
 
-    if (this.$store.getters.isGuest && !this.$store.getters.isGuestViaServer) {
+    if (this.$store.getters.isGuest) {
       const wid = this.currentworkspace && this.currentworkspace._id
       if (!wid) { self.isloading = false; return }
       const file = guestStore.getFile(wid, currentfile)
@@ -507,6 +525,10 @@ export default {
     },
     loadExampleScript () {
       const lang = (this.selectedScriptLanguage || 'lfr').toLowerCase()
+      if (this.$store.getters.isGuest) {
+        this.code = lang === 'mint' ? EXAMPLE_MINT_SCRIPT : EXAMPLE_LFR_SCRIPT
+        return
+      }
       axios.get('/api/v1/exampleScript', {
         params: { lang },
         withCredentials: true,
@@ -662,7 +684,7 @@ export default {
       this.configfiles = []
       const ws = this.$store.getters.currentWorkspace
       if (!ws || !ws._id) return
-      if (this.$store.getters.isGuest && !this.$store.getters.isGuestViaServer) {
+      if (this.$store.getters.isGuest) {
         const files = guestStore.getFiles(ws._id) || []
         files.forEach(f => {
           const ext = (f.ext || '').toLowerCase()
@@ -699,7 +721,7 @@ export default {
         const base = (this.editableFileBaseName || this.fileobject.name || 'script').trim().replace(/\.(mint|lfr)$/i, '') || 'script'
         const newName = base + ext
         const config = { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
-        if (this.$store.getters.isGuest && !this.$store.getters.isGuestViaServer) {
+        if (this.$store.getters.isGuest) {
           guestStore.updateFile(this.currentworkspace._id, this.fileobject.id, this.code, newName)
           this.fileobject.name = newName
           this.$router.push('/dashboard')
@@ -731,7 +753,7 @@ export default {
       const base = (this.editableFileBaseName || this.fileobject.name || 'script').trim().replace(/\.(mint|lfr)$/i, '') || 'script'
       const newName = base + ext
       const config = { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
-      if (this.$store.getters.isGuest && !this.$store.getters.isGuestViaServer) {
+      if (this.$store.getters.isGuest) {
         guestStore.updateFile(this.currentworkspace._id, this.fileobject.id, this.code, newName)
         this.fileobject.name = newName
         this.compiledialog = true
@@ -762,8 +784,8 @@ export default {
       this.compiledialog = true
     },
     openExistingWorkspaceDialog () {
-      if (this.$store.getters.isGuest && !this.$store.getters.isGuestViaServer) {
-        this.existingWorkspacesList = guestStore.getWorkspaces()
+      if (this.$store.getters.isGuest) {
+        this.existingWorkspacesList = guestStore.getWorkspacesSortedForDashboard()
         const curId = this.currentworkspace && this.currentworkspace._id
         const inList = this.existingWorkspacesList.some(w => String(w._id) === String(curId))
         this.selectedExistingWorkspaceId = inList ? curId : (this.existingWorkspacesList[0] && this.existingWorkspacesList[0]._id) || null
@@ -794,7 +816,7 @@ export default {
       const base = (this.editableFileBaseName || this.fileobject.name || this.newScriptBaseName || 'script').trim().replace(/\.(mint|lfr)$/i, '') || 'script'
       const fileName = base + ext
       const config = { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
-      if (this.$store.getters.isGuest && !this.$store.getters.isGuestViaServer) {
+      if (this.$store.getters.isGuest) {
         const file = guestStore.createFile(wsId, fileName, ext)
         if (file) guestStore.updateFile(wsId, file.id, this.code)
         this.existingWorkspaceDialog = false
@@ -827,7 +849,7 @@ export default {
       let base = (this.newScriptBaseName || 'script').trim().replace(/\.(mint|lfr)$/i, '') || 'script'
       const fileName = base + ext
 
-      if (this.$store.getters.isGuest && !this.$store.getters.isGuestViaServer) {
+      if (this.$store.getters.isGuest) {
         const ws = guestStore.createWorkspace(name, notes)
         const file = guestStore.createFile(ws._id, fileName, ext)
         if (file) guestStore.updateFile(ws._id, file.id, this.code)
@@ -914,7 +936,7 @@ export default {
     deletefile (event) {
       const fid = this.fileobject.id
       const wid = this.$store.getters.currentWorkspace && this.$store.getters.currentWorkspace._id
-      if (this.$store.getters.isGuest && !this.$store.getters.isGuestViaServer) {
+      if (this.$store.getters.isGuest) {
         if (wid) guestStore.deleteFile(wid, fid)
         router.push('/dashboard')
         return
@@ -934,7 +956,7 @@ export default {
       const baseName = (this.editableFileBaseName || this.fileobject.name || this.newScriptBaseName || 'script').trim().replace(/\.(mint|lfr)$/i, '') || 'script'
       const fileName = baseName + ext
 
-      if (this.$store.getters.isGuest && !this.$store.getters.isGuestViaServer) {
+      if (this.$store.getters.isGuest) {
         const blob = new Blob([this.code || ''], { type: 'text/plain;charset=utf-8' })
         const url = window.URL.createObjectURL(blob)
         const link = document.createElement('a')
@@ -983,31 +1005,77 @@ export default {
           alert('Download failed. ' + (msg || 'Please try again.'))
         })
     },
+    applyScriptLanguageFromUploadExt (ext) {
+      const e = (ext || '').toLowerCase()
+      if (e === '.lfr' || e === '.v') {
+        this.selectedScriptLanguage = 'lfr'
+      } else if (e === '.mint' || e === '.uf') {
+        this.selectedScriptLanguage = 'mint'
+      }
+    },
     uploadfile (event) {
       const input = event.target
       const file = input.files && input.files[0]
       if (!file) return
       const reader = new FileReader()
       const self = this
-      reader.onload = () => {
+      reader.onload = async () => {
         const content = reader.result
         const name = file.name
         const ext = (name.match(/\.[0-9a-z]+$/i) && name.match(/\.[0-9a-z]+$/i)[0]) || ''
-        const ws = self.currentworkspace && self.currentworkspace._id
-        if (!ws) {
-          alert('Select or create a workspace first (e.g. Save file to a new workspace).')
+        const allowed = ['.lfr', '.mint', '.v', '.uf']
+        if (!allowed.includes(ext.toLowerCase())) {
+          alert('Please upload an .lfr or .mint file (or .v / .uf for compatibility).')
           input.value = ''
           return
         }
-        if (self.$store.getters.isGuest && !self.$store.getters.isGuestViaServer) {
-          const f = guestStore.createFile(ws, name, ext)
-          if (f) guestStore.updateFile(ws, f.id, content)
+
+        let wsId = self.currentworkspace && self.currentworkspace._id
+        if (!wsId) {
+          if (self.$store.getters.isGuest) {
+            const w = guestStore.getOrCreateUploadWorkspace()
+            self.currentworkspace = w
+            self.$store.commit('SET_WORKSPACE', w)
+            wsId = w._id
+          } else {
+            const config = { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
+            try {
+              const idsRes = await axios.get('/api/v1/workspaces', config)
+              const ids = idsRes.data || []
+              let found = null
+              for (const wid of ids) {
+                // eslint-disable-next-line no-await-in-loop
+                const res = await axios.get('/api/v1/workspace', { params: { workspace_id: wid }, ...config })
+                if (res.data && String(res.data.name || '').trim() === 'uploaded files') {
+                  found = res.data
+                  break
+                }
+              }
+              const w = found
+                ? found
+                : (await axios.post('/api/v1/workspace', { name: 'uploaded files' }, config)).data
+              self.currentworkspace = w
+              self.$store.commit('SET_WORKSPACE', w)
+              wsId = w._id
+            } catch (err) {
+              const msg = (err.response && err.response.data && (err.response.data.error || err.response.data.message)) || err.message
+              alert('Could not create a workspace for upload. ' + (msg ? String(msg) : 'Please try again.'))
+              input.value = ''
+              return
+            }
+          }
+        }
+
+        if (self.$store.getters.isGuest) {
+          const f = guestStore.createFile(wsId, name, ext)
+          if (f) guestStore.updateFile(wsId, f.id, content)
           self.fileobject = { id: f.id, name: f.name, ext: f.ext }
           self.code = content
+          self.applyScriptLanguageFromUploadExt(ext)
           self.$store.commit('SET_WORKSPACE', self.currentworkspace)
         } else {
           const config = { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
-          axios.post('/api/v1/file', { workspaceid: ws, file_name: name, ext }, config)
+          axios.post('/api/v1/file', { workspaceid: wsId, file_name: name, ext }, config)
             .then((res) => {
               const fileId = res.data.id
               return axios.put('/api/v1/file', { fileid: fileId, text: content }, config).then(() => res.data)
@@ -1015,6 +1083,7 @@ export default {
             .then((f) => {
               self.fileobject = { id: f.id, name: f.name, ext: f.ext }
               self.code = content
+              self.applyScriptLanguageFromUploadExt(ext)
             })
             .catch((err) => {
               const msg = (err.response && err.response.data && (err.response.data.error || err.response.data.message)) || err.message

@@ -56,7 +56,6 @@
 
 <script>
   import router from '../../router'
-  import axios from 'axios'
 
   export default {
     name: 'Landing',
@@ -71,15 +70,8 @@
 
     methods: {
       continueAsGuest () {
-        axios.post('/api/v2/guest', {}, { withCredentials: true })
-          .then((res) => {
-            this.$store.commit('setGuestViaServer', res.data.user)
-            router.push('/dashboard')
-          })
-          .catch(() => {
-            this.$store.commit('setGuest')
-            router.push('/dashboard')
-          })
+        this.$store.commit('setGuest')
+        router.push('/dashboard')
       },
     },
   }

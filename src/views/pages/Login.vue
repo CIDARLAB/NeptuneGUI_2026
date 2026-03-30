@@ -250,15 +250,8 @@
           .finally(() => { this.forgotResetting = false })
       },
       continueAsGuest () {
-        axios.post('/api/v2/guest', {}, { withCredentials: true })
-          .then((res) => {
-            this.$store.commit('setGuestViaServer', res.data.user)
-            router.push('/dashboard')
-          })
-          .catch(() => {
-            this.$store.commit('setGuest')
-            router.push('/dashboard')
-          })
+        this.$store.commit('setGuest')
+        router.push('/dashboard')
       },
     },
   }

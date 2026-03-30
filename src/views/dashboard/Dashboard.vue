@@ -59,27 +59,42 @@
             Workspaces
           </div>
           <v-spacer />
-          <v-btn
-            v-if="isGuestLocal"
-            small
-            color="primary"
-            class="mt-1"
-            @click="exportGuestWorkspace"
-          >
-            Export cache
-          </v-btn>
-          <v-btn
-            small
-            outlined
-            color="primary"
-            class="mt-1 ml-2"
-            @click="triggerImportZip"
-          >
-            <v-icon left small>mdi-upload</v-icon>
-            Import zip
-          </v-btn>
+          <v-tooltip v-if="isGuest" bottom>
+            <template v-slot:activator="{ on, attrs }">
+              <v-btn
+                small
+                color="primary"
+                depressed
+                class="mt-1 dashboard-guest-export-btn"
+                v-bind="attrs"
+                v-on="on"
+                @click="exportGuestWorkspace"
+              >
+                <v-icon left small color="white">mdi-download</v-icon>
+                EXPORT WORKSPACES
+              </v-btn>
+            </template>
+            <span>Download all workspaces as a .zip file to keep a backup on your computer.</span>
+          </v-tooltip>
+          <v-tooltip bottom>
+            <template v-slot:activator="{ on, attrs }">
+              <v-btn
+                small
+                outlined
+                color="primary"
+                class="mt-1 ml-2 dashboard-guest-import-btn"
+                v-bind="attrs"
+                v-on="on"
+                @click="triggerImportZip"
+              >
+                <v-icon left small>mdi-upload</v-icon>
+                IMPORT WORKSPACES
+              </v-btn>
+            </template>
+            <span>Restore workspaces from a .zip file you exported earlier.</span>
+          </v-tooltip>
         </div>
-        <div v-if="isGuestLocal" class="guest-storage-hint mt-2">
+        <div v-if="isGuest" class="guest-storage-hint mt-2">
           <span class="guest-storage-text text-no-wrap">
             Guest data is stored in this browser. Export to a cache file (you choose the path) and later update from that file to restore your previous workspaces.
           </span>
@@ -111,73 +126,75 @@
       <v-col
         cols="12"
         lg="3"
-        v-for="(workspace, key, i) in workspaces" 
-        :key="i"
+        v-for="workspace in workspaces"
+        :key="workspace._id"
       >
         <base-material-workspace-chart-card
           :id="workspace._id"
-          hover-reveal
           color="info"
           type="Line"
           :active-jobs="jobActiveCount"
           :completed-jobs="jobCompletedCount"
         >
-          <template v-slot:reveal-actions>
-            <v-tooltip bottom>
-              <template v-slot:activator="{ attrs, on }">
-                <v-btn
-                  v-bind="attrs"
-                  color="info"
-                  icon
-                  v-on="on"
-                >
-                  <v-icon
-                    color="info"
-                  >
-                    mdi-refresh
-                  </v-icon>
-                </v-btn>
-              </template>
+          <div class="workspace-card-toolbar mt-2 mx-1">
+            <div class="workspace-card-name card-title font-weight-light">
+              {{ workspace.name }}
+            </div>
+            <div class="workspace-card-actions-row d-flex justify-center align-center">
+              <div class="workspace-card-actions d-flex flex-shrink-0 align-center">
+                <v-tooltip bottom>
+                  <template v-slot:activator="{ attrs, on }">
+                    <v-btn
+                      v-bind="attrs"
+                      text
+                      icon
+                      color="success"
+                      class="workspace-card-action-btn"
+                      v-on="on"
+                      @click="refreshworkspacedata"
+                    >
+                      <v-icon>mdi-refresh</v-icon>
+                    </v-btn>
+                  </template>
+                  <span>Refresh dashboard and workspace list</span>
+                </v-tooltip>
 
-              <span>Refresh</span>
-            </v-tooltip>
+                <v-tooltip bottom>
+                  <template v-slot:activator="{ attrs, on }">
+                    <v-btn
+                      v-bind="attrs"
+                      text
+                      icon
+                      color="blue"
+                      class="workspace-card-action-btn"
+                      v-on="on"
+                      @click="selectworkspace(workspace._id)"
+                    >
+                      <v-icon>mdi-view-split-vertical</v-icon>
+                    </v-btn>
+                  </template>
+                  <span>Show files in this workspace</span>
+                </v-tooltip>
 
-            <v-tooltip bottom>
-              <template v-slot:activator="{ attrs, on }">
-                <v-btn
-                  v-bind="attrs"
-                  light
-                  icon
-                  v-on="on"
-                  v-on:click="selectworkspace(workspace._id)"
-                >
-                  <v-icon color="primary">mdi-view-split-vertical</v-icon>
-                </v-btn>
-              </template>
-
-              <span>View Files</span>
-            </v-tooltip>
-
-            <v-tooltip bottom>
-              <template v-slot:activator="{ attrs, on }">
-                <v-btn
-                  v-bind="attrs"
-                  light
-                  icon
-                  v-on="on"
-                  v-on:click="deleteworkspace(workspace._id)"
-                >
-                  <v-icon color="error">mdi-delete</v-icon>
-                </v-btn>
-              </template>
-
-              <span>Delete Workspace</span>
-            </v-tooltip>
-          </template>
-
-          <h3 class="card-title font-weight-light mt-2 ml-2">
-            {{workspace.name}}
-          </h3>
+                <v-tooltip bottom>
+                  <template v-slot:activator="{ attrs, on }">
+                    <v-btn
+                      v-bind="attrs"
+                      text
+                      icon
+                      color="red"
+                      class="workspace-card-action-btn"
+                      v-on="on"
+                      @click="deleteworkspace(workspace._id)"
+                    >
+                      <v-icon>mdi-delete</v-icon>
+                    </v-btn>
+                  </template>
+                  <span>Delete this workspace and its files</span>
+                </v-tooltip>
+              </div>
+            </div>
+          </div>
           <template v-slot:actions>
             <v-icon
               class="mr-1"
@@ -196,9 +213,9 @@
             class="d-flex align-center justify-center py-6 px-4"
         >
             <p class="create-workspace-hint text-center ma-0">
-                To create a new workspace, go to
+                To create a new workspace, go to the
                 <router-link to="/editor" class="editor-link">Editor</router-link>
-                and save; that will create a new workspace.
+                and save your file into a new workspace.
             </p>
         </v-col>
 
@@ -235,7 +252,6 @@
                         :id="file.id"
                         :workspaceid="selectedworkspace._id"
                         v-on:onFileDeleted="refreshFiles"
-                        @download="downloadWorkspaceFile(file)"
                         @view3duf="openJsonIn3DuF($event)"
                     />
                 </v-col>
@@ -317,7 +333,7 @@
   import axios from 'axios'
   import { log } from 'util'
   import * as Utils from '../../utils'
-  import guestStore from '@/lib/guestStore'
+  import guestStore, { EXAMPLE_WORKSPACE_NAME } from '@/lib/guestStore'
   import JSZip from 'jszip'
 
   export default {
@@ -370,8 +386,8 @@
       totalSales () {
         return this.sales.reduce((acc, val) => acc + val.salesInM, 0)
       },
-      isGuestLocal () {
-        return this.$store.getters.isGuest && !this.$store.getters.isGuestViaServer
+      isGuest () {
+        return this.$store.getters.isGuest
       },
     },
 
@@ -398,7 +414,7 @@
         // allow picking same file again later
         try { e.target.value = '' } catch (_) {}
 
-        if (this.isGuestLocal) {
+        if (this.isGuest) {
           // Reuse local guest import implementation
           return this.onImportGuestFile({ target: { files: [file] } })
         }
@@ -583,10 +599,6 @@
           e.target.value = ''
         }
       },
-      downloadWorkspaceFile (file) {
-        if (!file || !file.id) return
-        this.downloadfile(file)
-      },
       openJsonIn3DuF (file) {
         return this.openJsonIn3DuFInternal(file)
       },
@@ -602,7 +614,7 @@
         // 3DuF expects the design JSON; we send as a string so 3DuF can JSON.parse it.
         let jsonText = ''
 
-        if (this.$store.getters.isGuest && !this.$store.getters.isGuestViaServer) {
+        if (this.$store.getters.isGuest) {
           if (!workspaceId) {
             // eslint-disable-next-line no-console
             console.error('openJsonIn3DuF: missing guest workspaceId')
@@ -655,8 +667,10 @@
           this.jobActiveCount = 0
           this.jobCompletedCount = 0
 
-          if (this.$store.getters.isGuest && !this.$store.getters.isGuestViaServer) {
-            const list = guestStore.getWorkspaces()
+          if (this.$store.getters.isGuest) {
+            guestStore.ensureExampleWorkspace()
+            guestStore.pruneEmptyWorkspaces()
+            const list = guestStore.getWorkspacesSortedForDashboard()
             list.forEach(w => {
               this.workspaces.push(w)
               this.workspacesobjects[w._id] = w
@@ -664,8 +678,20 @@
             const target = this.$route && this.$route.query && this.$route.query.workspace
             if (target && this.workspacesobjects[target]) {
               this.selectworkspace(target)
-            } else if (this.$store.getters.currentWorkspace) {
+            } else if (this.$store.getters.currentWorkspace && this.workspacesobjects[this.$store.getters.currentWorkspace._id]) {
               this.selectworkspace(this.$store.getters.currentWorkspace._id)
+            } else {
+              const example = list.find(w => String(w.name || '').trim() === EXAMPLE_WORKSPACE_NAME)
+              if (example) {
+                this.selectworkspace(example._id)
+              } else if (list.length) {
+                this.selectworkspace(list[0]._id)
+              } else {
+                this.$store.commit('SET_WORKSPACE', null)
+                this.$store.commit('SET_CURRENT_FILE', null)
+                this.selectedworkspace = { name: '', id: '' }
+                this.files = []
+              }
             }
             return
           }
@@ -686,19 +712,36 @@
           })
 
           axios.get('/api/v1/workspaces', config)
-            .then((response) => {
-                for (let wid of response.data || []) {
-                    axios.get('/api/v1/workspace', { params: { workspace_id: wid }, ...config })
-                    .then((res) => {
-                        this.workspaces.push(res.data)
-                        this.workspacesobjects[res.data._id] = res.data
-                        if (this.$store.getters.currentWorkspace != null && this.$store.getters.currentWorkspace !== undefined) {
-                            this.selectworkspace(this.$store.getters.currentWorkspace._id)
-                        }
-                    })
-                    .catch((error) => { console.log(error) })
+            .then(async (response) => {
+              const widList = response.data || []
+              const loaded = []
+              for (const wid of widList) {
+                try {
+                  const filesRes = await axios.get('/api/v1/files', { params: { id: wid }, ...config })
+                  const fileIds = filesRes.data || []
+                  if (fileIds.length === 0) continue
+                  const res = await axios.get('/api/v1/workspace', { params: { workspace_id: wid }, ...config })
+                  if (res.data) loaded.push(res.data)
+                } catch (error) {
+                  console.log(error)
                 }
-                this.fetchJobCounts(config)
+              }
+              loaded.forEach((w) => {
+                this.workspaces.push(w)
+                this.workspacesobjects[w._id] = w
+              })
+              const target = this.$route && this.$route.query && this.$route.query.workspace
+              if (target && this.workspacesobjects[target]) {
+                this.selectworkspace(target)
+              } else if (this.$store.getters.currentWorkspace && this.workspacesobjects[this.$store.getters.currentWorkspace._id]) {
+                this.selectworkspace(this.$store.getters.currentWorkspace._id)
+              } else {
+                this.$store.commit('SET_WORKSPACE', null)
+                this.$store.commit('SET_CURRENT_FILE', null)
+                this.selectedworkspace = { name: '', id: '' }
+                this.files = []
+              }
+              this.fetchJobCounts(config)
             })
             .catch((error) => { console.log(error) })
         },
@@ -729,7 +772,7 @@
             .catch(() => {})
         },
         deleteworkspace (wid) {
-          if (this.$store.getters.isGuest && !this.$store.getters.isGuestViaServer) {
+          if (this.$store.getters.isGuest) {
             guestStore.deleteWorkspace(wid)
             this.refreshworkspacedata()
             if (this.workspaces.length) this.selectworkspace(this.workspaces[0]._id)
@@ -747,7 +790,7 @@
         },
 
         createworkspace () {
-          if (this.$store.getters.isGuest && !this.$store.getters.isGuestViaServer) {
+          if (this.$store.getters.isGuest) {
             guestStore.createWorkspace(this.newworkspacename)
             this.refreshworkspacedata()
             this.newworkspacedialog = false
@@ -766,7 +809,7 @@
         },
         createfile () {
           const ext = this.extname.match(/\.[0-9a-z]+$/i) ? this.extname.match(/\.[0-9a-z]+$/i)[0] : this.extname
-          if (this.$store.getters.isGuest && !this.$store.getters.isGuestViaServer) {
+          if (this.$store.getters.isGuest) {
             const ws = this.$store.getters.currentWorkspace
             if (ws && ws._id) {
               guestStore.createFile(ws._id, this.newfilename + this.extname, ext)
@@ -801,7 +844,7 @@
           this.selectedworkspace = obj
           if (obj) this.$store.commit('SET_WORKSPACE', obj)
 
-          if (this.$store.getters.isGuest && !this.$store.getters.isGuestViaServer) {
+          if (this.$store.getters.isGuest) {
             this.files = guestStore.getFiles(workspace_id) || []
             return
           }
@@ -827,9 +870,37 @@
         font-size: calc(1rem + 2pt);
     }
     /* Workspace card action buttons: ensure icons are visible */
-    #dashboard .v-btn.info .v-icon { color: #00CAE3 !important; }
-    #dashboard .v-btn.primary .v-icon { color: #006994 !important; }
-    #dashboard .v-btn.error .v-icon { color: #f44336 !important; }
+    /* Match v-btn small (~13px) and keep both guest toolbar buttons visually identical */
+    #dashboard .dashboard-guest-export-btn,
+    #dashboard .dashboard-guest-import-btn {
+        font-weight: 600 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.03em !important;
+        font-size: calc(0.8125rem + 2pt) !important;
+    }
+
+    /* Workspace card: name top-left; action buttons centered on row below */
+    #dashboard .workspace-card-toolbar {
+        width: 100%;
+    }
+    #dashboard .workspace-card-actions-row {
+        width: 100%;
+        margin-top: 8px;
+    }
+    #dashboard .workspace-card-actions {
+        gap: 28px;
+    }
+    #dashboard .workspace-card-action-btn {
+        margin: 0 !important;
+    }
+    #dashboard .workspace-card-name {
+        width: 100%;
+        text-align: left;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+        line-height: 1.35;
+        font-size: calc(1.25rem + 2pt);
+    }
 
     /* Create workspace hint: Editor explanation line */
     .create-workspace-hint {

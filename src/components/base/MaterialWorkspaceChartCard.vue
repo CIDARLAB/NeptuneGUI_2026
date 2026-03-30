@@ -13,11 +13,6 @@
       </div>
     </template>
 
-    <slot
-      slot="reveal-actions"
-      name="reveal-actions"
-    />
-
     <slot />
 
     <slot
@@ -89,7 +84,7 @@
       color: #999
 
     .v-card--material__heading
-      max-height: 185px
+      max-height: 110px !important
 
       .ct-label
         color: inherit

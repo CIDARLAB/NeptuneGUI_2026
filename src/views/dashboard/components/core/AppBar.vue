@@ -13,7 +13,7 @@
       fab
       small
       color="primary"
-      @click="$vuetify.breakpoint.smAndDown ? setDrawer(!drawer) : $emit('input', !value)"
+      @click="setDrawer(!drawer)"
     >
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="sidebar-toggle-icon" aria-hidden="true">
         <circle cx="5" cy="6" r="1.5" fill="currentColor" />
@@ -202,13 +202,6 @@
             },
           })
         },
-      },
-    },
-
-    props: {
-      value: {
-        type: Boolean,
-        default: false,
       },
     },
 
@@ -420,8 +413,17 @@
   opacity: 1;
 }
 /* Right-side buttons (bell, account): use theme primary blue */
-#app-bar .v-btn:not(.fab) .v-icon {
+#app-bar .v-btn:not(.fab):not(.exit-btn) .v-icon {
   color: #006994 !important;
+  opacity: 1;
+}
+/* Exit: red button, white icon and label (overrides rule above) */
+#app-bar .exit-btn,
+#app-bar .exit-btn .v-btn__content {
+  color: #ffffff !important;
+}
+#app-bar .exit-btn .v-icon {
+  color: #ffffff !important;
   opacity: 1;
 }
 /* Dashboard / Editor page title: larger font */

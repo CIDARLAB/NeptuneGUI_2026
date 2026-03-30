@@ -244,7 +244,7 @@ export default {
   },
   methods: {
     loadComponents () {
-      const isGuest = this.$store.getters.isGuest && !this.$store.getters.isGuestViaServer
+      const isGuest = this.$store.getters.isGuest
       if (isGuest) {
         this.components = this.cloneDefaultComponents()
         return
@@ -271,7 +271,7 @@ export default {
       }))
     },
     persistIfLoggedIn () {
-      if (this.$store.getters.isGuest && !this.$store.getters.isGuestViaServer) return
+      if (this.$store.getters.isGuest) return
       const config = { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
       axios.put('/api/v1/componentLibrary', { components: this.components }, config).catch(() => {})
     },
@@ -368,7 +368,7 @@ export default {
       }
       const content = JSON.stringify(payload, null, 2)
       const config = { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
-      if (this.$store.getters.isGuest && !this.$store.getters.isGuestViaServer) {
+      if (this.$store.getters.isGuest) {
         let file = guestStore.getFiles(ws._id).find(f => f.name === fileName)
         if (!file) file = guestStore.createFile(ws._id, fileName, '.json')
         if (file) guestStore.updateFile(ws._id, file.id, content)

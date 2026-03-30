@@ -3,12 +3,11 @@
     id="core-navigation-drawer"
     v-model="drawer"
     :dark="barColor !== 'rgba(228, 226, 226, 1), rgba(255, 255, 255, 0.7)'"
-    :expand-on-hover="expandOnHover"
     :right="$vuetify.rtl"
     :src="barImage"
     mobile-break-point="960"
     app
-    mini-variant-width="80"
+    mini-variant-width="56"
     width="260"
     v-bind="$attrs"
   >
@@ -67,20 +66,38 @@
       <div />
     </v-list>
 
-    <!-- Sidebar export hint (bottom) -->
     <v-divider class="mt-2" />
     <div class="drawer-export-hint pa-4">
-      <div class="drawer-export-text">
-        Tip: export your workspace regularly to avoid losing work.
+      <div class="drawer-export-control d-flex flex-column align-center">
+        <v-tooltip right>
+          <template v-slot:activator="{ on, attrs }">
+            <v-btn
+              color="success"
+              depressed
+              small
+              block
+              class="drawer-export-rect-btn"
+              aria-label="Export workspaces as zip"
+              v-bind="attrs"
+              v-on="on"
+              @click="exportWorkspacesZip"
+            >
+              <v-icon
+                left
+                small
+                color="white"
+              >
+                mdi-download
+              </v-icon>
+              <span>Export</span>
+            </v-btn>
+          </template>
+          <span>Download all workspaces as a .zip file to keep a backup on your computer.</span>
+        </v-tooltip>
+        <div class="drawer-export-text text-center mt-3">
+          Tip: export your workspace regularly to avoid losing work.
+        </div>
       </div>
-      <v-btn
-        small
-        color="primary"
-        class="mt-3 drawer-export-btn mx-auto"
-        @click="exportWorkspacesZip"
-      >
-        Export workspaces (.zip)
-      </v-btn>
     </div>
   </v-navigation-drawer>
 </template>
@@ -96,13 +113,6 @@
 
   export default {
     name: 'DashboardCoreDrawer',
-
-    props: {
-      expandOnHover: {
-        type: Boolean,
-        default: false,
-      },
-    },
 
     data: () => ({
       logo: require('@/assets/Neptune2026_logo_white_text.png'),
@@ -284,9 +294,6 @@
 
     computed: {
       ...mapState(['barColor', 'barImage']),
-      isGuestLocal () {
-        return this.$store.getters.isGuest && !this.$store.getters.isGuestViaServer
-      },
       drawer: {
         get () {
           return this.$store.state.drawer
@@ -321,26 +328,8 @@
       },
     },
 
-    watch: {
-      '$vuetify.breakpoint.smAndDown' (val) {
-        this.$emit('update:expandOnHover', !val)
-      },
-    },
-
     methods: {
       async exportWorkspacesZip () {
-        if (!this.isGuestLocal) {
-          // Logged-in users and server-backed guests: export from backend
-          const a = document.createElement('a')
-          a.href = '/api/v1/exportWorkspacesZip'
-          a.target = '_blank'
-          document.body.appendChild(a)
-          a.click()
-          document.body.removeChild(a)
-          return
-        }
-
-        // Local guest: export from browser storage
         const data = guestStore.exportData()
         const zip = new JSZip()
 
@@ -404,16 +393,27 @@
   @import '~vuetify/src/styles/tools/_rtl.sass'
 
   #core-navigation-drawer
+    /* Slower width ease + fade nav labels (logo / export block are outside nav.v-list) */
+    &.v-navigation-drawer
+      transition-duration: 0.45s !important
+      transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1) !important
+
+    .v-navigation-drawer__content
+      transition: opacity 0.4s cubic-bezier(0.22, 1, 0.36, 1)
+
+    nav.v-list .v-list-item__content
+      transition: opacity 0.34s cubic-bezier(0.22, 1, 0.36, 1)
+
+    &.v-navigation-drawer--mini-variant:not(.v-navigation-drawer--is-mouseover) nav.v-list .v-list-item__content
+      opacity: 0
+
+    &:not(.v-navigation-drawer--mini-variant) nav.v-list .v-list-item__content,
+    &.v-navigation-drawer--is-mouseover nav.v-list .v-list-item__content
+      opacity: 1
+
     .v-list-item,
     .v-list-item__title
       font-size: 14pt !important
-    &.v-navigation-drawer--mini-variant
-      .v-list-item
-        justify-content: flex-start !important
-
-      .v-list-group--sub-group
-        display: block !important
-
     .v-list-group__header.v-list-item--active:before
       opacity: .24
 
@@ -438,23 +438,29 @@
         &__icon:first-child
           margin-top: 10px
 
-  .drawer-export-hint
-    display: flex
-    flex-direction: column
-    align-items: center
-
-    .drawer-export-text
-      font-size: 16px
-      font-weight: 600
-      line-height: 1.35
-      color: rgba(255, 255, 255, 0.92)
-    .drawer-export-btn
-      font-size: 13px !important
-      max-width: 200px
+    .drawer-export-hint
+      display: flex
+      flex-direction: column
+      align-items: center
       width: 100%
-      white-space: normal
-      line-height: 1.2
-      padding: 6px 10px !important
+
+      .drawer-export-control
+        width: 100%
+        max-width: 220px
+
+      .drawer-export-rect-btn
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18) !important
+        font-size: 14pt !important
+        font-weight: 400 !important
+        text-transform: none !important
+        letter-spacing: normal !important
+
+      .drawer-export-text
+        font-size: 14pt !important
+        font-weight: 400
+        line-height: 1.35
+        color: rgba(255, 255, 255, 0.9)
+        max-width: 220px
 
     .v-list-group--sub-group
       .v-list-item
