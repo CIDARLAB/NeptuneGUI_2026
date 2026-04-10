@@ -1,0 +1,5 @@
+LFR source:
+
+{{LFR_SOURCE}}
+
+Explain this design in English.

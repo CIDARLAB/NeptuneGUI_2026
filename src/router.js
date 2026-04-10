@@ -61,6 +61,12 @@ export default new Router({
           meta: { requiresAuth: true }
         },
         {
+          name: 'PromptSteps',
+          path: 'prompt/steps',
+          component: () => import('@/views/dashboard/PromptStepsPage'),
+          meta: { requiresAuth: true }
+        },
+        {
           name: 'Solutions',
           path: 'solutions',
           component: () => import('@/views/dashboard/Solutions'),

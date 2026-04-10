@@ -8,111 +8,85 @@
           </div>
         </v-col>
 
-        <!-- Right-side Chat Agent (static demo UI, Claude-style) -->
         <v-col
           v-if="chatVisible"
           cols="4"
-          class="agent-chat-col pa-0"
+          class="agent-panel-col pa-0"
         >
-          <v-card class="agent-chat-card d-flex flex-column" outlined>
-            <v-card-title class="agent-chat-header">
-              <div class="agent-chat-title">
-                Neptune Agent
+          <v-card class="agent-panel-card d-flex flex-column" outlined>
+            <v-card-title class="agent-panel-header">
+              <div class="agent-panel-title">
+                LLM prompts
               </div>
-              <div class="agent-chat-subtitle">
-                Natural language → LFR/MINT suggestions
+              <div class="agent-panel-subtitle">
+                <span class="agent-panel-subtitle-text">
+                  Download Neptune prompt scripts, open the vendor chat, describe your device in English, then paste the generated
+                  <span class="agent-panel-keep-together">LFR</span>
+                  into the
+                  <span class="agent-panel-keep-together">Editor</span>.
+                </span>
               </div>
             </v-card-title>
 
             <v-divider />
 
-            <v-card-text class="agent-chat-body flex-grow-1">
-              <div class="agent-chat-messages">
-                <div
-                  v-for="(m, idx) in messages"
-                  :key="idx"
-                  :class="['agent-chat-message', m.role]"
+            <v-card-text class="agent-panel-body flex-grow-1">
+              <v-select
+                v-model="selectedModel"
+                :items="llmModels"
+                item-text="label"
+                return-object
+                outlined
+                hide-details
+                label="Model"
+                color="primary"
+                class="mb-3 agent-panel-model-select"
+                :menu-props="{ contentClass: 'agent-panel-model-select-menu' }"
+              />
+
+              <p class="agent-panel-hint mb-3">
+                The <strong>.zip</strong> is plain-text <strong>prompt scripts</strong> for your chosen LLM: load them as custom instructions or paste per turn so the model can help you write and refine
+                <span class="agent-panel-keep-together">LFR</span>.
+                Full step-by-step guide:
+                <router-link
+                  :to="{ name: 'PromptSteps' }"
+                  class="agent-panel-steps-link"
+                >Prompt steps guide</router-link>.
+                The same content is at the root of the downloaded zip.
+              </p>
+
+              <div class="agent-panel-actions d-flex flex-wrap align-center">
+                <v-btn
+                  color="success"
+                  depressed
+                  small
+                  class="agent-panel-export-btn mb-2 mr-2"
+                  :loading="zipDownloading"
+                  :disabled="zipDownloading"
+                  @click="downloadPromptZip"
                 >
-                  <div :class="['agent-chat-message-role', m.role]">
-                    {{ m.role === 'user' ? 'You' : 'Neptune Agent' }}
-                  </div>
-                  <div class="agent-chat-message-text">
-                    {{ m.text }}
-                  </div>
-                  <div
-                    v-if="m.role === 'agent' && m.text"
-                    class="agent-chat-actions"
+                  <v-icon
+                    left
+                    small
+                    color="white"
                   >
-                    <v-btn
-                      x-small
-                      text
-                      color="primary"
-                      @click="insertIntoEditor(m, 'lfr')"
-                    >
-                      Insert into Editor as LFR
-                    </v-btn>
-                    <v-btn
-                      x-small
-                      text
-                      color="primary"
-                      @click="insertIntoEditor(m, 'mint')"
-                    >
-                      Insert into Editor as MINT
-                    </v-btn>
-                  </div>
-                </div>
+                    mdi-download
+                  </v-icon>
+                  <span>{{ zipDownloading ? 'Preparing zip…' : 'Download prompt package (.zip)' }}</span>
+                </v-btn>
+
+                <v-btn
+                  color="primary"
+                  depressed
+                  small
+                  class="agent-panel-export-btn mb-2"
+                  @click="openExternalAgent"
+                >
+                  <v-icon left small>mdi-open-in-new</v-icon>
+                  <span>Open {{ selectedModel.label }} chat</span>
+                </v-btn>
               </div>
             </v-card-text>
-
-            <v-divider />
-
-            <v-card-actions class="agent-chat-input-row">
-              <div v-if="selectionAttachment" class="agent-chat-attachment">
-                <v-btn
-                  x-small
-                  outlined
-                  color="primary"
-                  class="agent-chat-attachment-btn"
-                  @click="selectionExpanded = !selectionExpanded"
-                >
-                  Selected code ({{ (selectionAttachment.language || 'lfr').toUpperCase() }})
-                  <v-icon right x-small>{{ selectionExpanded ? 'mdi-chevron-down' : 'mdi-chevron-right' }}</v-icon>
-                </v-btn>
-                <v-btn
-                  x-small
-                  text
-                  color="primary"
-                  class="ml-1"
-                  @click="clearSelectionAttachment"
-                >
-                  Clear
-                </v-btn>
-                <div v-if="selectionExpanded" class="agent-chat-attachment-preview mt-2">
-                  <pre class="agent-chat-attachment-pre">{{ selectionAttachment.text }}</pre>
-                </div>
-              </div>
-              <div class="agent-chat-input-line">
-                <v-textarea
-                  v-model="draft"
-                  auto-grow
-                  rows="1"
-                  placeholder="Describe what you want to build in LFR, e.g. 'a 3-layer microfluidic mixer with two inputs and one output...'"
-                  class="agent-chat-input"
-                  hide-details
-                  outlined
-                  dense
-                  @keydown.enter.exact.prevent="send"
-                />
-                <v-btn
-                  color="primary"
-                  class="ml-2 agent-chat-send-btn"
-                  :disabled="!draft.trim()"
-                  @click="send"
-                >
-                  Send
-                </v-btn>
-              </div>
-            </v-card-actions>
           </v-card>
         </v-col>
       </v-row>
@@ -121,6 +95,24 @@
 </template>
 
 <script>
+  import JSZip from 'jszip'
+
+  const PROMPT_FILE_NAMES = [
+    'manifest.json',
+    'en2lfr_system.txt',
+    'en2lfr_user_template.txt',
+    'lfr2en_system.txt',
+    'lfr2en_user_template.txt',
+  ]
+
+  const LLM_MODELS = [
+    { id: 'qwen', label: 'Qwen', folder: 'alibaba_qwen', agentUrl: 'https://chat.qwen.ai/' },
+    { id: 'deepseek', label: 'DeepSeek', folder: 'deepseek', agentUrl: 'https://chat.deepseek.com/' },
+    { id: 'gemini', label: 'Gemini', folder: 'google_gemini', agentUrl: 'https://gemini.google.com/' },
+    { id: 'gpt', label: 'GPT', folder: 'openai', agentUrl: 'https://chatgpt.com/' },
+    { id: 'claude', label: 'Claude', folder: 'anthropic', agentUrl: 'https://claude.ai/' },
+  ]
+
   export default {
     name: 'DashboardCoreView',
 
@@ -130,81 +122,68 @@
 
     data () {
       return {
-        draft: '',
-        selectionAttachment: null,
-        selectionExpanded: false,
-        messages: [
-          {
-            role: 'agent',
-            text: 'Hi, I’m your Neptune Agent. Describe the fluidic behavior or module you want (in plain English), and I’ll suggest an LFR or MINT snippet you can paste into the Editor.',
-          },
-          {
-            role: 'agent',
-            text: 'For example: “Create a 3-layer device with finput A/B, mix for 10 cycles, then route to foutput OUT in LFR, or generate an equivalent MINT flow.”',
-          },
-        ],
+        llmModels: LLM_MODELS,
+        selectedModel: LLM_MODELS[0],
+        zipDownloading: false,
       }
-    },
-
-    mounted () {
-      this.$root.$on('agent-set-selection', this.onAgentSelection)
-    },
-    beforeDestroy () {
-      this.$root.$off('agent-set-selection', this.onAgentSelection)
     },
 
     computed: {
       chatVisible () {
-        // For now, show the agent sidebar only on the Editor page (name defined in router.js)
         return this.$route && this.$route.name === 'Editor'
       },
     },
 
     methods: {
-      onAgentSelection (payload) {
-        if (!payload || !payload.text) return
-        this.selectionAttachment = {
-          text: String(payload.text),
-          language: payload.language || 'lfr',
+      promptBasePath () {
+        const base = (process.env.BASE_URL || '/').replace(/\/?$/, '/')
+        return `${base}prompt`
+      },
+      async downloadPromptZip () {
+        const folder = this.selectedModel && this.selectedModel.folder
+        if (!folder || this.zipDownloading) return
+        this.zipDownloading = true
+        let objectUrl = ''
+        try {
+          const zip = new JSZip()
+          const root = this.promptBasePath()
+          for (const name of PROMPT_FILE_NAMES) {
+            const res = await fetch(`${root}/${folder}/${name}`)
+            if (!res.ok) {
+              throw new Error(`Could not load ${folder}/${name} (${res.status})`)
+            }
+            const text = await res.text()
+            zip.file(`${folder}/${name}`, text)
+          }
+          const stepsRes = await fetch(`${root}/Steps.md`)
+          if (stepsRes.ok) {
+            zip.file('Steps.md', await stepsRes.text())
+          }
+          const blob = await zip.generateAsync({ type: 'blob' })
+          objectUrl = URL.createObjectURL(blob)
+          const a = document.createElement('a')
+          a.href = objectUrl
+          a.download = `${folder}-neptune-prompts.zip`
+          a.rel = 'noopener'
+          document.body.appendChild(a)
+          a.click()
+          document.body.removeChild(a)
+        } catch (err) {
+          console.error(err)
+          window.alert(
+            err && err.message
+              ? err.message
+              : 'Failed to build the prompt zip. Rebuild the app and ensure src/Prompt files are present.'
+          )
+        } finally {
+          if (objectUrl) URL.revokeObjectURL(objectUrl)
+          this.zipDownloading = false
         }
-        this.selectionExpanded = false
       },
-      clearSelectionAttachment () {
-        this.selectionAttachment = null
-        this.selectionExpanded = false
-        this.$root.$emit('agent-clear-selection')
-      },
-      insertIntoEditor (message, language) {
-        if (!message || !message.text) return
-        const payload = {
-          code: message.text,
-          language: language || 'lfr',
-        }
-        this.$root.$emit('agent-insert-into-editor', payload)
-      },
-      send () {
-        const text = this.draft.trim()
-        if (!text) return
-
-        // Push user message
-        this.messages.push({
-          role: 'user',
-          text,
-        })
-        this.draft = ''
-        this.selectionAttachment = null
-        this.selectionExpanded = false
-
-        // Demo agent reply: placeholder until wired to real Qwen endpoint
-        const demoReply = [
-          'This is a demo reply. In your real setup, Neptune Agent would send this request to your local Qwen2.5-coder model,',
-          'then return an LFR script that implements the behavior you described. You can then paste it into the Editor.',
-        ].join(' ')
-
-        this.messages.push({
-          role: 'agent',
-          text: demoReply,
-        })
+      openExternalAgent () {
+        const url = this.selectedModel && this.selectedModel.agentUrl
+        if (!url) return
+        window.open(url, '_blank', 'noopener,noreferrer')
       },
     },
   }
@@ -226,130 +205,139 @@
   height: 100%;
 }
 
-.agent-chat-col {
+.agent-panel-col {
   padding-top: 0 !important;
 }
 
-.agent-chat-card {
+.agent-panel-card {
   height: 100%;
   border-radius: 0;
   border-left: 1px solid rgba(0, 0, 0, 0.08);
 }
 
-.agent-chat-header {
+.agent-panel-header {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
 }
 
-.agent-chat-title {
+.agent-panel-title {
   font-size: 20px;
   font-weight: 600;
 }
 
-.agent-chat-subtitle {
-  font-size: 15px;
+.agent-panel-subtitle {
+  font-size: 14px;
   opacity: 0.8;
+  line-height: 1.4;
+  font-weight: 400;
 }
 
-.agent-chat-body {
+/* Avoid breaking words mid-token; keep “LFR” / “Editor” intact */
+.agent-panel-subtitle-text {
+  word-break: normal;
+  overflow-wrap: break-word;
+  hyphens: manual;
+}
+
+.agent-panel-keep-together {
+  white-space: nowrap;
+}
+
+.agent-panel-body {
   overflow-y: auto;
-  padding-top: 8px;
+  padding-top: 16px;
 }
 
-.agent-chat-messages {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding-right: 4px;
-}
-
-.agent-chat-message {
-  max-width: 75%;
-  padding: 8px 10px;
-  border-radius: 10px;
-  background-color: #f5f5f7;
-}
-
-.agent-chat-message.user {
-  align-self: flex-end;
-  background-color: #e3f2fd;
-}
-
-.agent-chat-message.agent {
-  align-self: flex-start;
-}
-
-.agent-chat-message-role {
-  font-size: 15px;
-  font-weight: 600;
-  opacity: 0.75;
-  margin-bottom: 2px;
-}
-
-.agent-chat-message-role.agent {
-  font-size: 17px;
-  color: #0b3d91;
-  opacity: 1;
-}
-
-.agent-chat-message-text {
-  font-size: 15px;
-  white-space: pre-wrap;
-  line-height: 1.4;
-}
-
-.agent-chat-actions {
-  margin-top: 4px;
-}
-
-.agent-chat-input-row {
-  padding: 8px 12px;
-  flex-direction: column;
-  align-items: stretch;
-}
-
-.agent-chat-input {
-  flex: 1 1 auto;
-}
-
-.agent-chat-input-line {
-  display: flex;
-  width: 100%;
-  align-items: flex-end;
-}
-
-.agent-chat-send-btn {
-  align-self: flex-end;
-}
-
-/* Match chat input readability to primary action button scale */
-.agent-chat-input ::v-deep textarea {
-  font-size: 15px;
-  line-height: 1.4;
-}
-
-.agent-chat-attachment {
-  margin-bottom: 8px;
-}
-.agent-chat-attachment-preview {
-  background: #f5f5f7;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 8px;
-  padding: 8px;
-  max-height: 180px;
-  overflow: auto;
-}
-.agent-chat-attachment-pre {
+/* Match “Switch to another language” size (12pt); body text black, not blue */
+.agent-panel-hint {
+  font-size: 12pt !important;
+  font-weight: 500;
+  line-height: 1.45;
+  color: rgba(0, 0, 0, 0.87) !important;
   margin: 0;
-  font-size: 15px;
-  line-height: 1.35;
-  white-space: pre-wrap;
 }
 
-.agent-chat-actions ::v-deep .v-btn__content,
-.agent-chat-attachment ::v-deep .v-btn__content,
-.agent-chat-send-btn ::v-deep .v-btn__content {
-  font-size: 15px;
+.theme--dark .agent-panel-hint {
+  color: rgba(255, 255, 255, 0.87) !important;
+}
+
+.agent-panel-hint strong {
+  font-weight: 600;
+}
+
+.agent-panel-hint code {
+  font-size: 0.95em;
+  color: rgba(0, 0, 0, 0.87);
+  background: rgba(0, 0, 0, 0.06);
+  padding: 0.05em 0.25em;
+  border-radius: 3px;
+}
+
+.theme--dark .agent-panel-hint code {
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.agent-panel-steps-link {
+  text-decoration: underline;
+  color: rgba(0, 0, 0, 0.87) !important;
+  font-weight: 600;
+}
+
+.theme--dark .agent-panel-steps-link {
+  color: rgba(255, 255, 255, 0.87) !important;
+}
+
+/* Match sidebar Export: 14pt, normal case (see Drawer.vue .drawer-export-rect-btn) */
+.agent-panel-export-btn {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18) !important;
+  font-size: 14pt !important;
+  font-weight: 400 !important;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+}
+
+.agent-panel-export-btn ::v-deep .v-btn__content {
+  font-size: 14pt !important;
+  font-weight: 400 !important;
+  letter-spacing: normal !important;
+}
+
+/* Match Editor “File name” / “Script language” (see Editor.vue) */
+.agent-panel-model-select ::v-deep label {
+  font-size: 14pt !important;
+  font-weight: 600 !important;
+  color: #9e9e9e !important;
+}
+
+.agent-panel-model-select ::v-deep .v-select__selection,
+.agent-panel-model-select ::v-deep .v-select__selection--comma,
+.agent-panel-model-select ::v-deep .v-input__slot input {
+  font-size: 14pt !important;
+  font-weight: 600 !important;
+  color: #006994 !important;
+  line-height: 1.35 !important;
+}
+
+.theme--dark .agent-panel-model-select ::v-deep .v-select__selection,
+.theme--dark .agent-panel-model-select ::v-deep .v-select__selection--comma,
+.theme--dark .agent-panel-model-select ::v-deep .v-input__slot input {
+  color: #00acc1 !important;
+}
+</style>
+
+<style>
+/* Menu is portaled; match Editor script-language dropdown */
+.agent-panel-model-select-menu .v-list-item,
+.agent-panel-model-select-menu .v-list-item__title {
+  font-size: 14pt !important;
+  font-weight: 600 !important;
+  color: #006994 !important;
+}
+
+.theme--dark .agent-panel-model-select-menu .v-list-item,
+.theme--dark .agent-panel-model-select-menu .v-list-item__title {
+  color: #00acc1 !important;
 }
 </style>

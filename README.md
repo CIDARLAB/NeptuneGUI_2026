@@ -2,6 +2,37 @@
 
 Vue 2 + Vuetify frontend for Neptune_2026.
 
+## English → LFR (BYOK) — user journey
+
+This section summarizes the **bring-your-own-key** path from **English description** to **LFR**, and what **this repo implements today** versus optional **product-specific** features.
+
+### Cloud provider (always your account)
+
+1. **Register** on the platform you will use (e.g. DashScope / Model Studio, OpenAI, Anthropic, Google—your choice).
+2. **Enable** the chat/code models you need and **billing** or **trial credits** (per that console).
+3. **Create an API key**, store it privately; do not paste it into public channels.
+
+### Inside Neptune (depends on deployment)
+
+- **If your deployment includes** “API / model settings” (names vary): choose provider → paste key → save; use **test connection** if offered.
+- **If your deployment includes** a dedicated **English → LFR** screen: describe the design in English, pick a model if available, run **Generate LFR**, then review compile results and iterate.
+- **This open-source NeptuneGUI_2026** focuses on the **Editor**, workspace files, and compile integration with Neptune_2026 (see **[RUN_LFR.md](./RUN_LFR.md)**). It **does not require** in-app cloud API key fields to be present. For LLM-assisted authoring, use the **Editor** sidebar **“LLM prompts”**: download the **prompt `.zip`**, use the files with your provider’s chat or API, then paste LFR back into the Editor.
+
+### In this GUI today
+
+| Step | What to do |
+|------|------------|
+| Prompts | **Editor** → sidebar **LLM prompts** → choose model → **Download** zip (`src/Prompt` templates). |
+| Guide | In-app page **`/prompt/steps`** (route `PromptSteps`) renders **[src/Prompt/Steps.md](./src/Prompt/Steps.md)**. |
+| Write LFR | Paste into **Editor**, set **Script language** to **LFR**, **Save** / **Compile** per **[RUN_LFR.md](./RUN_LFR.md)**. |
+| Export | Use **Download** / copy in the Editor as implemented in your build. |
+
+### Fees & privacy
+
+Usage and billing are shown in the **cloud console**. Content handling follows **that vendor’s** privacy policy. If your product stores keys in Neptune, users should be able to **remove saved keys** when no longer needed.
+
+---
+
 ## How to run locally
 
 All commands below are run from the **project root** (the folder that contains `package.json`).

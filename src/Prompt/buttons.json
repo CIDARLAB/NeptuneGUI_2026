@@ -1,0 +1,10 @@
+{
+  "description": "Maps UI button order to prompt packages (BYOK). Load manifest.json in each folder for API hints.",
+  "packages": [
+    { "folder": "openai", "label": "OpenAI" },
+    { "folder": "anthropic", "label": "Claude" },
+    { "folder": "google_gemini", "label": "Gemini" },
+    { "folder": "alibaba_qwen", "label": "Qwen" },
+    { "folder": "deepseek", "label": "DeepSeek" }
+  ]
+}

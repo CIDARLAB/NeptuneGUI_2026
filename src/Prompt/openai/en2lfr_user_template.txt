@@ -1,0 +1,5 @@
+Design specification (English):
+
+{{ENGLISH_SPEC}}
+
+Produce the LFR module. Output only the ```lfr fenced block as instructed.

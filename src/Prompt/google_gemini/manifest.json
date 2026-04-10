@@ -1,0 +1,9 @@
+{
+  "id": "google_gemini",
+  "display_name": "Google Gemini",
+  "button_order": 3,
+  "env_var_api_key": "GEMINI_API_KEY",
+  "suggested_base_url": "https://generativelanguage.googleapis.com",
+  "default_model": "gemini-2.5-flash",
+  "notes": "Google AI Studio / Gemini API; model IDs change—set in app. User brings own key (BYOK)."
+}

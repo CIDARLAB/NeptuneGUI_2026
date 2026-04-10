@@ -34,8 +34,8 @@
         <v-btn class="editor-toolbar-btn editor-toolbar-btn-4" small @click="triggerUpload">Upload</v-btn>
         <v-btn class="editor-toolbar-btn editor-toolbar-btn-delete" small color="error" @click="deletefile">Delete</v-btn>
         <v-spacer />
-        <v-btn class="editor-toolbar-btn editor-toolbar-btn-agent" small outlined color="primary" @click="sendSelectionToAgent">
-          Ask Agent about selection
+        <v-btn class="editor-toolbar-btn editor-toolbar-btn-agent" small outlined color="primary" @click="copySelectionForExternalLLM">
+          Copy selection for LLM
         </v-btn>
         <input ref="fileUploadInput" type="file" accept=".lfr,.mint,.v,.uf" style="display: none" @change="uploadfile">
       </v-col>
@@ -225,8 +225,6 @@ export default {
     const self = this
     this.fetchComponentLibraryAndUpdateLfrHighlighting()
 
-    this.$root.$on('agent-insert-into-editor', this.handleAgentInsert)
-    this.$root.$on('agent-clear-selection', this.clearAgentSelectionDecoration)
     const terminalEl = document.getElementById('terminal')
     if (terminalEl) {
       term.open(terminalEl)
@@ -334,10 +332,6 @@ export default {
     //   .error((error) => {
     //     console.log(error)
     //   })
-  },
-  beforeDestroy () {
-    this.$root.$off('agent-insert-into-editor', this.handleAgentInsert)
-    this.$root.$off('agent-clear-selection', this.clearAgentSelectionDecoration)
   },
   data () {
     return {
@@ -490,7 +484,7 @@ export default {
         this._agentSelectionDecorationIds = editor.deltaDecorations(this._agentSelectionDecorationIds, [])
       }
     },
-    sendSelectionToAgent () {
+    copySelectionForExternalLLM () {
       const editor = this._monacoEditor
       if (!editor) return
       const model = editor.getModel()
@@ -500,13 +494,7 @@ export default {
       const text = model.getValueInRange(selection)
       const snippet = (text || '').trim()
       if (!snippet) return
-      const payload = {
-        text: snippet,
-        language: this.selectedScriptLanguage,
-      }
-      this.$root.$emit('agent-set-selection', payload)
 
-      // Grey background highlight for the selection (Cursor-style)
       try {
         const monaco = this._monaco
         if (monaco) {
@@ -522,6 +510,33 @@ export default {
           )
         }
       } catch (_) {}
+
+      const afterCopy = () => {
+        this.clearAgentSelectionDecoration()
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(snippet).then(afterCopy).catch(() => {
+          this.fallbackCopyTextToClipboard(snippet, afterCopy)
+        })
+        return
+      }
+      this.fallbackCopyTextToClipboard(snippet, afterCopy)
+    },
+    fallbackCopyTextToClipboard (text, done) {
+      try {
+        const ta = document.createElement('textarea')
+        ta.value = text
+        ta.setAttribute('readonly', '')
+        ta.style.position = 'fixed'
+        ta.style.left = '-9999px'
+        document.body.appendChild(ta)
+        ta.select()
+        document.execCommand('copy')
+        document.body.removeChild(ta)
+        if (typeof done === 'function') done()
+      } catch (_) {
+        window.alert('Could not copy to clipboard.')
+      }
     },
     loadExampleScript () {
       const lang = (this.selectedScriptLanguage || 'lfr').toLowerCase()
@@ -670,16 +685,6 @@ export default {
       registerLang('lfr', baseLfrKeywords)
     },
 
-    handleAgentInsert (payload) {
-      if (!payload || !payload.code) return
-      const language = payload.language || this.selectedScriptLanguage || 'lfr'
-      if (language !== this.selectedScriptLanguage) {
-        const ok = window.confirm(`Agent suggests code in ${language.toUpperCase()}. Switch Editor language and replace current content?`)
-        if (!ok) return
-        this.selectedScriptLanguage = language
-      }
-      this.code = payload.code
-    },
     downloadconfigfiles (event) {
       this.configfiles = []
       const ws = this.$store.getters.currentWorkspace

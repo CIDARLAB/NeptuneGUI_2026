@@ -1,3 +1,6 @@
+const path = require('path')
+const CopyWebpackPlugin = require('copy-webpack-plugin')
+
 module.exports = {
   // Disable ESLint during build to avoid eslint-plugin-vue / parser compatibility issues
   lintOnSave: false,
@@ -21,7 +24,12 @@ module.exports = {
   },
 
   configureWebpack: {
-    devtool: 'source-map'
+    devtool: 'source-map',
+    plugins: [
+      new CopyWebpackPlugin([
+        { from: path.resolve(__dirname, 'src/Prompt'), to: 'prompt' },
+      ]),
+    ],
   },
   devServer: {
     port: 8081,
