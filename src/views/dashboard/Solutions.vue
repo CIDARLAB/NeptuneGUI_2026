@@ -11,9 +11,10 @@
       icon="mdi-clipboard-text"
       inline
       title="Jobs"
-      class="px-5 py-3 mb-5"
+      class="solutions-jobs-card px-5 py-3 mb-5"
     >
       <v-simple-table
+        class="solutions-jobs-table"
         height="300px"
       >
         <thead>
@@ -316,13 +317,22 @@
 </script>
 
 <style lang="sass" scoped>
-.solutions-page,
-.solutions-page .v-data-table,
-.solutions-page th,
-.solutions-page td,
-.solutions-page .v-card__title,
-.solutions-page .body-2
-  font-size: 12pt !important
+/* Card titles (Jobs + workspace file cards): match Dashboard #dashboard .workspace-section-title */
+.solutions-page
+  ::v-deep .v-card--material .card-title
+    font-size: calc(25px + 5pt) !important
+    font-weight: 300 !important
+
+  /* Jobs table: match Component Library .component-library-table (14pt) */
+  ::v-deep .solutions-jobs-table
+    table,
+    thead th,
+    tbody td
+      font-size: 14pt !important
+
+  /* File card “Actions” label — same scale as library table */
+  .body-2
+    font-size: 14pt !important
 </style>
 <style lang="sass">
   #coloured-line

@@ -208,7 +208,13 @@ app.get('/api/v1/fs', requireAuth, (req, res) => {
   const workspaces = data.getWorkspaces(req.session)
   for (const w of workspaces) {
     const f = data.getFile(req.session, w._id, fileId)
-    if (f) return res.type('text/plain').send(f.content || '')
+    if (f) {
+      const c = f.content
+      const body = (c == null || c === '')
+        ? ''
+        : (typeof c === 'string' ? c : JSON.stringify(c))
+      return res.type('text/plain').send(body)
+    }
   }
   res.status(404).json({ error: 'File not found' })
 })
@@ -250,7 +256,11 @@ app.get('/api/v1/downloadFile', requireAuth, (req, res) => {
     const f = data.getFile(req.session, w._id, fileId)
     if (f) {
       res.setHeader('Content-Disposition', 'attachment; filename="' + (f.name || 'file') + '"')
-      return res.type('text/plain').send(f.content || '')
+      const c = f.content
+      const body = (c == null || c === '')
+        ? ''
+        : (typeof c === 'string' ? c : JSON.stringify(c))
+      return res.type('text/plain').send(body)
     }
   }
   res.status(404).json({ error: 'File not found' })
@@ -261,6 +271,7 @@ app.get('/api/v1/exportWorkspacesZip', requireAuth, async (req, res) => {
   try {
     const zip = new JSZip()
     const workspaces = data.getWorkspaces(req.session) || []
+    const componentLibrary = data.getComponentLibrary(req.session) || { customComponents: [] }
 
     zip.file('index.json', JSON.stringify({
       exportedAt: new Date().toISOString(),
@@ -293,6 +304,9 @@ app.get('/api/v1/exportWorkspacesZip', requireAuth, async (req, res) => {
       }
     }
 
+    // Keep component library table state in workspace export cache.
+    zip.file('component_library.json', JSON.stringify(componentLibrary, null, 2))
+
     const buf = await zip.generateAsync({ type: 'nodebuffer' })
     const stamp = new Date().toISOString().replace(/[:.]/g, '-')
     res.setHeader('Content-Type', 'application/zip')
@@ -323,6 +337,15 @@ app.post(
       const overwrite = String(req.query.overwrite || '') === '1'
 
       const zip = await JSZip.loadAsync(buf)
+      let importedComponentLibrary = null
+      if (zip.files['component_library.json']) {
+        try {
+          const libRaw = await zip.files['component_library.json'].async('string')
+          importedComponentLibrary = JSON.parse(libRaw)
+        } catch (_) {
+          importedComponentLibrary = null
+        }
+      }
 
       const folderNames = Object.keys(zip.files)
         .filter(name => name.endsWith('/'))
@@ -394,6 +417,10 @@ app.post(
         }
       }
 
+      if (importedComponentLibrary && typeof importedComponentLibrary === 'object') {
+        data.saveComponentLibrary(req.session, importedComponentLibrary)
+      }
+
       return res.json({ ok: true, importedCount: created.length, overwritten, created })
     } catch (e) {
       return res.status(500).json({ error: 'Failed to import zip' })
@@ -453,19 +480,396 @@ app.get('/api/v1/job', requireAuth, (req, res) => {
     .catch(() => res.json({ status: 'unknown' }))
 })
 
-// ---------- Component Library (per-user; guest not persisted, use default on next load) ----------
+// ---------- Component Library ----------
+function normalizeCustomComponent (raw) {
+  if (!raw || typeof raw !== 'object') return null
+  const syntax = data.sanitizeComponentSyntax(raw.syntax || raw.name)
+  const name = String(raw.name || raw.syntax || '').trim()
+  const jsonScript = String(raw.jsonScript || '')
+  const baseJsonScript = String(raw.baseJsonScript || raw.jsonScript || '')
+  if (!syntax || !name || !jsonScript) return null
+  return {
+    syntax,
+    name,
+    sourceType: raw.sourceType === 'workspace' ? 'workspace' : 'upload',
+    jsonScript,
+    baseJsonScript: baseJsonScript || jsonScript,
+  }
+}
+
+function readCustomComponents (session) {
+  const lib = data.getComponentLibrary(session)
+  if (!lib || !Array.isArray(lib.customComponents)) return []
+  return lib.customComponents.map(normalizeCustomComponent).filter(Boolean)
+}
+
+function writeCustomComponents (session, customComponents) {
+  return data.saveComponentLibrary(session, {
+    customComponents: customComponents.map(normalizeCustomComponent).filter(Boolean),
+  })
+}
+
+function removeCustomComponentFromSession (req, res, rawParam) {
+  const syntax = data.sanitizeComponentSyntax(rawParam)
+  if (!syntax) return res.status(400).json({ error: 'Invalid syntax' })
+  const custom = readCustomComponents(req.session)
+  const defaults = data.listDefaultComponentSyntaxes()
+
+  let idx = custom.findIndex(c => c.syntax === syntax)
+  if (idx >= 0) {
+    custom.splice(idx, 1)
+    writeCustomComponents(req.session, custom)
+    return res.json({ ok: true })
+  }
+
+  if (defaults.includes(syntax)) {
+    return res.status(400).json({ error: 'Built-in components cannot be removed from the library.' })
+  }
+
+  const nameHits = custom
+    .map((c, i) => ({ i, c }))
+    .filter(({ c }) => data.sanitizeComponentSyntax(c.name) === syntax)
+  if (nameHits.length === 1) {
+    custom.splice(nameHits[0].i, 1)
+    writeCustomComponents(req.session, custom)
+    return res.json({ ok: true })
+  }
+  if (nameHits.length > 1) {
+    return res.status(400).json({
+      error: 'Multiple imported entries share that display name. Use Remove on the specific row so the correct syntax id is used.',
+    })
+  }
+
+  return res.status(404).json({
+    error: 'Component not found in library. Custom rows are stored per login/guest session—refresh the page after signing in, or re-import if you switched accounts.',
+  })
+}
+
+// Backward-compatible endpoint used by Editor syntax highlighting.
 app.get('/api/v1/componentLibrary', requireAuth, (req, res) => {
-  if (req.session.type === 'guest') return res.json({ components: null })
-  const lib = data.getComponentLibrary(req.session)
-  res.json(lib ? { components: lib.components } : { components: null })
+  const defaults = data.listDefaultComponentSyntaxes().map(syntax => ({ syntax }))
+  const custom = readCustomComponents(req.session).map(c => ({ syntax: c.syntax }))
+  res.json({ components: [...defaults, ...custom] })
 })
 
 app.put('/api/v1/componentLibrary', requireAuth, (req, res) => {
-  if (req.session.type === 'guest') return res.status(403).json({ error: 'Guest cannot persist component library' })
   const { components } = req.body || {}
   if (!Array.isArray(components)) return res.status(400).json({ error: 'components array required' })
-  data.saveComponentLibrary(req.session, { components })
+  const custom = []
+  components.forEach((c) => {
+    const syntax = data.sanitizeComponentSyntax(c && c.syntax)
+    if (!syntax) return
+    if (data.listDefaultComponentSyntaxes().includes(syntax)) return
+    custom.push({
+      syntax,
+      name: String((c && c.name) || syntax),
+      sourceType: 'upload',
+      jsonScript: String((c && c.jsonScript) || '{}'),
+      baseJsonScript: String((c && c.jsonScript) || '{}'),
+    })
+  })
+  writeCustomComponents(req.session, custom)
   res.json({ ok: true })
+})
+
+function buildJsonViewScript (jsonScript, lfrText, mintText) {
+  const sections = []
+  if (lfrText) {
+    sections.push(
+      '// LFR reference (read-only)',
+      ...String(lfrText).split('\n').map(line => `// ${line}`)
+    )
+  }
+  if (mintText) {
+    sections.push(
+      '// MINT reference (read-only)',
+      ...String(mintText).split('\n').map(line => `// ${line}`)
+    )
+  }
+  if (sections.length) sections.push('// JSON payload used by 3DuF')
+  return [...sections, String(jsonScript || '')].join('\n')
+}
+
+function pickEditableParams (syntax, jsonObj) {
+  const safe = data.sanitizeComponentSyntax(syntax)
+  if (!jsonObj || typeof jsonObj !== 'object') return {}
+  let source = null
+  if (safe === 'channel' && Array.isArray(jsonObj.connections) && jsonObj.connections[0] && jsonObj.connections[0].params) {
+    source = jsonObj.connections[0].params
+  } else if (safe === 'valve' && Array.isArray(jsonObj.components)) {
+    const valveComp = jsonObj.components.find(c => String(c && c.entity || '').toUpperCase().includes('VALVE'))
+    source = valveComp && valveComp.params
+  }
+  if (!source && Array.isArray(jsonObj.components) && jsonObj.components[0] && jsonObj.components[0].params) {
+    source = jsonObj.components[0].params
+  }
+  if (!source || typeof source !== 'object') return {}
+  const params = {}
+  Object.keys(source).forEach((k) => {
+    const v = source[k]
+    if (typeof v === 'number') params[k] = v
+  })
+  return params
+}
+
+function applyEditableParamsDeep (node, params) {
+  if (Array.isArray(node)) {
+    node.forEach((it) => applyEditableParamsDeep(it, params))
+    return
+  }
+  if (!node || typeof node !== 'object') return
+  Object.keys(node).forEach((k) => {
+    const v = node[k]
+    if (typeof v === 'number' && Object.prototype.hasOwnProperty.call(params, k) && Number.isFinite(params[k])) {
+      node[k] = params[k]
+      return
+    }
+    if (v && typeof v === 'object') applyEditableParamsDeep(v, params)
+  })
+}
+
+function formatScalar (v) {
+  if (typeof v === 'number') return Number.isInteger(v) ? `${v}` : `${v}`
+  return JSON.stringify(v)
+}
+
+function buildLfrText (syntax, params) {
+  const safe = data.sanitizeComponentSyntax(syntax)
+  const upper = String(safe || 'component').toUpperCase()
+  const entries = Object.keys(params).sort().map(k => `${k}=${formatScalar(params[k])}`)
+  return [
+    '// Auto-generated from component DIY parameters.',
+    `${upper} ${safe || 'component'}_1 ${entries.join(' ')};`,
+    '',
+  ].join('\n')
+}
+
+function buildMintText (syntax, params) {
+  const safe = data.sanitizeComponentSyntax(syntax)
+  const lines = Object.keys(params).sort().map(k => `  ${k}: ${formatScalar(params[k])};`)
+  return [
+    '// Auto-generated from component DIY parameters.',
+    `device ${safe || 'component'}_1 {`,
+    ...lines,
+    '}',
+    '',
+  ].join('\n')
+}
+
+function buildComponentPayload (syntax, jsonObj, source) {
+  const params = pickEditableParams(syntax, jsonObj)
+  const lfrText = data.readTextIfExists(data.getComponentDefaultLfrPath(syntax))
+  const mintText = data.readTextIfExists(data.getComponentDefaultMintPath(syntax))
+  const jsonScript = JSON.stringify(jsonObj, null, 2)
+  return {
+    syntax: data.sanitizeComponentSyntax(syntax),
+    name: data.sanitizeComponentSyntax(syntax),
+    source,
+    sourceType: 'default',
+    showLfrMint: true,
+    params,
+    lfrScript: lfrText || buildLfrText(syntax, params),
+    mintScript: mintText || buildMintText(syntax, params),
+    jsonScript,
+    jsonViewScript: buildJsonViewScript(jsonScript, lfrText, mintText),
+  }
+}
+
+app.get('/api/v1/componentFiles', requireAuth, (req, res) => {
+  const syntaxes = data.listDefaultComponentSyntaxes()
+  const defaults = syntaxes.map((syntax) => {
+    const loaded = data.loadComponentJson(syntax)
+    if (!loaded) return null
+    return buildComponentPayload(loaded.syntax, loaded.json, loaded.source)
+  }).filter(Boolean)
+  const custom = readCustomComponents(req.session).map((c) => {
+    let jsonObj = null
+    try { jsonObj = JSON.parse(c.jsonScript) } catch (_) { jsonObj = null }
+    return {
+      syntax: c.syntax,
+      name: c.name,
+      source: 'custom',
+      sourceType: c.sourceType,
+      showLfrMint: false,
+      params: pickEditableParams(c.syntax, jsonObj || {}),
+      lfrScript: '',
+      mintScript: '',
+      jsonScript: c.jsonScript,
+      jsonViewScript: c.jsonScript,
+    }
+  })
+  res.json({ components: [...defaults, ...custom] })
+})
+
+app.put('/api/v1/componentFiles/:syntax', requireAuth, (req, res) => {
+  const syntax = data.sanitizeComponentSyntax(req.params.syntax)
+  const rawParams = req.body && req.body.params
+  if (!syntax) return res.status(400).json({ error: 'Invalid syntax' })
+  if (!rawParams || typeof rawParams !== 'object' || Array.isArray(rawParams)) {
+    return res.status(400).json({ error: 'params object required' })
+  }
+  const custom = readCustomComponents(req.session)
+  const customIdx = custom.findIndex(c => c.syntax === syntax)
+  const nextParams = {}
+  Object.keys(rawParams).forEach((k) => {
+    const n = Number(rawParams[k])
+    if (Number.isFinite(n)) nextParams[k] = n
+  })
+
+  if (customIdx >= 0) {
+    let parsed = null
+    try { parsed = JSON.parse(custom[customIdx].jsonScript) } catch (_) { parsed = {} }
+    applyEditableParamsDeep(parsed, nextParams)
+    custom[customIdx].jsonScript = JSON.stringify(parsed, null, 2)
+    writeCustomComponents(req.session, custom)
+    return res.json({
+      component: {
+        syntax: custom[customIdx].syntax,
+        name: custom[customIdx].name,
+        source: 'custom',
+        sourceType: custom[customIdx].sourceType,
+        showLfrMint: false,
+        params: pickEditableParams(custom[customIdx].syntax, parsed),
+        lfrScript: '',
+        mintScript: '',
+        jsonScript: custom[customIdx].jsonScript,
+        jsonViewScript: custom[customIdx].jsonScript,
+      },
+    })
+  }
+
+  const loaded = data.loadComponentJson(syntax)
+  if (!loaded) return res.status(404).json({ error: 'Component JSON not found in Data/3DuF_component/default/JSON' })
+  const nextJson = JSON.parse(JSON.stringify(loaded.json))
+  applyEditableParamsDeep(nextJson, nextParams)
+  data.saveComponentTmpJson(syntax, nextJson)
+  const updated = data.loadComponentJson(syntax)
+  if (!updated) return res.status(500).json({ error: 'Failed to reload updated component JSON' })
+  return res.json({ component: buildComponentPayload(syntax, updated.json, updated.source) })
+})
+
+app.post('/api/v1/componentFiles/:syntax/reset', requireAuth, (req, res) => {
+  const syntax = data.sanitizeComponentSyntax(req.params.syntax)
+  if (!syntax) return res.status(400).json({ error: 'Invalid syntax' })
+  const custom = readCustomComponents(req.session)
+  const customIdx = custom.findIndex(c => c.syntax === syntax)
+  if (customIdx >= 0) {
+    custom[customIdx].jsonScript = custom[customIdx].baseJsonScript || custom[customIdx].jsonScript
+    writeCustomComponents(req.session, custom)
+    let parsed = null
+    try { parsed = JSON.parse(custom[customIdx].jsonScript) } catch (_) { parsed = {} }
+    return res.json({
+      component: {
+        syntax: custom[customIdx].syntax,
+        name: custom[customIdx].name,
+        source: 'custom',
+        sourceType: custom[customIdx].sourceType,
+        showLfrMint: false,
+        params: pickEditableParams(custom[customIdx].syntax, parsed),
+        lfrScript: '',
+        mintScript: '',
+        jsonScript: custom[customIdx].jsonScript,
+        jsonViewScript: custom[customIdx].jsonScript,
+      },
+    })
+  }
+  data.resetComponentTmpJson(syntax)
+  const loaded = data.loadComponentJson(syntax)
+  if (!loaded) return res.status(404).json({ error: 'Component JSON not found in Data/3DuF_component/default/JSON' })
+  res.json({ component: buildComponentPayload(syntax, loaded.json, loaded.source) })
+})
+
+app.delete('/api/v1/componentFiles/:syntax', requireAuth, (req, res) => {
+  removeCustomComponentFromSession(req, res, req.params.syntax)
+})
+
+app.post('/api/v1/componentFiles/remove', requireAuth, (req, res) => {
+  const s = req.body && req.body.syntax
+  if (s == null || String(s).trim() === '') {
+    return res.status(400).json({ error: 'syntax required in JSON body' })
+  }
+  removeCustomComponentFromSession(req, res, s)
+})
+
+app.post('/api/v1/componentFiles/upload', requireAuth, (req, res) => {
+  const { name, jsonText, syntax: preferredSyntaxField } = req.body || {}
+  const displayName = String(name || '').trim()
+  const raw = String(jsonText || '').trim()
+  if (!displayName) return res.status(400).json({ error: 'name required' })
+  if (!raw) return res.status(400).json({ error: 'jsonText required' })
+  let parsed = null
+  try { parsed = JSON.parse(raw) } catch (e) {
+    return res.status(400).json({ error: 'Invalid JSON content' })
+  }
+  const defaults = new Set(data.listDefaultComponentSyntaxes())
+  const custom = readCustomComponents(req.session)
+  const used = new Set([...defaults, ...custom.map(c => c.syntax)])
+  const base = data.sanitizeComponentSyntax(displayName)
+  if (!base) return res.status(400).json({ error: 'name must contain letters or numbers' })
+  const preferred = data.sanitizeComponentSyntax(
+    preferredSyntaxField != null && preferredSyntaxField !== ''
+      ? String(preferredSyntaxField)
+      : ''
+  )
+  let syntax
+  if (preferred && !used.has(preferred)) {
+    syntax = preferred
+  } else {
+    syntax = base
+    let n = 1
+    while (used.has(syntax)) {
+      n++
+      syntax = `${base}_${n}`
+    }
+  }
+  custom.push({
+    syntax,
+    name: displayName,
+    sourceType: 'upload',
+    jsonScript: JSON.stringify(parsed, null, 2),
+    baseJsonScript: JSON.stringify(parsed, null, 2),
+  })
+  writeCustomComponents(req.session, custom)
+  res.json({ ok: true, syntax })
+})
+
+app.post('/api/v1/componentFiles/importWorkspaceJson', requireAuth, (req, res) => {
+  const { fileid, name } = req.body || {}
+  const displayName = String(name || '').trim()
+  if (!fileid) return res.status(400).json({ error: 'fileid required' })
+  if (!displayName) return res.status(400).json({ error: 'name required' })
+  const workspaces = data.getWorkspaces(req.session)
+  let file = null
+  for (const w of workspaces) {
+    const f = data.getFile(req.session, w._id, fileid)
+    if (f) { file = f; break }
+  }
+  if (!file) return res.status(404).json({ error: 'Workspace file not found' })
+  const raw = String(file.content || '')
+  let parsed = null
+  try { parsed = JSON.parse(raw) } catch (e) {
+    return res.status(400).json({ error: 'Selected workspace file is not valid JSON' })
+  }
+  const defaults = new Set(data.listDefaultComponentSyntaxes())
+  const custom = readCustomComponents(req.session)
+  const used = new Set([...defaults, ...custom.map(c => c.syntax)])
+  const base = data.sanitizeComponentSyntax(displayName)
+  if (!base) return res.status(400).json({ error: 'name must contain letters or numbers' })
+  let syntax = base
+  let n = 1
+  while (used.has(syntax)) {
+    n++
+    syntax = `${base}_${n}`
+  }
+  custom.push({
+    syntax,
+    name: displayName,
+    sourceType: 'workspace',
+    jsonScript: JSON.stringify(parsed, null, 2),
+    baseJsonScript: JSON.stringify(parsed, null, 2),
+  })
+  writeCustomComponents(req.session, custom)
+  res.json({ ok: true, syntax })
 })
 
 app.listen(PORT, () => {

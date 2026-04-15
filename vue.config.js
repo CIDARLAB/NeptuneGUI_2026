@@ -5,6 +5,20 @@ module.exports = {
   // Disable ESLint during build to avoid eslint-plugin-vue / parser compatibility issues
   lintOnSave: false,
 
+  chainWebpack (config) {
+    const dxJson = /[\\/]Data[\\/]example[\\/]dx[\\/].*\.json$/
+    config.module
+      .rule('json')
+      .exclude.add(dxJson)
+    config.module
+      .rule('example-dx-json-raw')
+      .enforce('pre')
+      .test(dxJson)
+      .type('javascript/auto')
+      .use('raw-loader')
+      .loader('raw-loader')
+  },
+
   // Deprecations: we fixed global built-ins (rgba→color) in our partials; import/legacy-js-api come from Vue CLI/Vuetify
   css: {
     loaderOptions: {

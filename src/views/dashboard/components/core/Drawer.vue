@@ -92,10 +92,10 @@
               <span>Export</span>
             </v-btn>
           </template>
-          <span>Download all workspaces as a .zip file to keep a backup on your computer.</span>
+          <span>Export all workspaces and component library cache as a .zip backup.</span>
         </v-tooltip>
         <div class="drawer-export-text text-center mt-3">
-          Tip: export your workspace regularly to avoid losing work.
+          Tip: export regularly to back up both workspaces and component library cache.
         </div>
       </div>
     </div>
@@ -109,7 +109,8 @@
   } from 'vuex'
 
   import JSZip from 'jszip'
-  import guestStore from '@/lib/guestStore'
+  import guestStore, { fileContentForZipExport } from '@/lib/guestStore'
+  import axios from 'axios'
 
   export default {
     name: 'DashboardCoreDrawer',
@@ -355,9 +356,17 @@
           ;(w.files || []).forEach((f, fi) => {
             const base = (f.name || `file_${fi + 1}`).replace(/[^a-zA-Z0-9_-]/g, '_')
             const ext = f.ext && f.ext.startsWith('.') ? f.ext : (f.ext ? `.${f.ext}` : '')
-            folder.file(`${base}${ext || '.txt'}`, f.content || '')
+            folder.file(`${base}${ext || '.txt'}`, fileContentForZipExport(f.content))
           })
         })
+
+        try {
+          const compRes = await axios.get('/api/v1/componentFiles', {
+            withCredentials: true,
+            headers: { 'Content-Type': 'application/json' },
+          })
+          zip.file('component_table.json', JSON.stringify(compRes.data || { components: [] }, null, 2))
+        } catch (_) {}
 
         const blob = await zip.generateAsync({ type: 'blob' })
         const a = document.createElement('a')

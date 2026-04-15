@@ -5,16 +5,21 @@
     color="transparent"
     dark
   >
-    <v-container>
+    <v-container
+      fluid
+      class="footer-container"
+    >
       <v-row
         align="center"
+        justify="start"
         no-gutters
+        class="footer-row"
       >
         <v-col
           v-for="(link, i) in links"
           :key="i"
-          class="text-center"
-          cols="6"
+          class="text-left footer-link-col"
+          cols="auto"
           md="auto"
         >
           <router-link
@@ -40,7 +45,7 @@
           cols="12"
           md="auto"
         >
-          <div class="body-1 font-weight-light pt-6 pt-md-0 text-center footer-copyright">
+          <div class="body-1 font-weight-light pt-6 pt-md-0 text-left text-md-right footer-copyright">
             &copy; 2026, CIDAR Lab
           </div>
         </v-col>
@@ -66,6 +71,20 @@
 
 <style lang="sass">
   #pages-core-footer
+    width: 100%
+    box-sizing: border-box
+    padding-left: 20pt
+    padding-right: 20pt
+    .footer-container
+      max-width: 1280px
+      margin-left: auto
+      margin-right: auto
+      width: 100%
+    .footer-row
+      width: 100%
+      justify-content: flex-start
+    .footer-link-col
+      padding-right: 16px
     a, a.footer-link, .footer-link
       color: #FFFFFF !important
       font-size: 12pt !important

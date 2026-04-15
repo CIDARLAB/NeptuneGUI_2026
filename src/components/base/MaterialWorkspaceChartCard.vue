@@ -6,10 +6,11 @@
     :icon="icon"
   >
     <template v-slot:heading>
-      <div align="center">
-      Completed Jobs: {{ completedJobs }}
-      <br/>
-      Active Jobs: {{ activeJobs }}
+      <div
+        class="workspace-chart-heading-name font-weight-light"
+        :title="name"
+      >
+        {{ name || 'Workspace' }}
       </div>
     </template>
 
@@ -66,14 +67,6 @@
         type: String,
         required: false,
       },
-      activeJobs: {
-        type: Number,
-        default: 0,
-      },
-      completedJobs: {
-        type: Number,
-        default: 0,
-      },
     },
   }
 </script>
@@ -83,8 +76,24 @@
     p
       color: #999
 
+    .workspace-chart-heading-name
+      display: block
+      width: 100%
+      box-sizing: border-box
+      min-height: 64px
+      padding: 12px 14px
+      font-size: calc(1rem + 2pt + 5pt + 2pt)
+      line-height: 1.4
+      word-break: break-word
+      overflow-wrap: anywhere
+      text-align: left
+      overflow: visible
+
     .v-card--material__heading
-      max-height: 110px !important
+      max-height: none !important
+      min-height: 72px
+      height: auto !important
+      overflow: visible !important
 
       .ct-label
         color: inherit

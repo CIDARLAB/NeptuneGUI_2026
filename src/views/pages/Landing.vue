@@ -1,5 +1,5 @@
 <template>
-  <v-container id="landing" class="fill-height landing-shell" tag="section">
+  <v-container id="landing" fluid class="fill-height landing-shell" tag="section">
     <v-slide-y-transition appear>
       <v-img
         :src="require('@/assets/Neptune2026_logo_white_text.png')"
@@ -10,16 +10,17 @@
 
     <v-row justify="center" align="center" class="fill-height landing-content-row">
       <v-col cols="12" md="9" lg="8" class="text-center">
-        <div class="mt-4 d-flex justify-center align-center landing-buttons">
-          <v-btn class="ma-2" color="success" large @click="continueAsGuest">
-            <span class="landing-btn-text">Start Now!</span>
-          </v-btn>
-        </div>
         <p class="mt-2 landing-guest-text">
-          Local mode only: no account is required. To keep your data across sessions, export your workspaces to a zip file and later restore by importing that file.
+          We do not provide online data storage. To keep your data across sessions, export your data (Workspaces + DIY components) using the Export button, then restore it later by importing that file.
         </p>
       </v-col>
     </v-row>
+
+    <div class="landing-bottom-cta d-flex justify-center align-center">
+      <v-btn class="ma-2 landing-start-btn" color="success" large @click="continueAsGuest">
+        <span class="landing-btn-text">Start now!</span>
+      </v-btn>
+    </div>
   </v-container>
 </template>
 
@@ -30,26 +31,45 @@
 
 .landing-top-right-logo {
   position: absolute;
-  top: -80pt;
-  left: 0;
+  top: -100pt;
+  left: 16px;
   width: 260px;
   max-width: 38vw;
   z-index: 2;
 }
 
 .landing-content-row {
-  transform: translateY(-100pt);
+  transform: translateY(-40pt);
+}
+
+.landing-bottom-cta {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(28px - 500pt + 20pt);
+  z-index: 3;
+}
+
+.landing-guest-text,
+.landing-btn-text {
+  font-size: 19pt;
 }
 
 .landing-btn-text {
-  font-size: 1.125rem; /* +2pt from 1rem */
-  font-weight: 500;
+  font-weight: 600;
+}
+
+.landing-bottom-cta .landing-start-btn {
+  min-width: calc(12rem + 20pt);
+  padding-left: calc(16px + 10pt) !important;
+  padding-right: calc(16px + 10pt) !important;
 }
 .landing-guest-text {
-  font-size: 18pt;
-  max-width: 900px;
+  max-width: 1280px;
   margin-left: auto;
   margin-right: auto;
+  line-height: 1.45;
+  white-space: normal;
   color: rgba(255, 255, 255, 0.95);
 }
 </style>

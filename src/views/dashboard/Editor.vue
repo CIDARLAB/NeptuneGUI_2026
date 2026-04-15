@@ -5,7 +5,7 @@
     tag="section"
     class="editor-page"
   >
-    <v-row>
+    <v-row class="editor-toolbar-row">
       <v-col cols="12" class="pt-0 d-flex align-center flex-wrap editor-toolbar">
         <v-menu offset-y left close-on-content-click>
           <template v-slot:activator="{ on, attrs }">
@@ -30,19 +30,15 @@
           </v-list>
         </v-menu>
         <v-btn class="editor-toolbar-btn editor-toolbar-btn-2" small @click="openCompile">Compile</v-btn>
-        <v-btn class="editor-toolbar-btn editor-toolbar-btn-3" small @click="downloadfile">Download</v-btn>
-        <v-btn class="editor-toolbar-btn editor-toolbar-btn-4" small @click="triggerUpload">Upload</v-btn>
+        <v-btn class="editor-toolbar-btn editor-toolbar-btn-4" small @click="triggerImport">Import</v-btn>
+        <v-btn class="editor-toolbar-btn editor-toolbar-btn-3" small @click="downloadfile">Export</v-btn>
         <v-btn class="editor-toolbar-btn editor-toolbar-btn-delete" small color="error" @click="deletefile">Delete</v-btn>
-        <v-spacer />
-        <v-btn class="editor-toolbar-btn editor-toolbar-btn-agent" small outlined color="primary" @click="copySelectionForExternalLLM">
-          Copy selection for LLM
-        </v-btn>
-        <input ref="fileUploadInput" type="file" accept=".lfr,.mint,.v,.uf" style="display: none" @change="uploadfile">
+        <input ref="fileImportInput" type="file" accept=".lfr,.mint,.v,.uf" style="display: none" @change="importFile">
       </v-col>
     </v-row>
 
     <!-- Script language selection (MINT / LFR) above workspace -->
-    <v-row>
+    <v-row class="editor-script-language-row">
       <v-col cols="12" sm="8" class="pt-0 pb-1">
         <div class="script-language-wrapper">
           <v-select
@@ -350,8 +346,8 @@ export default {
       widgets: false,
       select: ['State 1', 'State 2', 'State 3', 'State 4', 'State 5', 'State 6', 'State 7'],
       scriptLanguageItems: [
-        { text: 'MINT', value: 'mint' },
         { text: 'LFR', value: 'lfr' },
+        { text: 'MINT', value: 'mint' },
       ],
       selectedScriptLanguage: 'mint',
       lastCompileType: '',
@@ -359,7 +355,7 @@ export default {
       editorOptions: {
         lineNumbers: 'on',
         lineNumbersMinChars: 1,
-        fontSize: 16,
+        fontSize: 18,
         minimap: { enabled: false },
         scrollBeyondLastLine: false,
         overviewRulerLanes: 0,
@@ -477,67 +473,6 @@ export default {
 
   },
   methods: {
-    clearAgentSelectionDecoration () {
-      const editor = this._monacoEditor
-      if (!editor) return
-      if (this._agentSelectionDecorationIds && this._agentSelectionDecorationIds.length) {
-        this._agentSelectionDecorationIds = editor.deltaDecorations(this._agentSelectionDecorationIds, [])
-      }
-    },
-    copySelectionForExternalLLM () {
-      const editor = this._monacoEditor
-      if (!editor) return
-      const model = editor.getModel()
-      if (!model) return
-      const selection = editor.getSelection()
-      if (!selection || selection.isEmpty()) return
-      const text = model.getValueInRange(selection)
-      const snippet = (text || '').trim()
-      if (!snippet) return
-
-      try {
-        const monaco = this._monaco
-        if (monaco) {
-          const range = new monaco.Range(
-            selection.startLineNumber,
-            selection.startColumn,
-            selection.endLineNumber,
-            selection.endColumn
-          )
-          this._agentSelectionDecorationIds = editor.deltaDecorations(
-            this._agentSelectionDecorationIds || [],
-            [{ range, options: { inlineClassName: 'agent-selection-decoration' } }]
-          )
-        }
-      } catch (_) {}
-
-      const afterCopy = () => {
-        this.clearAgentSelectionDecoration()
-      }
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(snippet).then(afterCopy).catch(() => {
-          this.fallbackCopyTextToClipboard(snippet, afterCopy)
-        })
-        return
-      }
-      this.fallbackCopyTextToClipboard(snippet, afterCopy)
-    },
-    fallbackCopyTextToClipboard (text, done) {
-      try {
-        const ta = document.createElement('textarea')
-        ta.value = text
-        ta.setAttribute('readonly', '')
-        ta.style.position = 'fixed'
-        ta.style.left = '-9999px'
-        document.body.appendChild(ta)
-        ta.select()
-        document.execCommand('copy')
-        document.body.removeChild(ta)
-        if (typeof done === 'function') done()
-      } catch (_) {
-        window.alert('Could not copy to clipboard.')
-      }
-    },
     loadExampleScript () {
       const lang = (this.selectedScriptLanguage || 'lfr').toLowerCase()
       if (this.$store.getters.isGuest) {
@@ -844,8 +779,8 @@ export default {
           alert('Could not save. ' + (msg ? String(msg) : 'Please try again.'))
         })
     },
-    triggerUpload () {
-      this.$refs.fileUploadInput && this.$refs.fileUploadInput.click()
+    triggerImport () {
+      this.$refs.fileImportInput && this.$refs.fileImportInput.click()
     },
     confirmSaveNewWorkspace () {
       const name = (this.newWorkspaceName || '').trim() || 'New Workspace'
@@ -1007,10 +942,10 @@ export default {
         })
         .catch((err) => {
           const msg = (err.response && err.response.data) ? (typeof err.response.data === 'string' ? err.response.data : (err.response.data.error || err.response.data.message)) : err.message
-          alert('Download failed. ' + (msg || 'Please try again.'))
+          alert('Export failed. ' + (msg || 'Please try again.'))
         })
     },
-    applyScriptLanguageFromUploadExt (ext) {
+    applyScriptLanguageFromImportExt (ext) {
       const e = (ext || '').toLowerCase()
       if (e === '.lfr' || e === '.v') {
         this.selectedScriptLanguage = 'lfr'
@@ -1018,7 +953,7 @@ export default {
         this.selectedScriptLanguage = 'mint'
       }
     },
-    uploadfile (event) {
+    importFile (event) {
       const input = event.target
       const file = input.files && input.files[0]
       if (!file) return
@@ -1030,7 +965,7 @@ export default {
         const ext = (name.match(/\.[0-9a-z]+$/i) && name.match(/\.[0-9a-z]+$/i)[0]) || ''
         const allowed = ['.lfr', '.mint', '.v', '.uf']
         if (!allowed.includes(ext.toLowerCase())) {
-          alert('Please upload an .lfr or .mint file (or .v / .uf for compatibility).')
+          alert('Please import an .lfr or .mint file (or .v / .uf for compatibility).')
           input.value = ''
           return
         }
@@ -1064,7 +999,7 @@ export default {
               wsId = w._id
             } catch (err) {
               const msg = (err.response && err.response.data && (err.response.data.error || err.response.data.message)) || err.message
-              alert('Could not create a workspace for upload. ' + (msg ? String(msg) : 'Please try again.'))
+              alert('Could not create a workspace for import. ' + (msg ? String(msg) : 'Please try again.'))
               input.value = ''
               return
             }
@@ -1076,7 +1011,7 @@ export default {
           if (f) guestStore.updateFile(wsId, f.id, content)
           self.fileobject = { id: f.id, name: f.name, ext: f.ext }
           self.code = content
-          self.applyScriptLanguageFromUploadExt(ext)
+          self.applyScriptLanguageFromImportExt(ext)
           self.$store.commit('SET_WORKSPACE', self.currentworkspace)
         } else {
           const config = { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
@@ -1088,11 +1023,11 @@ export default {
             .then((f) => {
               self.fileobject = { id: f.id, name: f.name, ext: f.ext }
               self.code = content
-              self.applyScriptLanguageFromUploadExt(ext)
+              self.applyScriptLanguageFromImportExt(ext)
             })
             .catch((err) => {
               const msg = (err.response && err.response.data && (err.response.data.error || err.response.data.message)) || err.message
-              alert('Upload failed. ' + (msg ? String(msg) : 'Please try again.'))
+              alert('Import failed. ' + (msg ? String(msg) : 'Please try again.'))
             })
         }
         input.value = ''
@@ -1121,12 +1056,6 @@ export default {
 .editor {
   height: 500px;
   width: 100%;
-}
-
-/* Cursor-style selection sent to agent: grey highlight */
-.agent-selection-decoration {
-  background: rgba(0, 0, 0, 0.12);
-  border-radius: 2px;
 }
 
 /* Script and Console cards: same height (row stretch), console fills column */
@@ -1211,12 +1140,22 @@ export default {
   right: 0;
 }
 
-/* Editor toolbar: font +1pt, order Save file → … → Delete (red), colors dark blue → light blue */
+/* Space below toolbar buttons before Script language row */
+.editor-page .editor-toolbar-row {
+  margin-bottom: 10pt;
+}
+
+/* Space below Script language row before editor card */
+.editor-page .editor-script-language-row {
+  margin-bottom: 10pt;
+}
+
+/* Editor toolbar: Save → Compile → Import → Export → Delete; Save/Compile/Import blues shallow→deep; Export green */
 .editor-page .editor-toolbar {
   gap: 6px;
 }
 .editor-page .editor-toolbar .v-btn {
-  font-size: 15px;
+  font-size: calc(15px + 2pt + 1pt) !important;
   color: #fff;
   min-width: 0;
   padding-left: 12px;
@@ -1224,29 +1163,30 @@ export default {
 }
 .editor-page .editor-toolbar .v-btn .v-btn__content {
   justify-content: center;
+  font-size: calc(15px + 2pt + 1pt) !important;
 }
 .editor-page .editor-toolbar .v-btn .v-icon {
   color: inherit;
 }
-/* Theme blue gradient: dark #006994 → light #00CAE3 */
-.editor-page .editor-toolbar .editor-toolbar-btn-1 { background-color: #006994 !important; border-color: #006994 !important; }
-.editor-page .editor-toolbar .editor-toolbar-btn-2 { background-color: #007a9e !important; border-color: #007a9e !important; }
-.editor-page .editor-toolbar .editor-toolbar-btn-3 { background-color: #00838F !important; border-color: #00838F !important; }
-.editor-page .editor-toolbar .editor-toolbar-btn-4 { background-color: #0097a3 !important; border-color: #0097a3 !important; }
+/* Save → Compile → Import: blues light→deep (muted, not pale); Export green */
+.editor-page .editor-toolbar .editor-toolbar-btn-1 { background-color: #0092b3 !important; border-color: #0092b3 !important; }
+.editor-page .editor-toolbar .editor-toolbar-btn-2 { background-color: #007fa1 !important; border-color: #007fa1 !important; }
+.editor-page .editor-toolbar .editor-toolbar-btn-3 { background-color: #50c878 !important; border-color: #50c878 !important; }
+.editor-page .editor-toolbar .editor-toolbar-btn-4 { background-color: #006994 !important; border-color: #006994 !important; }
 .editor-page .editor-toolbar .editor-toolbar-btn-5 { background-color: #00ACC1 !important; border-color: #00ACC1 !important; }
 .editor-page .editor-toolbar .editor-toolbar-btn-6 { background-color: #00CAE3 !important; border-color: #00CAE3 !important; }
 .editor-page .editor-toolbar .editor-toolbar-btn-delete { color: #fff !important; }
-/* File name: label above box light grey; text inside box 14pt, dark blue */
+/* File name: label +2pt (16pt); text inside box matches */
 .editor-page .editor-page-filename-input label,
 .editor-page .new-script-filename-input label {
-  font-size: 14pt !important;
+  font-size: 16pt !important;
   font-weight: 600;
   color: #9e9e9e !important;
 }
 .editor-page .editor-page-filename-input .v-input__slot input,
 .editor-page .new-script-filename-input .v-input__slot input,
 .editor-page .new-script-filename-input .v-input__slot {
-  font-size: 14pt !important;
+  font-size: 16pt !important;
   font-weight: 600;
   color: #006994 !important;
 }
@@ -1267,22 +1207,22 @@ export default {
   font-size: 12pt;
 }
 
-/* Script language: label above box light grey; content in box 14pt, dark blue */
+/* Script language: label +2pt (16pt) */
 .editor-page .script-language-select label {
-  font-size: 14pt !important;
+  font-size: 16pt !important;
   font-weight: 600;
   color: #9e9e9e !important;
 }
 .editor-page .script-language-select .v-input__slot input,
 .editor-page .script-language-select .v-select__selection {
-  font-size: 14pt !important;
+  font-size: 16pt !important;
   font-weight: 600;
   color: #006994 !important;
 }
 /* Dropdown list options (when opened) 14pt */
 .script-language-select-menu .v-list-item,
 .script-language-select-menu .v-list-item__title {
-  font-size: 14pt !important;
+  font-size: 16pt !important;
 }
 /* Script language: arrow + hint 12pt (explanatory) */
 .script-language-wrapper {
@@ -1301,7 +1241,7 @@ export default {
   color: #9e9e9e;
 }
 .script-language-hint {
-  font-size: 12pt !important;
+  font-size: 14pt !important;
   font-weight: 500;
   color: #006994;
 }
@@ -1318,14 +1258,14 @@ export default {
 }
 
 .editor-page-filename-ext {
-  font-size: 14pt;
+  font-size: 16pt;
   font-weight: 600;
   color: #006994;
 }
-/* Monaco editor code: 12pt */
+/* Monaco editor: +2pt (14pt) */
 .editor .monaco-editor,
 .editor .monaco-editor .view-lines {
-  font-size: 12pt !important;
+  font-size: 14pt !important;
 }
 
 /* LFR: finput/foutput variable occurrences (document decoration) */

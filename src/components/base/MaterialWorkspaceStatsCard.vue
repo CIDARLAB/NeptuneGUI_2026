@@ -22,7 +22,10 @@
       cols="12"
       class="px-0 file-stats-row"
     >
-      <div class="file-stats-line d-flex flex-nowrap align-start">
+      <div class="file-stats-line d-flex flex-nowrap">
+        <div class="file-stats-name text--darken-4">
+          {{ name }}
+        </div>
         <div class="file-stats-actions d-flex flex-shrink-0 align-center">
           <v-tooltip
             v-if="(ext || '').toLowerCase() !== '.log' && (ext || '').toLowerCase() !== '.json'"
@@ -43,6 +46,48 @@
             </template>
             <span>Open this file in the Editor</span>
           </v-tooltip>
+          <v-tooltip
+            v-if="(ext || '').toLowerCase() === '.json'"
+            bottom
+          >
+            <template v-slot:activator="{ on, attrs }">
+              <v-btn
+                text
+                icon
+                color="purple"
+                class="file-stats-action-btn"
+                v-bind="attrs"
+                v-on="on"
+                @click="$emit('view3duf', { id, name, workspaceid, ext, content })"
+              >
+                <img
+                  class="go-3duf-btn-logo"
+                  :src="logo3duf"
+                  alt="3DuF"
+                >
+              </v-btn>
+            </template>
+            <span>Open design JSON in 3DuF</span>
+          </v-tooltip>
+          <v-tooltip
+            v-if="(ext || '').toLowerCase() === '.json'"
+            bottom
+          >
+            <template v-slot:activator="{ on, attrs }">
+              <v-btn
+                text
+                icon
+                color="primary"
+                class="file-stats-action-btn"
+                v-bind="attrs"
+                v-on="on"
+                @click="$emit('importComponentJson', { id, name, workspaceid })"
+              >
+                <v-icon>mdi-database-import-outline</v-icon>
+              </v-btn>
+            </template>
+            <span>Import this JSON into Component Library</span>
+          </v-tooltip>
           <v-tooltip bottom>
             <template v-slot:activator="{ on, attrs }">
               <v-btn
@@ -59,28 +104,6 @@
             </template>
             <span>Remove this file from the workspace</span>
           </v-tooltip>
-          <v-tooltip
-            v-if="(ext || '').toLowerCase() === '.json'"
-            bottom
-          >
-            <template v-slot:activator="{ on, attrs }">
-              <v-btn
-                text
-                icon
-                color="purple"
-                class="file-stats-action-btn"
-                v-bind="attrs"
-                v-on="on"
-                @click="$emit('view3duf', { id, name, workspaceid })"
-              >
-                <v-icon>mdi-vector-square</v-icon>
-              </v-btn>
-            </template>
-            <span>Open design JSON in 3DuF</span>
-          </v-tooltip>
-        </div>
-        <div class="file-stats-name text--darken-4">
-          {{ name }}
         </div>
       </div>
       <v-divider />
@@ -112,6 +135,10 @@
     name: 'MaterialStatsCard',
 
     inheritAttrs: false,
+
+    data: () => ({
+      logo3duf: require('@/assets/3duf_icon.png'),
+    }),
 
     props: {
       ...Card.props,
@@ -161,6 +188,10 @@
       },
       ext: {
         type: String,
+        default: undefined,
+      },
+      content: {
+        type: [String, Object, Array],
         default: undefined,
       },
     },
@@ -236,11 +267,14 @@
   .file-stats-line
     width: 100%
     gap: 4px
+    align-items: stretch
 
   .file-stats-actions
     flex: 0 0 auto
     white-space: nowrap
-    padding-right: 8px
+    margin-left: auto
+    padding-left: 8px
+    align-self: flex-end
 
   .file-stats-name
     flex: 1 1 auto
@@ -248,8 +282,15 @@
     word-break: break-word
     overflow-wrap: anywhere
     line-height: 1.35
-    text-align: right
+    text-align: left
 
   .file-stats-action-btn
     margin: 0 !important
+
+  .go-3duf-btn-logo
+    width: 24px
+    height: 24px
+    object-fit: contain
+    display: block
+    vertical-align: middle
 </style>

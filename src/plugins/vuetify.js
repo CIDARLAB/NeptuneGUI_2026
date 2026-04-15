@@ -11,6 +11,8 @@ const theme = {
   secondary: '#00838F',
   accent: '#00ACC1',
   info: '#00CAE3',
+  success: '#50C878',
+  green: '#50C878', // align Material `green` with app accent green
   silverGrey: '#8d99a0', // cool silver grey to pair with primary
 }
 

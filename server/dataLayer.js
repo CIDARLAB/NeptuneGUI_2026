@@ -10,17 +10,115 @@ const DATA_ROOT = path.join(__dirname, '..', 'Data')
 const ADMIN_DIR = path.join(DATA_ROOT, 'Admin')
 const TEMP_DIR = path.join(DATA_ROOT, 'Temp')
 const USERS_DIR = path.join(DATA_ROOT, 'Users')
+const COMPONENT_ROOT = path.join(DATA_ROOT, '3DuF_component')
+const COMPONENT_DEFAULT_DIR = path.join(COMPONENT_ROOT, 'default')
+const COMPONENT_DEFAULT_JSON_DIR = path.join(COMPONENT_DEFAULT_DIR, 'JSON')
+const COMPONENT_DEFAULT_LFR_DIR = path.join(COMPONENT_DEFAULT_DIR, 'LFR')
+const COMPONENT_DEFAULT_MINT_DIR = path.join(COMPONENT_DEFAULT_DIR, 'MINT')
+const COMPONENT_TMP_DIR = path.join(COMPONENT_ROOT, 'tmp')
 
 const ADMIN_FILE = path.join(ADMIN_DIR, 'admin.json')
 const DEFAULT_ADMIN = { username: 'cidar', password: '12345' }
 
 function ensureDirs () {
-  ;[DATA_ROOT, ADMIN_DIR, TEMP_DIR, USERS_DIR].forEach(dir => {
+  ;[
+    DATA_ROOT,
+    ADMIN_DIR,
+    TEMP_DIR,
+    USERS_DIR,
+    COMPONENT_ROOT,
+    COMPONENT_DEFAULT_DIR,
+    COMPONENT_DEFAULT_JSON_DIR,
+    COMPONENT_DEFAULT_LFR_DIR,
+    COMPONENT_DEFAULT_MINT_DIR,
+    COMPONENT_TMP_DIR,
+  ].forEach(dir => {
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
   })
   if (!fs.existsSync(ADMIN_FILE)) {
     fs.writeFileSync(ADMIN_FILE, JSON.stringify(DEFAULT_ADMIN, null, 2))
   }
+}
+
+function sanitizeComponentSyntax (syntax) {
+  return String(syntax || '').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '')
+}
+
+function getComponentDefaultPath (syntax) {
+  const safe = sanitizeComponentSyntax(syntax)
+  if (!safe) return null
+  return path.join(COMPONENT_DEFAULT_JSON_DIR, `${safe}.json`)
+}
+
+function getComponentTmpPath (syntax) {
+  const safe = sanitizeComponentSyntax(syntax)
+  if (!safe) return null
+  return path.join(COMPONENT_TMP_DIR, `${safe}.json`)
+}
+
+function listDefaultComponentSyntaxes () {
+  ensureDirs()
+  if (!fs.existsSync(COMPONENT_DEFAULT_JSON_DIR)) return []
+  return fs.readdirSync(COMPONENT_DEFAULT_JSON_DIR)
+    .filter(name => /\.json$/i.test(name))
+    .map(name => name.replace(/\.json$/i, '').toLowerCase())
+    .sort()
+}
+
+function loadComponentJson (syntax) {
+  ensureDirs()
+  const defPath = getComponentDefaultPath(syntax)
+  const tmpPath = getComponentTmpPath(syntax)
+  if (!defPath || !fs.existsSync(defPath)) return null
+  const safeSyntax = sanitizeComponentSyntax(syntax)
+  const tryReadJson = (p) => {
+    try {
+      const raw = fs.readFileSync(p, 'utf8')
+      return JSON.parse(raw)
+    } catch (_) {
+      return null
+    }
+  }
+  if (tmpPath && fs.existsSync(tmpPath)) {
+    const tmpJson = tryReadJson(tmpPath)
+    if (tmpJson) {
+      return { syntax: safeSyntax, source: 'tmp', path: tmpPath, json: tmpJson }
+    }
+  }
+  const defJson = tryReadJson(defPath)
+  if (!defJson) return null
+  return { syntax: safeSyntax, source: 'default', path: defPath, json: defJson }
+}
+
+function getComponentDefaultLfrPath (syntax) {
+  const safe = sanitizeComponentSyntax(syntax)
+  if (!safe) return null
+  return path.join(COMPONENT_DEFAULT_LFR_DIR, `${safe}.lfr`)
+}
+
+function getComponentDefaultMintPath (syntax) {
+  const safe = sanitizeComponentSyntax(syntax)
+  if (!safe) return null
+  return path.join(COMPONENT_DEFAULT_MINT_DIR, `${safe}.mint`)
+}
+
+function readTextIfExists (p) {
+  if (!p || !fs.existsSync(p)) return ''
+  return fs.readFileSync(p, 'utf8')
+}
+
+function saveComponentTmpJson (syntax, jsonObj) {
+  const p = getComponentTmpPath(syntax)
+  if (!p) return false
+  fs.writeFileSync(p, JSON.stringify(jsonObj, null, 2))
+  return true
+}
+
+function resetComponentTmpJson (syntax) {
+  const p = getComponentTmpPath(syntax)
+  if (!p) return false
+  if (fs.existsSync(p)) fs.unlinkSync(p)
+  return true
 }
 
 function getAdmin () {
@@ -330,5 +428,14 @@ module.exports = {
   deleteFile,
   getComponentLibrary,
   saveComponentLibrary,
+  sanitizeComponentSyntax,
+  listDefaultComponentSyntaxes,
+  loadComponentJson,
+  saveComponentTmpJson,
+  resetComponentTmpJson,
+  getComponentDefaultPath,
+  getComponentDefaultLfrPath,
+  getComponentDefaultMintPath,
+  readTextIfExists,
   DATA_ROOT,
 }

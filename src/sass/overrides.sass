@@ -112,3 +112,12 @@ html.font-size-normal .landing-top-right-logo,
 html.font-size-small .landing-top-right-logo
   transform: scale(var(--ui-scale))
   transform-origin: top left
+
+// Show button labels with natural casing (Vuetify defaults to uppercase)
+.v-application .v-btn
+  text-transform: none !important
+  letter-spacing: normal !important
+
+.v-application .v-btn .v-btn__content
+  text-transform: none !important
+  letter-spacing: normal !important

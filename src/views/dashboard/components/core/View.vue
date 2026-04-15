@@ -20,7 +20,7 @@
               </div>
               <div class="agent-panel-subtitle">
                 <span class="agent-panel-subtitle-text">
-                  Download Neptune prompt scripts, open the vendor chat, describe your device in English, then paste the generated
+                  Export Neptune prompt scripts, open the vendor chat, describe your device in English, then paste the generated
                   <span class="agent-panel-keep-together">LFR</span>
                   into the
                   <span class="agent-panel-keep-together">Editor</span>.
@@ -52,18 +52,19 @@
                   :to="{ name: 'PromptSteps' }"
                   class="agent-panel-steps-link"
                 >Prompt steps guide</router-link>.
-                The same content is at the root of the downloaded zip.
+                The same content is at the root of the exported zip.
               </p>
 
-              <div class="agent-panel-actions d-flex flex-wrap align-center">
+              <div class="agent-panel-actions d-flex flex-column align-stretch">
                 <v-btn
                   color="success"
                   depressed
                   small
-                  class="agent-panel-export-btn mb-2 mr-2"
+                  block
+                  class="agent-panel-export-btn mb-2"
                   :loading="zipDownloading"
                   :disabled="zipDownloading"
-                  @click="downloadPromptZip"
+                  @click="exportPromptZip"
                 >
                   <v-icon
                     left
@@ -72,14 +73,15 @@
                   >
                     mdi-download
                   </v-icon>
-                  <span>{{ zipDownloading ? 'Preparing zip…' : 'Download prompt package (.zip)' }}</span>
+                  <span>{{ zipDownloading ? 'Preparing zip…' : 'Export prompt package (.zip)' }}</span>
                 </v-btn>
 
                 <v-btn
                   color="primary"
                   depressed
                   small
-                  class="agent-panel-export-btn mb-2"
+                  block
+                  class="agent-panel-export-btn"
                   @click="openExternalAgent"
                 >
                   <v-icon left small>mdi-open-in-new</v-icon>
@@ -105,12 +107,13 @@
     'lfr2en_user_template.txt',
   ]
 
+  /* Alphabetical by label */
   const LLM_MODELS = [
-    { id: 'qwen', label: 'Qwen', folder: 'alibaba_qwen', agentUrl: 'https://chat.qwen.ai/' },
+    { id: 'claude', label: 'Claude', folder: 'anthropic', agentUrl: 'https://claude.ai/' },
     { id: 'deepseek', label: 'DeepSeek', folder: 'deepseek', agentUrl: 'https://chat.deepseek.com/' },
     { id: 'gemini', label: 'Gemini', folder: 'google_gemini', agentUrl: 'https://gemini.google.com/' },
     { id: 'gpt', label: 'GPT', folder: 'openai', agentUrl: 'https://chatgpt.com/' },
-    { id: 'claude', label: 'Claude', folder: 'anthropic', agentUrl: 'https://claude.ai/' },
+    { id: 'qwen', label: 'Qwen', folder: 'alibaba_qwen', agentUrl: 'https://chat.qwen.ai/' },
   ]
 
   export default {
@@ -123,7 +126,7 @@
     data () {
       return {
         llmModels: LLM_MODELS,
-        selectedModel: LLM_MODELS[0],
+        selectedModel: LLM_MODELS[0], /* Claude — first alphabetically */
         zipDownloading: false,
       }
     },
@@ -139,7 +142,7 @@
         const base = (process.env.BASE_URL || '/').replace(/\/?$/, '/')
         return `${base}prompt`
       },
-      async downloadPromptZip () {
+      async exportPromptZip () {
         const folder = this.selectedModel && this.selectedModel.folder
         if (!folder || this.zipDownloading) return
         this.zipDownloading = true
@@ -222,12 +225,12 @@
 }
 
 .agent-panel-title {
-  font-size: 20px;
+  font-size: calc(20px + 2pt);
   font-weight: 600;
 }
 
 .agent-panel-subtitle {
-  font-size: 14px;
+  font-size: calc(14px + 2pt);
   opacity: 0.8;
   line-height: 1.4;
   font-weight: 400;
@@ -249,9 +252,9 @@
   padding-top: 16px;
 }
 
-/* Match “Switch to another language” size (12pt); body text black, not blue */
+/* +2pt vs previous 12pt; body text black */
 .agent-panel-hint {
-  font-size: 12pt !important;
+  font-size: 14pt !important;
   font-weight: 500;
   line-height: 1.45;
   color: rgba(0, 0, 0, 0.87) !important;
@@ -304,9 +307,9 @@
   letter-spacing: normal !important;
 }
 
-/* Match Editor “File name” / “Script language” (see Editor.vue) */
+/* Match Editor labels: +2pt (16pt) */
 .agent-panel-model-select ::v-deep label {
-  font-size: 14pt !important;
+  font-size: 16pt !important;
   font-weight: 600 !important;
   color: #9e9e9e !important;
 }
@@ -314,7 +317,7 @@
 .agent-panel-model-select ::v-deep .v-select__selection,
 .agent-panel-model-select ::v-deep .v-select__selection--comma,
 .agent-panel-model-select ::v-deep .v-input__slot input {
-  font-size: 14pt !important;
+  font-size: 16pt !important;
   font-weight: 600 !important;
   color: #006994 !important;
   line-height: 1.35 !important;
@@ -331,7 +334,7 @@
 /* Menu is portaled; match Editor script-language dropdown */
 .agent-panel-model-select-menu .v-list-item,
 .agent-panel-model-select-menu .v-list-item__title {
-  font-size: 14pt !important;
+  font-size: 16pt !important;
   font-weight: 600 !important;
   color: #006994 !important;
 }

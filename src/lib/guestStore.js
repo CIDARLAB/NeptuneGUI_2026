@@ -4,10 +4,22 @@
  */
 
 import { EXAMPLE_LFR_SCRIPT, EXAMPLE_MINT_SCRIPT } from './exampleScripts'
+import { EXAMPLE_DX_SEED_SPECS } from './exampleDxSeed'
 
 const KEY = 'neptune_guest_data'
 
 export const EXAMPLE_WORKSPACE_NAME = 'Example'
+
+/** Zip / download: never write "[object Object]" when file.content is a parsed JSON object. */
+export function fileContentForZipExport (content) {
+  if (content == null || content === '') return ''
+  if (typeof content === 'string') return content
+  try {
+    return JSON.stringify(content)
+  } catch (_) {
+    return ''
+  }
+}
 
 function load () {
   try {
@@ -252,12 +264,32 @@ function seedExampleDemoFiles (wid) {
   const specs = [
     { name: 'flow_and_control_demo.lfr', ext: '.lfr', content: EXAMPLE_LFR_SCRIPT },
     { name: EXAMPLE_MINT_FILENAME, ext: '.mint', content: EXAMPLE_MINT_SCRIPT },
+    ...EXAMPLE_DX_SEED_SPECS,
   ]
   for (const spec of specs) {
     const files = getFiles(wid)
     if (files.some(f => f.name === spec.name)) continue
     const f = createFile(wid, spec.name, spec.ext)
     if (f) updateFile(wid, f.id, spec.content)
+  }
+}
+
+const CORRUPT_OBJECT_STRING = '[object Object]'
+
+/** DX demo JSON was once seeded as literal "[object Object]" (bad `String(json)` on bundled .json). */
+function repairCorruptedKnownJsonSeeds () {
+  const data = load()
+  const byName = new Map(EXAMPLE_DX_SEED_SPECS.map(s => [s.name, s]))
+  for (const w of data.workspaces) {
+    if (!w.files) continue
+    for (const f of w.files) {
+      const spec = byName.get(f.name)
+      if (!spec || String(spec.ext || '').toLowerCase() !== '.json') continue
+      const c = f.content
+      const isCorruptString =
+        typeof c === 'string' && c.trim() === CORRUPT_OBJECT_STRING
+      if (isCorruptString) updateFile(w._id, f.id, spec.content)
+    }
   }
 }
 
@@ -275,6 +307,7 @@ function ensureExampleWorkspace () {
   }
   if (!ex) return
   seedExampleDemoFiles(ex._id)
+  repairCorruptedKnownJsonSeeds()
 }
 
 /** Remove all workspaces that have no files (Dashboard stays empty until user saves/uploads). */

@@ -115,7 +115,7 @@
       @click="logout"
     >
       <v-icon left small>mdi-exit-run</v-icon>
-      Exit
+      EXIT
     </v-btn>
 
     <!-- Exit dialog: ask to export workspace snapshot before leaving -->
@@ -129,10 +129,10 @@
           Leave Neptune?
         </v-card-title>
         <v-card-text>
-          If you leave now, your current workspaces may not be saved.
+          If you leave now, your current workspaces and component library cache may not be saved.
           <br><br>
-          Please export your current workspaces to a local zip file before exiting.
-          Later, you can restore them from Dashboard using “Import zip”.
+          Please export your current workspaces and component library cache to a local zip file before exiting.
+          Later, you can restore both from Dashboard using “Import zip”.
           <br><br>
           <v-checkbox
             v-model="dontShowLogoutPromptWeek"
@@ -172,7 +172,7 @@
 
   import axios from 'axios'
   import router from '../../../../router'
-  import guestStore from '@/lib/guestStore'
+  import guestStore, { fileContentForZipExport } from '@/lib/guestStore'
   import JSZip from 'jszip'
 
   let self = this
@@ -345,9 +345,17 @@
               const base = (f.name || `file_${fi + 1}`).replace(/[^a-zA-Z0-9_-]/g, '_')
               const ext = f.ext && f.ext.startsWith('.') ? f.ext : (f.ext ? `.${f.ext}` : '')
               const filename = `${base}${ext || '.txt'}`
-              folder.file(filename, f.content || '')
+              folder.file(filename, fileContentForZipExport(f.content))
             })
           })
+
+          try {
+            const compRes = await axios.get('/api/v1/componentFiles', {
+              withCredentials: true,
+              headers: { 'Content-Type': 'application/json' },
+            })
+            zip.file('component_table.json', JSON.stringify(compRes.data || { components: [] }, null, 2))
+          } catch (_) {}
 
           const blob = await zip.generateAsync({ type: 'blob' })
           const date = new Date()
@@ -417,10 +425,13 @@
   color: #006994 !important;
   opacity: 1;
 }
-/* Exit: red button, white icon and label (overrides rule above) */
+/* Exit: red button, white icon and label; ALL CAPS; +2pt to match Editor toolbar */
 #app-bar .exit-btn,
 #app-bar .exit-btn .v-btn__content {
   color: #ffffff !important;
+  font-size: calc(15px + 2pt) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.04em !important;
 }
 #app-bar .exit-btn .v-icon {
   color: #ffffff !important;

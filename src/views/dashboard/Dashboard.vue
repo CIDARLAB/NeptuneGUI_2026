@@ -55,7 +55,7 @@
 
       <v-col cols="12">
         <div class="d-flex align-center flex-wrap">
-          <div class="font-weight-light mt-1" style="font-size: 25px">
+          <div class="font-weight-light mt-1 workspace-section-title">
             Workspaces
           </div>
           <v-spacer />
@@ -63,40 +63,41 @@
             <template v-slot:activator="{ on, attrs }">
               <v-btn
                 small
-                color="primary"
+                color="success"
                 depressed
+                dark
                 class="mt-1 dashboard-guest-export-btn"
                 v-bind="attrs"
                 v-on="on"
                 @click="exportGuestWorkspace"
               >
                 <v-icon left small color="white">mdi-download</v-icon>
-                EXPORT WORKSPACES
+                Export workspaces
               </v-btn>
             </template>
-            <span>Download all workspaces as a .zip file to keep a backup on your computer.</span>
+            <span>Export all workspaces and component library cache as a .zip backup.</span>
           </v-tooltip>
           <v-tooltip bottom>
             <template v-slot:activator="{ on, attrs }">
               <v-btn
                 small
-                outlined
-                color="primary"
+                depressed
+                dark
                 class="mt-1 ml-2 dashboard-guest-import-btn"
                 v-bind="attrs"
                 v-on="on"
                 @click="triggerImportZip"
               >
-                <v-icon left small>mdi-upload</v-icon>
-                IMPORT WORKSPACES
+                <v-icon left small color="white">mdi-upload</v-icon>
+                Import workspaces
               </v-btn>
             </template>
-            <span>Restore workspaces from a .zip file you exported earlier.</span>
+            <span>Restore workspaces and component library cache from a previously exported .zip file.</span>
           </v-tooltip>
         </div>
         <div v-if="isGuest" class="guest-storage-hint mt-2">
           <span class="guest-storage-text text-no-wrap">
-            Guest data is stored in this browser. Export to a cache file (you choose the path) and later update from that file to restore your previous workspaces.
+            Guest data is stored in this browser. Export to a cache file and later restore both workspaces and component library from that file.
           </span>
         </div>
         <input ref="importZipInput" type="file" accept=".zip,application/zip" style="display: none" @change="onImportZip">
@@ -106,7 +107,7 @@
         <v-card>
           <v-card-title>Workspace conflicts detected</v-card-title>
           <v-card-text>
-            The uploaded zip contains workspaces that already exist in your online account. Choose whether to overwrite them with the uploaded content.
+            The imported zip contains workspaces that already exist in your online account. Choose whether to overwrite them with the imported content.
             <v-list dense class="mt-3">
               <v-list-item v-for="(c, idx) in importConflicts" :key="idx">
                 <v-list-item-content>
@@ -114,7 +115,7 @@
                 </v-list-item-content>
               </v-list-item>
             </v-list>
-            <v-checkbox v-model="importOverwriteConfirmed" label="Overwrite these workspaces using the uploaded zip" class="mt-2" />
+            <v-checkbox v-model="importOverwriteConfirmed" label="Overwrite these workspaces using the imported zip" class="mt-2" />
           </v-card-text>
           <v-card-actions>
             <v-spacer />
@@ -130,16 +131,13 @@
         :key="workspace._id"
       >
         <base-material-workspace-chart-card
+          class="workspace-dashboard-chart-card"
           :id="workspace._id"
           color="info"
           type="Line"
-          :active-jobs="jobActiveCount"
-          :completed-jobs="jobCompletedCount"
+          :name="workspace.name"
         >
-          <div class="workspace-card-toolbar mt-2 mx-1">
-            <div class="workspace-card-name card-title font-weight-light">
-              {{ workspace.name }}
-            </div>
+          <div class="workspace-card-toolbar mx-1">
             <div class="workspace-card-actions-row d-flex justify-center align-center">
               <div class="workspace-card-actions d-flex flex-shrink-0 align-center">
                 <v-tooltip bottom>
@@ -202,7 +200,7 @@
             >
               mdi-clock-outline
             </v-icon>
-            <span class="caption grey--text font-weight-light">Last Update: {{formattimestamp(workspace.updated_at)}}</span>
+            <span class="caption grey--text font-weight-light workspace-card-last-update">Last Update: {{formattimestamp(workspace.updated_at)}}</span>
           </template>
         </base-material-workspace-chart-card>
       </v-col>
@@ -222,68 +220,237 @@
     </v-row>
             <v-row
                 v-if="files.length > 0"
+                class="files-section-row"
                 >
                 <v-col
                     cols="12"
-                    
+                    class="d-flex align-center justify-space-between flex-wrap"
                 >
                     <div
-                    class="font-weight-light mt-1"
-                    style="font-size: 25px"
+                      class="font-weight-light mt-1 mr-4"
+                      style="font-size: 25px"
                     >
-                    Files
+                      Files
                     </div>
-                </v-col>
-                <v-col
-                    cols="12"
-                    sm="3"
-                    lg="3"
-                    v-for="(file, i) in files" :key="i"
-                >
-                    <base-material-workspace-stats-card
-                        color="info"
-                        icon="mdi-file"
-                        title="File Type:"
-                        :value="file.ext"
-                        :name="file.name"
-                        :ext="file.ext"
-                        sub-icon="mdi-clockwise-outline"
-                        :sub-text="'Last edited: ' + (file.updated_at ? formattimestamp(file.updated_at) : (file.created_at ? formattimestamp(file.created_at) : '—'))"
-                        :id="file.id"
-                        :workspaceid="selectedworkspace._id"
-                        v-on:onFileDeleted="refreshFiles"
-                        @view3duf="openJsonIn3DuF($event)"
-                    />
-                </v-col>
-                <v-col
-                    cols="12"
-                    sm="3"
-                    lg="3"
-                    v-if="files.length > 0"
-                    align="center"
-                >
-                    <div class="my-2">
-                    <v-tooltip top>
-                        <template v-slot:activator="{ on }">
-                        <v-btn 
-                            v-on="on" 
-                            class="newbutton" 
-                            color="success" 
-                            fab 
-                            x-large 
-                            dark
-                            @click="newfiledialog = true"
-                            >
-                            <v-icon>mdi-plus</v-icon>
-                        </v-btn>
-                        </template>
-                        <span>Create New File</span>
-                    </v-tooltip>
-                                    <v-dialog
-                    v-model="newfiledialog"
-                    max-width="300px"
+                    <v-btn-toggle
+                      v-model="fileViewMode"
+                      mandatory
+                      dense
+                      class="files-view-toggle mt-2 mt-sm-0"
                     >
-                    <v-card>
+                      <v-btn value="grid" small class="files-view-btn">
+                        <v-icon left small class="files-view-btn-icon">mdi-view-grid</v-icon>
+                        Grid view
+                      </v-btn>
+                      <v-btn value="list" small class="files-view-btn">
+                        <v-icon left small class="files-view-btn-icon">mdi-format-list-bulleted</v-icon>
+                        List view
+                      </v-btn>
+                    </v-btn-toggle>
+                </v-col>
+
+                <template v-if="fileViewMode === 'grid'">
+                  <v-col
+                      cols="12"
+                      sm="6"
+                      md="4"
+                      lg="3"
+                      xl="2"
+                      v-for="(file, i) in files" :key="`grid-${i}`"
+                  >
+                      <base-material-workspace-stats-card
+                          class="file-grid-card"
+                          color="info"
+                          icon="mdi-file"
+                          title="File Type:"
+                          :value="file.ext"
+                          :name="file.name"
+                          :ext="file.ext"
+                          sub-icon="mdi-clockwise-outline"
+                          :sub-text="'Last edited: ' + (file.updated_at ? formattimestamp(file.updated_at) : (file.created_at ? formattimestamp(file.created_at) : '—'))"
+                          :id="file.id"
+                          :workspaceid="selectedworkspace._id"
+                          :content="file.content"
+                          v-on:onFileDeleted="refreshFiles"
+                          @view3duf="openJsonIn3DuF($event)"
+                          @importComponentJson="importWorkspaceJsonToComponentLibrary($event)"
+                      />
+                  </v-col>
+
+                  <v-col
+                      cols="12"
+                      sm="6"
+                      md="4"
+                      lg="3"
+                      xl="2"
+                      v-if="files.length > 0"
+                  >
+                    <v-card class="file-grid-create-tile d-flex flex-column align-center justify-center">
+                      <v-btn
+                        class="file-grid-create-btn"
+                        color="success"
+                        fab
+                        dark
+                        @click="newfiledialog = true"
+                      >
+                        <v-icon x-large>mdi-plus</v-icon>
+                      </v-btn>
+                      <div class="file-grid-create-label mt-4">Create a new file</div>
+                    </v-card>
+                  </v-col>
+                </template>
+
+                <template v-else>
+                  <v-col cols="12">
+                    <v-card class="file-list-table-card">
+                      <v-simple-table dense class="file-list-table">
+                        <thead>
+                          <tr>
+                            <th>
+                              <button type="button" class="file-list-sort-btn" @click="toggleFileListSort('name')">
+                                <span>File Name</span>
+                                <v-icon x-small class="ml-1">{{ getFileListSortIcon('name') }}</v-icon>
+                              </button>
+                            </th>
+                            <th>
+                              <button type="button" class="file-list-sort-btn" @click="toggleFileListSort('ext')">
+                                <span>File Type</span>
+                                <v-icon x-small class="ml-1">{{ getFileListSortIcon('ext') }}</v-icon>
+                              </button>
+                            </th>
+                            <th class="file-list-th-last-edited">
+                              <button type="button" class="file-list-sort-btn" @click="toggleFileListSort('updatedAt')">
+                                <span>Last Edited</span>
+                                <v-icon x-small class="ml-1">{{ getFileListSortIcon('updatedAt') }}</v-icon>
+                              </button>
+                            </th>
+                            <th class="text-right">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr v-for="(file, i) in sortedFilesForList" :key="`list-${i}`">
+                            <td class="file-list-name-cell">
+                              {{ file.name }}
+                            </td>
+                            <td>
+                              <code class="file-list-ext-pill">{{ file.ext || '—' }}</code>
+                            </td>
+                            <td class="file-list-time-cell">
+                              {{ file.updated_at ? formattimestamp(file.updated_at) : (file.created_at ? formattimestamp(file.created_at) : '—') }}
+                            </td>
+                            <td class="text-right">
+                              <div class="d-inline-flex align-center file-list-actions">
+                                <v-tooltip
+                                  v-if="(file.ext || '').toLowerCase() === '.json'"
+                                  bottom
+                                >
+                                  <template v-slot:activator="{ on, attrs }">
+                                    <v-btn
+                                      text
+                                      icon
+                                      small
+                                      color="purple"
+                                      v-bind="attrs"
+                                      v-on="on"
+                                      @click="viewFileIn3DuF(file)"
+                                    >
+                                      <img
+                                        class="go-3duf-btn-logo go-3duf-btn-logo--sm"
+                                        :src="logo3duf"
+                                        alt="3DuF"
+                                      >
+                                    </v-btn>
+                                  </template>
+                                  <span>Open design JSON in 3DuF</span>
+                                </v-tooltip>
+
+                                <v-tooltip
+                                  v-if="(file.ext || '').toLowerCase() === '.json'"
+                                  bottom
+                                >
+                                  <template v-slot:activator="{ on, attrs }">
+                                    <v-btn
+                                      text
+                                      icon
+                                      small
+                                      color="primary"
+                                      v-bind="attrs"
+                                      v-on="on"
+                                      @click="importFileJson(file)"
+                                    >
+                                      <v-icon small>mdi-database-import-outline</v-icon>
+                                    </v-btn>
+                                  </template>
+                                  <span>Import this JSON into Component Library</span>
+                                </v-tooltip>
+
+                                <v-tooltip
+                                  v-if="canEditFile(file)"
+                                  bottom
+                                >
+                                  <template v-slot:activator="{ on, attrs }">
+                                    <v-btn
+                                      text
+                                      icon
+                                      small
+                                      color="blue"
+                                      v-bind="attrs"
+                                      v-on="on"
+                                      @click="editFile(file)"
+                                    >
+                                      <v-icon small>mdi-pen</v-icon>
+                                    </v-btn>
+                                  </template>
+                                  <span>Open this file in the Editor</span>
+                                </v-tooltip>
+
+                                <v-tooltip bottom>
+                                  <template v-slot:activator="{ on, attrs }">
+                                    <v-btn
+                                      text
+                                      icon
+                                      small
+                                      color="red"
+                                      v-bind="attrs"
+                                      v-on="on"
+                                      @click="deleteFile(file)"
+                                    >
+                                      <v-icon small>mdi-delete</v-icon>
+                                    </v-btn>
+                                  </template>
+                                  <span>Remove this file from the workspace</span>
+                                </v-tooltip>
+                              </div>
+                            </td>
+                          </tr>
+                          <tr
+                            class="file-list-create-row"
+                            @click="newfiledialog = true"
+                          >
+                            <td colspan="4" class="file-list-create-cell">
+                              <v-tooltip bottom>
+                                <template v-slot:activator="{ on, attrs }">
+                                  <span
+                                    class="file-list-create-label"
+                                    v-bind="attrs"
+                                    v-on="on"
+                                  >Create a new file</span>
+                                </template>
+                                <span>Create a new file in this workspace</span>
+                              </v-tooltip>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </v-simple-table>
+                    </v-card>
+                  </v-col>
+                </template>
+
+                <v-dialog
+                  v-model="newfiledialog"
+                  max-width="300px"
+                >
+                  <v-card>
                     <v-card-title>
                         Create New File
                     </v-card-title>
@@ -320,12 +487,9 @@
                         </v-btn>
 
                     </v-card-actions>
-                    </v-card>
+                  </v-card>
                 </v-dialog>
-
-            </div>
-        </v-col>
-    </v-row>
+            </v-row>
   </v-container>
 </template>
 
@@ -333,8 +497,10 @@
   import axios from 'axios'
   import { log } from 'util'
   import * as Utils from '../../utils'
-  import guestStore, { EXAMPLE_WORKSPACE_NAME } from '@/lib/guestStore'
+  import guestStore, { EXAMPLE_WORKSPACE_NAME, fileContentForZipExport } from '@/lib/guestStore'
   import JSZip from 'jszip'
+
+  const LOCAL_3DUF_URL = 'http://localhost:8082'
 
   export default {
     name: 'DashboardDashboard',
@@ -343,6 +509,7 @@
         this.refreshworkspacedata()
     },
     data: () => ({
+      logo3duf: require('@/assets/3duf_icon.png'),
       // set rules for the file extension
       rules: [
         value => !!value || 'Required',
@@ -357,10 +524,11 @@
             id: '',
         },          
         files: [],
+        fileViewMode: 'grid',
+        fileListSortBy: 'name',
+        fileListSortDesc: false,
         workspaces:[],
         workspacesobjects: {},
-        jobActiveCount: 0,
-        jobCompletedCount: 0,
         actions: [
             {
             color: 'info',
@@ -386,12 +554,102 @@
       totalSales () {
         return this.sales.reduce((acc, val) => acc + val.salesInM, 0)
       },
+      sortedFilesForList () {
+        const list = Array.isArray(this.files) ? [...this.files] : []
+        const key = this.fileListSortBy
+        const desc = !!this.fileListSortDesc
+        const toMillis = (f) => {
+          const value = (f && (f.updated_at || f.created_at)) || null
+          if (!value) return 0
+          const time = new Date(value).getTime()
+          return Number.isFinite(time) ? time : 0
+        }
+        const normalize = v => String(v == null ? '' : v).toLowerCase()
+
+        list.sort((a, b) => {
+          if (key === 'updatedAt') {
+            return toMillis(a) - toMillis(b)
+          }
+          if (key === 'ext') {
+            return normalize(a && a.ext).localeCompare(normalize(b && b.ext))
+          }
+          return normalize(a && a.name).localeCompare(normalize(b && b.name))
+        })
+
+        return desc ? list.reverse() : list
+      },
       isGuest () {
         return this.$store.getters.isGuest
       },
     },
 
     methods: {
+      toggleFileListSort (key) {
+        if (this.fileListSortBy === key) {
+          this.fileListSortDesc = !this.fileListSortDesc
+          return
+        }
+        this.fileListSortBy = key
+        this.fileListSortDesc = false
+      },
+      getFileListSortIcon (key) {
+        if (this.fileListSortBy !== key) return 'mdi-unfold-more-horizontal'
+        return this.fileListSortDesc ? 'mdi-arrow-down' : 'mdi-arrow-up'
+      },
+      canEditFile (file) {
+        const lowerExt = String((file && file.ext) || '').toLowerCase()
+        return lowerExt !== '.log' && lowerExt !== '.json'
+      },
+      editFile (file) {
+        if (!file || !file.id || !this.canEditFile(file)) return
+        this.$store.commit('SET_CURRENT_FILE', file.id)
+        this.$router.push('/editor')
+      },
+      deleteFile (file) {
+        if (!file || !file.id) return
+        const wid =
+          (this.selectedworkspace && this.selectedworkspace._id) ||
+          (this.$store.getters.currentWorkspace && this.$store.getters.currentWorkspace._id) ||
+          null
+        if (!wid) return
+
+        if (this.$store.getters.isGuest) {
+          guestStore.deleteFile(wid, file.id)
+          this.refreshFiles(wid)
+          return
+        }
+
+        const config = {
+          data: {
+            fileid: file.id,
+            workspaceid: wid,
+          },
+          withCredentials: true,
+          crossorigin: true,
+          headers: { 'Content-Type': 'application/json' },
+        }
+
+        axios.delete('/api/v1/file', config)
+          .then(() => { this.refreshFiles(wid) })
+          .catch((error) => { console.log(error) })
+      },
+      viewFileIn3DuF (file) {
+        if (!file || !file.id) return
+        this.openJsonIn3DuF({
+          id: file.id,
+          name: file.name,
+          ext: file.ext,
+          workspaceid: (this.selectedworkspace && this.selectedworkspace._id) || undefined,
+        })
+      },
+      importFileJson (file) {
+        if (!file || !file.id) return
+        this.importWorkspaceJsonToComponentLibrary({
+          id: file.id,
+          name: file.name,
+          workspaceid: (this.selectedworkspace && this.selectedworkspace._id) || undefined,
+        })
+      },
       triggerImportZip () {
         const el = this.$refs.importZipInput
         if (el) el.click()
@@ -481,9 +739,17 @@
             const base = (f.name || `file_${fi + 1}`).replace(/[^a-zA-Z0-9_-]/g, '_')
             const ext = f.ext && f.ext.startsWith('.') ? f.ext : (f.ext ? `.${f.ext}` : '')
             const filename = `${base}${ext || '.txt'}`
-            folder.file(filename, f.content || '')
+            folder.file(filename, fileContentForZipExport(f.content))
           })
         })
+
+        try {
+          const compRes = await axios.get('/api/v1/componentFiles', {
+            withCredentials: true,
+            headers: { 'Content-Type': 'application/json' },
+          })
+          zip.file('component_table.json', JSON.stringify(compRes.data || { components: [] }, null, 2))
+        } catch (_) {}
 
         const blob = await zip.generateAsync({ type: 'blob' })
         const a = document.createElement('a')
@@ -523,6 +789,16 @@
               if (index.nextWorkspaceId) nextWorkspaceId = index.nextWorkspaceId
               if (index.nextFileId) nextFileId = index.nextFileId
             } catch (_) {}
+          }
+
+          let componentTable = null
+          if (zip.files['component_table.json']) {
+            try {
+              const tableStr = await zip.files['component_table.json'].async('string')
+              componentTable = JSON.parse(tableStr)
+            } catch (_) {
+              componentTable = null
+            }
           }
 
           const folderNames = Object.keys(zip.files)
@@ -593,17 +869,247 @@
             this.$store.commit('SET_WORKSPACE', null)
             if (this.workspaces.length) this.selectworkspace(this.workspaces[0]._id)
           }
+
+          // Restore custom component-library rows from cache zip.
+          if (componentTable && Array.isArray(componentTable.components)) {
+            const customRows = componentTable.components.filter(c => c && c.showLfrMint === false && c.jsonScript)
+            for (const row of customRows) {
+              try {
+                // eslint-disable-next-line no-await-in-loop
+                await axios.post('/api/v1/componentFiles/upload', {
+                  name: row.name || row.syntax || 'component',
+                  jsonText: row.jsonScript,
+                  syntax: row.syntax || undefined,
+                }, {
+                  withCredentials: true,
+                  headers: { 'Content-Type': 'application/json' },
+                })
+              } catch (_) {}
+            }
+          }
         } catch (err) {
           console.error('Import failed', err)
         } finally {
           e.target.value = ''
         }
       },
+      async importWorkspaceJsonToComponentLibrary (file) {
+        if (!file || !file.id) return
+        const fallbackName = String(file.name || 'component').replace(/\.json$/i, '')
+        const customName = window.prompt('Component name for component library:', fallbackName)
+        if (!customName || !String(customName).trim()) return
+        const name = String(customName).trim()
+
+        try {
+          if (this.$store.getters.isGuest) {
+            const workspaceId = file.workspaceid || (this.selectedworkspace && this.selectedworkspace._id)
+            if (!workspaceId) return
+            const local = guestStore.getFile(workspaceId, file.id)
+            const jsonText = local && local.content ? String(local.content) : ''
+            JSON.parse(jsonText)
+            await axios.post('/api/v1/componentFiles/upload', { name, jsonText }, {
+              withCredentials: true,
+              headers: { 'Content-Type': 'application/json' },
+            })
+            alert('Imported JSON into Component Library.')
+            return
+          }
+
+          await axios.post('/api/v1/componentFiles/importWorkspaceJson', {
+            fileid: file.id,
+            name,
+          }, {
+            withCredentials: true,
+            headers: { 'Content-Type': 'application/json' },
+          })
+          alert('Imported JSON into Component Library.')
+        } catch (err) {
+          const msg = (err.response && err.response.data && (err.response.data.error || err.response.data.message)) || err.message
+          alert('Import to component library failed: ' + (msg || 'please try again.'))
+        }
+      },
       openJsonIn3DuF (file) {
         return this.openJsonIn3DuFInternal(file)
       },
 
-      async openJsonIn3DuFInternal (file) {
+      /** Fix literal "[object Object]" (e.g. object sent through text/plain) — same idea as Component Library raw JSON. */
+      async normalizeJsonPayloadFor3DuF (rawJsonPayload, file, workspaceId) {
+        const isBadObjectString = (v) =>
+          typeof v === 'string' && v.trim() === '[object Object]'
+        if (typeof rawJsonPayload === 'object' && rawJsonPayload !== null) {
+          return rawJsonPayload
+        }
+        if (!isBadObjectString(rawJsonPayload)) {
+          return rawJsonPayload
+        }
+        if (this.$store.getters.isGuest && workspaceId && file && file.id) {
+          const g = guestStore.getFile(workspaceId, file.id)
+          if (g && g.content != null) {
+            if (typeof g.content === 'object') return g.content
+            if (typeof g.content === 'string' && g.content.trim() !== '[object Object]') return g.content
+          }
+        }
+        if (!this.$store.getters.isGuest && file && file.id) {
+          try {
+            const fsRes = await axios.get('/api/v1/fs', {
+              params: { id: file.id },
+              withCredentials: true,
+              crossorigin: true,
+              headers: { 'Content-Type': 'application/json' },
+              responseType: 'text',
+            })
+            const rawText = fsRes && fsRes.data != null ? String(fsRes.data) : ''
+            if (rawText.trim() && rawText.trim() !== '[object Object]') {
+              return rawText
+            }
+          } catch (_) {}
+        }
+        return rawJsonPayload
+      },
+
+      async tryRawFsPayloadFor3DuF (file) {
+        if (this.$store.getters.isGuest || !file || !file.id) return null
+        try {
+          const fsRes = await axios.get('/api/v1/fs', {
+            params: { id: file.id },
+            withCredentials: true,
+            crossorigin: true,
+            headers: { 'Content-Type': 'application/json' },
+            responseType: 'text',
+          })
+          const rawText = fsRes && fsRes.data != null ? String(fsRes.data) : ''
+          return rawText.trim() ? rawText : null
+        } catch (_) {
+          return null
+        }
+      },
+
+    parseJsonFor3DuF (rawInput) {
+      if (rawInput && typeof rawInput === 'object') {
+        try {
+          return { jsonObject: rawInput, jsonText: JSON.stringify(rawInput) }
+        } catch (_) {
+          return { error: 'invalid_json' }
+        }
+      }
+
+      const nl = String.fromCharCode(10)
+      let base = String(rawInput == null ? '' : rawInput)
+      if (base.charCodeAt(0) === 65279) base = base.slice(1)
+      base = base.trim()
+
+      if (!base) return { error: 'empty' }
+      const lower = base.toLowerCase()
+      if (lower.startsWith('<!doctype html') || lower.startsWith('<html')) {
+        return { error: 'html_response' }
+      }
+
+      const candidates = []
+      const pushCandidate = (text) => {
+        if (typeof text !== 'string') return
+        const t = text.trim()
+        if (!t) return
+        if (!candidates.includes(t)) candidates.push(t)
+      }
+
+      const stripBlockComments = (input) => {
+        let out = input
+        while (true) {
+          const start = out.indexOf('/*')
+          if (start === -1) break
+          const end = out.indexOf('*/', start + 2)
+          if (end === -1) {
+            out = out.slice(0, start)
+            break
+          }
+          out = out.slice(0, start) + out.slice(end + 2)
+        }
+        return out
+      }
+
+      const extractBalanced = (text, openChar, closeChar) => {
+        const parts = []
+        let inString = false
+        let escape = false
+        let depth = 0
+        let start = -1
+
+        for (let i = 0; i < text.length; i++) {
+          const ch = text[i]
+          if (inString) {
+            if (escape) {
+              escape = false
+            } else if (ch.charCodeAt(0) === 92) {
+              escape = true
+            } else if (ch === '"') {
+              inString = false
+            }
+            continue
+          }
+
+          if (ch === '"') {
+            inString = true
+            continue
+          }
+
+          if (ch === openChar) {
+            if (depth === 0) start = i
+            depth++
+          } else if (ch === closeChar && depth > 0) {
+            depth--
+            if (depth === 0 && start !== -1) {
+              parts.push(text.slice(start, i + 1))
+              start = -1
+            }
+          }
+        }
+        return parts
+      }
+
+      pushCandidate(base)
+
+      let unwrappedFence = base
+      if (unwrappedFence.startsWith('```')) {
+        const firstBreak = unwrappedFence.indexOf(nl)
+        if (firstBreak !== -1) {
+          unwrappedFence = unwrappedFence.slice(firstBreak + 1)
+        }
+        if (unwrappedFence.endsWith('```')) {
+          unwrappedFence = unwrappedFence.slice(0, -3)
+        }
+      }
+      unwrappedFence = unwrappedFence.trim()
+      pushCandidate(unwrappedFence)
+
+      const noLineComments = unwrappedFence
+        .split(nl)
+        .filter(line => !line.trim().startsWith('//'))
+        .join(nl)
+        .trim()
+      pushCandidate(noLineComments)
+
+      const noBlockComments = stripBlockComments(noLineComments).trim()
+      pushCandidate(noBlockComments)
+
+      extractBalanced(noBlockComments, '{', '}').forEach(pushCandidate)
+      extractBalanced(noBlockComments, '[', ']').forEach(pushCandidate)
+
+      for (const text of candidates) {
+        try {
+          let jsonObject = JSON.parse(text)
+          if (typeof jsonObject === 'string') {
+            try { jsonObject = JSON.parse(jsonObject) } catch (_) {}
+          }
+          if (jsonObject && typeof jsonObject === 'object') {
+            return { jsonObject, jsonText: JSON.stringify(jsonObject) }
+          }
+        } catch (_) {}
+      }
+
+      return { error: 'invalid_json' }
+    },
+
+    async openJsonIn3DuFInternal (file) {
         if (!file || !file.id) return
 
         const workspaceId =
@@ -611,51 +1117,141 @@
           (this.selectedworkspace && this.selectedworkspace._id) ||
           null
 
-        // 3DuF expects the design JSON; we send as a string so 3DuF can JSON.parse it.
-        let jsonText = ''
+        const row = this.files.find(f => String(f.id) === String(file.id))
+        const extLower = String((file.ext || (row && row.ext) || '')).toLowerCase()
+        const nameLower = String((file.name || (row && row.name) || '')).toLowerCase()
+        const isWorkspaceJson =
+          extLower === '.json' || (!extLower && nameLower.endsWith('.json'))
 
-        if (this.$store.getters.isGuest) {
-          if (!workspaceId) {
-            // eslint-disable-next-line no-console
-            console.error('openJsonIn3DuF: missing guest workspaceId')
-            return
-          }
-          const f = guestStore.getFile(workspaceId, file.id)
-          jsonText = (f && f.content) ? String(f.content) : ''
-        } else {
-          const res = await axios.get('/api/v1/fs', {
-            params: { id: file.id },
-            withCredentials: true,
-            crossorigin: true,
-            headers: { 'Content-Type': 'application/json' },
-            responseType: 'text',
-          })
-          jsonText = res && res.data != null ? String(res.data) : ''
+        const httpFileParams = {
+          params: { id: file.id },
+          withCredentials: true,
+          crossorigin: true,
+          headers: { 'Content-Type': 'application/json' },
         }
 
-        if (!jsonText) {
+        let rawJsonPayload = ''
+
+        try {
+          if (isWorkspaceJson) {
+            // Workspace JSON: always load like Component Library (raw text / store), not card/list copies.
+            if (this.$store.getters.isGuest) {
+              if (!workspaceId) {
+                // eslint-disable-next-line no-console
+                console.error('openJsonIn3DuF: missing guest workspaceId')
+                alert('Cannot locate workspace for this JSON file.')
+                return
+              }
+              const f = guestStore.getFile(workspaceId, file.id)
+              rawJsonPayload = (f && f.content != null) ? f.content : ''
+            } else {
+              const fsRes = await axios.get('/api/v1/fs', {
+                ...httpFileParams,
+                responseType: 'text',
+              })
+              rawJsonPayload = fsRes && fsRes.data != null ? String(fsRes.data) : ''
+              const fsEmpty = typeof rawJsonPayload !== 'string' || !rawJsonPayload.trim()
+              if (fsEmpty) {
+                const res = await axios.get('/api/v1/file', httpFileParams)
+                const data = res && res.data
+                rawJsonPayload = data && Object.prototype.hasOwnProperty.call(data, 'content')
+                  ? data.content
+                  : (data != null ? data : '')
+              }
+            }
+          } else {
+            const fromCard = file && Object.prototype.hasOwnProperty.call(file, 'content') ? file.content : undefined
+            let r = fromCard !== undefined ? fromCard : (row ? row.content : '')
+            const isPreloadedString = (typeof r === 'string' && r.trim().length > 0)
+            const hasPreloadedObject = r && typeof r === 'object'
+            if (!isPreloadedString && !hasPreloadedObject) {
+              if (this.$store.getters.isGuest) {
+                if (!workspaceId) {
+                  alert('Cannot locate workspace for this JSON file.')
+                  return
+                }
+                const f = guestStore.getFile(workspaceId, file.id)
+                r = (f && f.content != null) ? f.content : ''
+              } else {
+                const res = await axios.get('/api/v1/file', httpFileParams)
+                const data = res && res.data
+                r = data && Object.prototype.hasOwnProperty.call(data, 'content')
+                  ? data.content
+                  : (data != null ? data : '')
+              }
+            }
+            rawJsonPayload = r
+          }
+        } catch (err) {
+          const msg = (err.response && err.response.data && (err.response.data.error || err.response.data.message)) || err.message || 'Unknown error'
+          alert('Failed to load JSON for 3DuF: ' + msg)
+          return
+        }
+
+        rawJsonPayload = await this.normalizeJsonPayloadFor3DuF(rawJsonPayload, file, workspaceId)
+
+        const isEmptyString = (typeof rawJsonPayload === 'string' && !rawJsonPayload.trim())
+        if (rawJsonPayload == null || isEmptyString) {
           alert('Cannot load JSON content for 3DuF.')
           return
         }
 
-        const win = window.open('http://localhost:8082', '_blank')
-        if (!win) {
-            alert('Popup blocked. Please allow popups to open 3DuF.')
+        let parsed = this.parseJsonFor3DuF(rawJsonPayload)
+        if (parsed.error && parsed.error !== 'html_response' && !this.$store.getters.isGuest) {
+          const rawAlt = await this.tryRawFsPayloadFor3DuF(file)
+          if (rawAlt) {
+            const trimmedAlt = rawAlt.trim()
+            const trimmedCur = typeof rawJsonPayload === 'string' ? rawJsonPayload.trim() : ''
+            if (!trimmedCur || trimmedAlt !== trimmedCur) {
+              const p2 = this.parseJsonFor3DuF(rawAlt)
+              if (!p2.error) {
+                parsed = p2
+                rawJsonPayload = rawAlt
+              }
+            }
+          }
+        }
+
+        if (parsed.error) {
+          if (parsed.error === 'html_response') {
+            alert('Received HTML instead of JSON. Please refresh Neptune/login again, then retry opening 3DuF.')
+          } else {
+            const previewRaw = (typeof rawJsonPayload === 'string') ? rawJsonPayload : JSON.stringify(rawJsonPayload || {})
+            const preview = String(previewRaw || '').slice(0, 140).split('\n').join(' ')
+            if (preview.trim() === '[object Object]') {
+              alert('This JSON file appears to be saved as "[object Object]" (corrupted text). Please re-save/re-import the JSON file, then try opening 3DuF again.')
+            } else {
+              alert('This file is not valid JSON and cannot be opened in 3DuF. Preview: ' + preview)
+            }
+          }
           return
         }
 
-        const payload = { type: 'loadDeviceFromJSON', json: jsonText }
-        // Retry briefly until 3DuF finishes initializing.
+        const win = window.open(LOCAL_3DUF_URL, '_blank')
+        if (!win) {
+          alert('Popup blocked. Please allow popups to open 3DuF.')
+          return
+        }
+
+        const payloadText = { type: 'loadDeviceFromJSON', json: parsed.jsonText }
+        const payloadObject = { type: 'loadDeviceFromJSON', json: parsed.jsonObject }
+        const targetOrigin = new URL(LOCAL_3DUF_URL).origin
         const start = Date.now()
         const interval = setInterval(() => {
-          try {
-            win.postMessage(payload, '*')
+          if (win.closed || Date.now() - start > 10000) {
             clearInterval(interval)
-          } catch (e) {
-            if (Date.now() - start > 6000) clearInterval(interval)
+            return
           }
-        }, 300)
-        setTimeout(() => clearInterval(interval), 6500)
+          try {
+            // Send to strict target and wildcard for compatibility with different 3DuF dev setups.
+            win.postMessage(payloadText, targetOrigin)
+            win.postMessage(payloadObject, targetOrigin)
+            win.postMessage(payloadText, '*')
+            win.postMessage(payloadObject, '*')
+          } catch (_) {
+            // Ignore transient cross-window timing errors during page boot.
+          }
+        }, 450)
       },
       formattimestamp(datestring){
         return Utils.getprettytimestamp(datestring)
@@ -664,8 +1260,6 @@
           this.workspaces = []
           this.workspacesobjects = {}
           this.files = []
-          this.jobActiveCount = 0
-          this.jobCompletedCount = 0
 
           if (this.$store.getters.isGuest) {
             guestStore.ensureExampleWorkspace()
@@ -741,35 +1335,8 @@
                 this.selectedworkspace = { name: '', id: '' }
                 this.files = []
               }
-              this.fetchJobCounts(config)
             })
             .catch((error) => { console.log(error) })
-        },
-        fetchJobCounts (config) {
-          axios.get('/api/v1/jobs', config)
-            .then((response) => {
-              const ids = response.data || []
-              if (ids.length === 0) return
-              let active = 0
-              let completed = 0
-              const check = (i) => {
-                if (i >= ids.length) {
-                  this.jobActiveCount = active
-                  this.jobCompletedCount = completed
-                  return
-                }
-                axios.get('/api/v1/job', { params: { job_id: ids[i] }, ...config })
-                  .then((res) => {
-                    const status = (res.data && res.data.status && String(res.data.status).toLowerCase()) || ''
-                    if (['done', 'completed', 'success', 'failed', 'error'].includes(status)) completed++
-                    else active++
-                    check(i + 1)
-                  })
-                  .catch(() => { check(i + 1) })
-              }
-              check(0)
-            })
-            .catch(() => {})
         },
         deleteworkspace (wid) {
           if (this.$store.getters.isGuest) {
@@ -874,37 +1441,44 @@
     #dashboard .dashboard-guest-export-btn,
     #dashboard .dashboard-guest-import-btn {
         font-weight: 600 !important;
-        text-transform: uppercase !important;
-        letter-spacing: 0.03em !important;
+        text-transform: none !important;
+        letter-spacing: normal !important;
         font-size: calc(0.8125rem + 2pt) !important;
     }
 
-    /* Workspace card: name top-left; action buttons centered on row below */
+    #dashboard .dashboard-guest-import-btn {
+        background-color: #006994 !important;
+        border-color: #006994 !important;
+        color: #ffffff !important;
+    }
+
+    .theme--dark #dashboard .dashboard-guest-import-btn {
+        background-color: #00838f !important;
+        border-color: #00838f !important;
+    }
+
+    /* Workspace card: compact; actions sit closer to blue heading */
+    #dashboard .workspace-dashboard-chart-card.v-card.v-card--material {
+        padding: 10px 10px 8px !important;
+    }
     #dashboard .workspace-card-toolbar {
         width: 100%;
+        margin-top: 2px;
     }
     #dashboard .workspace-card-actions-row {
         width: 100%;
-        margin-top: 8px;
+        margin-top: 2px;
     }
     #dashboard .workspace-card-actions {
-        gap: 28px;
+        gap: 16px;
     }
     #dashboard .workspace-card-action-btn {
         margin: 0 !important;
     }
-    #dashboard .workspace-card-name {
-        width: 100%;
-        text-align: left;
-        word-break: break-word;
-        overflow-wrap: anywhere;
-        line-height: 1.35;
-        font-size: calc(1.25rem + 2pt);
-    }
 
     /* Create workspace hint: Editor explanation line */
     .create-workspace-hint {
-        font-size: 14pt;
+        font-size: 19pt;
         line-height: 1.6;
         color: rgba(0, 0, 0, 0.87);
     }
@@ -920,10 +1494,121 @@
     color: #00838F;
 }
 .guest-storage-hint {
-    font-size: 14pt;
+    font-size: 19pt;
 }
 .guest-storage-text {
     display: inline-block;
     max-width: 640px;
 }
+#dashboard .workspace-section-title {
+    font-size: calc(25px + 5pt);
+}
+
+
+    #dashboard .files-view-toggle .v-btn {
+        text-transform: none !important;
+        font-weight: 600 !important;
+    }
+    #dashboard .files-view-toggle .files-view-btn-icon {
+        color: #006994 !important;
+    }
+    #dashboard .files-view-toggle .v-btn.v-btn--active {
+        background-color: #006994 !important;
+        color: #ffffff !important;
+    }
+    #dashboard .files-view-toggle .v-btn.v-btn--active .files-view-btn-icon {
+        color: #ffffff !important;
+    }
+    #dashboard .file-grid-card .v-card--material-stats {
+        min-height: 210px;
+    }
+    #dashboard .file-grid-card .display-2 {
+        font-size: 1.8rem !important;
+    }
+    #dashboard .file-grid-create-tile {
+        min-height: 210px;
+        border: 1px dashed rgba(80, 200, 120, 0.45);
+        background: rgba(80, 200, 120, 0.08);
+    }
+    #dashboard .file-grid-create-btn {
+        width: 90px;
+        height: 90px;
+    }
+    #dashboard .file-grid-create-label {
+        font-size: calc(14px + 3pt);
+        font-weight: 600;
+    }
+    #dashboard .file-grid-card .caption {
+        font-size: calc(12px + 3pt) !important;
+    }
+    #dashboard .workspace-card-last-update {
+        font-size: calc(12px + 3pt) !important;
+    }
+    #dashboard .file-list-table-card {
+        border: 1px solid rgba(0, 0, 0, 0.08);
+    }
+    #dashboard .file-list-table th {
+        font-weight: 700;
+        font-size: calc(0.9rem + 5pt);
+        white-space: nowrap;
+    }
+    #dashboard .file-list-table th.file-list-th-last-edited {
+        font-size: calc(0.9rem + 5pt + 3pt) !important;
+    }
+    #dashboard .file-list-table td {
+        vertical-align: middle;
+    }
+    #dashboard .file-list-sort-btn {
+        border: 0;
+        background: transparent;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        font: inherit;
+        font-weight: 700;
+        color: inherit;
+        padding: 0;
+    }
+    #dashboard .file-list-time-cell {
+        white-space: nowrap;
+        min-width: 170px;
+    }
+    #dashboard .file-list-name-cell {
+        word-break: break-word;
+        overflow-wrap: anywhere;
+    }
+    #dashboard .file-list-ext-pill {
+        font-family: monospace;
+        background: rgba(0, 105, 148, 0.08);
+        padding: 3px 8px;
+        border-radius: 4px;
+    }
+    #dashboard .file-list-actions {
+        gap: 4px;
+    }
+    #dashboard .go-3duf-btn-logo {
+        object-fit: contain;
+        display: block;
+    }
+    #dashboard .go-3duf-btn-logo--sm {
+        width: 20px;
+        height: 20px;
+    }
+    #dashboard .file-list-create-row {
+        cursor: pointer;
+    }
+    #dashboard .file-list-create-row:hover .file-list-create-label {
+        text-decoration: underline;
+    }
+    #dashboard .file-list-create-cell {
+        text-align: left !important;
+        padding-top: 12px !important;
+        padding-bottom: 12px !important;
+    }
+    #dashboard .file-list-create-label {
+        color: #2e7d32 !important;
+        font-weight: 600;
+        font-size: 0.95rem;
+    }
+
 </style>
