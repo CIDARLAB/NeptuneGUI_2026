@@ -264,7 +264,7 @@
                           icon="mdi-file"
                           title="File Type:"
                           :value="file.ext"
-                          :name="file.name"
+                          :name="getFileDisplayName(file)"
                           :ext="file.ext"
                           sub-icon="mdi-clockwise-outline"
                           :sub-text="'Last edited: ' + (file.updated_at ? formattimestamp(file.updated_at) : (file.created_at ? formattimestamp(file.created_at) : '—'))"
@@ -306,39 +306,41 @@
                       <v-simple-table dense class="file-list-table">
                         <thead>
                           <tr>
-                            <th>
+                            <th class="file-list-col-name">
                               <button type="button" class="file-list-sort-btn" @click="toggleFileListSort('name')">
                                 <span>File Name</span>
                                 <v-icon x-small class="ml-1">{{ getFileListSortIcon('name') }}</v-icon>
                               </button>
                             </th>
-                            <th>
+                            <th class="file-list-col-type">
                               <button type="button" class="file-list-sort-btn" @click="toggleFileListSort('ext')">
                                 <span>File Type</span>
                                 <v-icon x-small class="ml-1">{{ getFileListSortIcon('ext') }}</v-icon>
                               </button>
                             </th>
-                            <th class="file-list-th-last-edited">
+                            <th class="file-list-th-last-edited file-list-col-time">
                               <button type="button" class="file-list-sort-btn" @click="toggleFileListSort('updatedAt')">
                                 <span>Last Edited</span>
                                 <v-icon x-small class="ml-1">{{ getFileListSortIcon('updatedAt') }}</v-icon>
                               </button>
                             </th>
-                            <th class="text-right">Actions</th>
+                            <th class="text-right file-list-col-actions">Actions</th>
                           </tr>
                         </thead>
                         <tbody>
                           <tr v-for="(file, i) in sortedFilesForList" :key="`list-${i}`">
-                            <td class="file-list-name-cell">
-                              {{ file.name }}
+                            <td class="file-list-name-cell file-list-col-name">
+                              <div class="file-list-name-scroll">
+                                <span class="file-list-name-text">{{ getFileDisplayName(file) }}</span>
+                              </div>
                             </td>
-                            <td>
-                              <code class="file-list-ext-pill">{{ file.ext || '—' }}</code>
+                            <td class="file-list-col-type">
+                              <code class="file-list-ext-pill" :class="getFileListExtClass(file.ext)">{{ file.ext || '—' }}</code>
                             </td>
-                            <td class="file-list-time-cell">
+                            <td class="file-list-time-cell file-list-col-time">
                               {{ file.updated_at ? formattimestamp(file.updated_at) : (file.created_at ? formattimestamp(file.created_at) : '—') }}
                             </td>
-                            <td class="text-right">
+                            <td class="text-right file-list-col-actions">
                               <div class="d-inline-flex align-center file-list-actions">
                                 <v-tooltip
                                   v-if="(file.ext || '').toLowerCase() === '.json'"
@@ -508,6 +510,9 @@
     mounted: async function() {
         this.refreshworkspacedata()
     },
+    activated () {
+      this.refreshworkspacedata()
+    },
     data: () => ({
       logo3duf: require('@/assets/3duf_icon.png'),
       // set rules for the file extension
@@ -573,7 +578,7 @@
           if (key === 'ext') {
             return normalize(a && a.ext).localeCompare(normalize(b && b.ext))
           }
-          return normalize(a && a.name).localeCompare(normalize(b && b.name))
+          return normalize(this.getFileDisplayName(a)).localeCompare(normalize(this.getFileDisplayName(b)))
         })
 
         return desc ? list.reverse() : list
@@ -584,6 +589,11 @@
     },
 
     methods: {
+      getFileDisplayName (file) {
+        if (!file || typeof file !== 'object') return ''
+        const raw = file.name || file.file_name || file.filename || ''
+        return String(raw).trim()
+      },
       toggleFileListSort (key) {
         if (this.fileListSortBy === key) {
           this.fileListSortDesc = !this.fileListSortDesc
@@ -595,6 +605,13 @@
       getFileListSortIcon (key) {
         if (this.fileListSortBy !== key) return 'mdi-unfold-more-horizontal'
         return this.fileListSortDesc ? 'mdi-arrow-down' : 'mdi-arrow-up'
+      },
+      getFileListExtClass (ext) {
+        const lowerExt = String(ext || '').toLowerCase()
+        if (lowerExt === '.json') return 'file-list-ext-pill--json'
+        if (lowerExt === '.lfr') return 'file-list-ext-pill--lfr'
+        if (lowerExt === '.mint') return 'file-list-ext-pill--mint'
+        return ''
       },
       canEditFile (file) {
         const lowerExt = String((file && file.ext) || '').toLowerCase()
@@ -637,7 +654,7 @@
         if (!file || !file.id) return
         this.openJsonIn3DuF({
           id: file.id,
-          name: file.name,
+          name: this.getFileDisplayName(file),
           ext: file.ext,
           workspaceid: (this.selectedworkspace && this.selectedworkspace._id) || undefined,
         })
@@ -646,7 +663,7 @@
         if (!file || !file.id) return
         this.importWorkspaceJsonToComponentLibrary({
           id: file.id,
-          name: file.name,
+          name: this.getFileDisplayName(file),
           workspaceid: (this.selectedworkspace && this.selectedworkspace._id) || undefined,
         })
       },
@@ -1547,6 +1564,18 @@
     #dashboard .file-list-table-card {
         border: 1px solid rgba(0, 0, 0, 0.08);
     }
+    #dashboard .file-list-table table {
+        width: 100%;
+        table-layout: fixed;
+    }
+    #dashboard .file-list-table .file-list-col-name {
+        width: 33.3333%;
+    }
+    #dashboard .file-list-table .file-list-col-type,
+    #dashboard .file-list-table .file-list-col-time,
+    #dashboard .file-list-table .file-list-col-actions {
+        width: 22.2222%;
+    }
     #dashboard .file-list-table th {
         font-weight: 700;
         font-size: calc(0.9rem + 5pt);
@@ -1571,17 +1600,41 @@
     }
     #dashboard .file-list-time-cell {
         white-space: nowrap;
-        min-width: 170px;
+        min-width: 0;
     }
     #dashboard .file-list-name-cell {
-        word-break: break-word;
-        overflow-wrap: anywhere;
+        word-break: normal;
+        overflow-wrap: normal;
+    }
+    #dashboard .file-list-name-scroll {
+        max-width: 100%;
+        overflow-x: auto;
+        overflow-y: hidden;
+        white-space: nowrap;
+        padding-bottom: 2px;
+    }
+    #dashboard .file-list-name-text {
+        display: inline-block;
+        min-width: max-content;
     }
     #dashboard .file-list-ext-pill {
         font-family: monospace;
         background: rgba(0, 105, 148, 0.08);
+        color: #006994;
         padding: 3px 8px;
         border-radius: 4px;
+    }
+    #dashboard .file-list-ext-pill--json {
+        background: rgba(245, 124, 0, 0.12);
+        color: #ef6c00;
+    }
+    #dashboard .file-list-ext-pill--lfr {
+        background: rgba(0, 105, 148, 0.12);
+        color: #006994;
+    }
+    #dashboard .file-list-ext-pill--mint {
+        background: rgba(46, 125, 50, 0.12);
+        color: #2e7d32;
     }
     #dashboard .file-list-actions {
         gap: 4px;

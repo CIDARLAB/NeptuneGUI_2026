@@ -18,6 +18,23 @@
 - 控制：distribute@(控制量) begin ... if/else 或 case ... endcase end
 - 语句以分号结束；尽量 ASCII；复杂网络多用显式 flow 中间节点。
 
+## 与新增 LiteratureBenchmarks 对齐的规则（重要）
+- 模块接口与需求严格一致：finput/foutput/control 的数量和位宽不要丢失。
+- 不能漏掉出口：若一个内部流或 storage 驱动多个 foutput，必须逐个 `assign`。
+- 对“门控加载/阶段加载”语义，使用 `distribute@(ctrl)`，并在分支内写 `if (ctrl == 1'b1) storage_node <= stream;`。
+- 对 N 位路由/解复用语义，优先写：
+  - `flow [0:(2^N-1)] lanes;`
+  - `distribute@(route)` + `case({route[0], ...})` 覆盖所有状态
+  - 每个 lane 显式映射到一个输出端口
+- 多阶段流程尽量使用显式中间 `flow` 节点（如 feed_stage_a、merged、reaction_input）。
+- `<=` 仅在 `distribute` 分支赋值中使用；普通连续赋值使用 `assign ... = ...;`。
+
+## 返回前自检
+- 只返回一个 ```lfr 代码块。
+- 所有声明的 foutput 都已驱动。
+- 控制位宽与 case 分支数量一致。
+- 语法可编译（分号、begin/end、case/endcase 配对）。
+
 ## 示例模式
 ```lfr
 module demo(finput a, b; foutput y;);

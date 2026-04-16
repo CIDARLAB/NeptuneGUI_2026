@@ -3,8 +3,7 @@
  * Guest can export to a file (save to a path) and later import from that file to restore.
  */
 
-import { EXAMPLE_LFR_SCRIPT, EXAMPLE_MINT_SCRIPT } from './exampleScripts'
-import { EXAMPLE_DX_SEED_SPECS } from './exampleDxSeed'
+import { EXAMPLE_SEED_SPECS } from './exampleSeedSpecs'
 
 const KEY = 'neptune_guest_data'
 
@@ -158,12 +157,8 @@ function deleteFile (workspaceId, fileId) {
 const UPLOAD_WORKSPACE_NAME = 'uploaded files'
 
 /** Seeded demo file names; used to pick which duplicate "Example" row to keep when merging. */
-const EXAMPLE_MINT_FILENAME = 'flow_and_control_demo.mint'
 const EXAMPLE_OLD_MINT_FILENAME = 'flow_and_control_demo_fromLFR.mint'
-const EXAMPLE_SEED_FILE_NAMES = new Set([
-  'flow_and_control_demo.lfr',
-  EXAMPLE_MINT_FILENAME,
-])
+const EXAMPLE_SEED_FILE_NAMES = new Set(EXAMPLE_SEED_SPECS.map(s => s.name))
 
 /**
  * If multiple workspaces are named "Example" (e.g. after import), merge into one on load/refresh.
@@ -176,17 +171,20 @@ function dedupeNamedExampleWorkspaces () {
 
   const score = (w) => {
     const names = new Set((w.files || []).map(f => f.name))
-    const hasBothSeeds = [...EXAMPLE_SEED_FILE_NAMES].every(n => names.has(n))
-    return { hasBothSeeds, count: (w.files || []).length, w }
+    let seedHitCount = 0
+    EXAMPLE_SEED_FILE_NAMES.forEach((n) => {
+      if (names.has(n)) seedHitCount += 1
+    })
+    return { seedHitCount, count: (w.files || []).length, w }
   }
   let best = score(examples[0])
   let primary = examples[0]
   for (let i = 1; i < examples.length; i++) {
     const s = score(examples[i])
-    if (s.hasBothSeeds && !best.hasBothSeeds) {
+    if (s.seedHitCount > best.seedHitCount) {
       best = s
       primary = s.w
-    } else if (s.hasBothSeeds === best.hasBothSeeds && s.count > best.count) {
+    } else if (s.seedHitCount === best.seedHitCount && s.count > best.count) {
       best = s
       primary = s.w
     }
@@ -253,33 +251,120 @@ function migrateExampleMintFilename () {
   const ex = data.workspaces.find(w => String(w.name || '').trim() === EXAMPLE_WORKSPACE_NAME)
   if (!ex || !ex.files) return
   const oldF = ex.files.find(f => f.name === EXAMPLE_OLD_MINT_FILENAME)
-  const newF = ex.files.find(f => f.name === EXAMPLE_MINT_FILENAME)
+  const newF = ex.files.find(f => f.name === 'flow_and_control_demo.mint')
   if (oldF && !newF) {
-    oldF.name = EXAMPLE_MINT_FILENAME
+    oldF.name = 'flow_and_control_demo.mint'
     save(data)
   }
 }
 
-function seedExampleDemoFiles (wid) {
-  const specs = [
-    { name: 'flow_and_control_demo.lfr', ext: '.lfr', content: EXAMPLE_LFR_SCRIPT },
-    { name: EXAMPLE_MINT_FILENAME, ext: '.mint', content: EXAMPLE_MINT_SCRIPT },
-    ...EXAMPLE_DX_SEED_SPECS,
+function migrateDxJsonSeedFilenames () {
+  const data = load()
+  const renamePairs = [
+    { oldName: 'dx2_after_PR.json', newName: 'dx2_PR.json' },
+    { oldName: 'dx3_after_PR.json', newName: 'dx3_PR.json' },
   ]
-  for (const spec of specs) {
-    const files = getFiles(wid)
-    if (files.some(f => f.name === spec.name)) continue
-    const f = createFile(wid, spec.name, spec.ext)
-    if (f) updateFile(wid, f.id, spec.content)
+  let changed = false
+
+  for (const w of data.workspaces) {
+    if (!Array.isArray(w.files) || w.files.length === 0) continue
+    for (const pair of renamePairs) {
+      const oldIdx = w.files.findIndex(f => String(f && f.name) === pair.oldName)
+      if (oldIdx < 0) continue
+      const newIdx = w.files.findIndex(f => String(f && f.name) === pair.newName)
+
+      if (newIdx < 0) {
+        w.files[oldIdx].name = pair.newName
+        if (!w.files[oldIdx].ext) w.files[oldIdx].ext = '.json'
+        changed = true
+        continue
+      }
+
+      const oldFile = w.files[oldIdx]
+      const newFile = w.files[newIdx]
+      const newContent = newFile && newFile.content
+      const isNewEmpty =
+        newContent == null || (typeof newContent === 'string' && newContent.trim() === '')
+      const hasOldContent =
+        oldFile && oldFile.content != null && (typeof oldFile.content !== 'string' || oldFile.content.trim() !== '')
+      if (isNewEmpty && hasOldContent) {
+        newFile.content = oldFile.content
+      }
+      w.files.splice(oldIdx, 1)
+      changed = true
+    }
+  }
+
+  if (changed) save(data)
+}
+
+function syncExampleDemoFiles (wid) {
+  if (!Array.isArray(EXAMPLE_SEED_SPECS) || EXAMPLE_SEED_SPECS.length === 0) return
+  const data = load()
+  const ws = data.workspaces.find(w => String(w._id) === String(wid))
+  if (!ws) return
+  if (!Array.isArray(ws.files)) ws.files = []
+
+  const now = new Date().toISOString()
+  const desiredByName = new Map(EXAMPLE_SEED_SPECS.map(s => [s.name, s]))
+  const nextFiles = []
+  const seen = new Set()
+  let changed = false
+
+  for (const f of ws.files) {
+    if (!f || !f.name) {
+      changed = true
+      continue
+    }
+    const spec = desiredByName.get(f.name)
+    if (!spec) {
+      // Keep Example workspace in one-to-one sync with Data/example filenames.
+      changed = true
+      continue
+    }
+    if (seen.has(f.name)) {
+      changed = true
+      continue
+    }
+    seen.add(f.name)
+    if (!f.ext && spec.ext) {
+      f.ext = spec.ext
+      changed = true
+    }
+    nextFiles.push(f)
+  }
+
+  for (const spec of EXAMPLE_SEED_SPECS) {
+    if (seen.has(spec.name)) continue
+    const id = String(data.nextFileId++)
+    nextFiles.push({
+      id,
+      name: spec.name,
+      content: spec.content,
+      ext: spec.ext || '',
+      created_at: now,
+      updated_at: now,
+    })
+    changed = true
+  }
+
+  if (changed) {
+    ws.files = nextFiles
+    ws.updated_at = now
+    save(data)
   }
 }
 
 const CORRUPT_OBJECT_STRING = '[object Object]'
 
-/** DX demo JSON was once seeded as literal "[object Object]" (bad `String(json)` on bundled .json). */
+/** Known JSON seeds were once saved as literal "[object Object]"; rewrite using bundled file text. */
 function repairCorruptedKnownJsonSeeds () {
   const data = load()
-  const byName = new Map(EXAMPLE_DX_SEED_SPECS.map(s => [s.name, s]))
+  const byName = new Map(
+    EXAMPLE_SEED_SPECS
+      .filter(s => String(s.ext || '').toLowerCase() === '.json')
+      .map(s => [s.name, s])
+  )
   for (const w of data.workspaces) {
     if (!w.files) continue
     for (const f of w.files) {
@@ -294,19 +379,20 @@ function repairCorruptedKnownJsonSeeds () {
 }
 
 /**
- * Ensure Example workspace exists and contains both demo files (adds any missing by name).
+ * Ensure Example workspace exists and contains all Data/example text files (adds missing by name).
  * Other files in Example are left untouched.
  */
 function ensureExampleWorkspace () {
   dedupeNamedExampleWorkspaces()
   migrateExampleMintFilename()
+  migrateDxJsonSeedFilenames()
   let ex = load().workspaces.find(w => String(w.name || '').trim() === EXAMPLE_WORKSPACE_NAME)
   if (!ex) {
     createWorkspace(EXAMPLE_WORKSPACE_NAME, '')
     ex = load().workspaces.find(w => String(w.name || '').trim() === EXAMPLE_WORKSPACE_NAME)
   }
   if (!ex) return
-  seedExampleDemoFiles(ex._id)
+  syncExampleDemoFiles(ex._id)
   repairCorruptedKnownJsonSeeds()
 }
 

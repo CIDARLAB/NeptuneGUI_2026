@@ -663,6 +663,24 @@ export default {
   font-size: 12pt !important;
 }
 
+/* DIY dialog readability: +2pt for title/notes/parameter helper text. */
+.component-library-diy-dialog .v-card__title {
+  font-size: 16pt !important;
+}
+
+.component-library-diy-dialog .v-card__text,
+.component-library-diy-dialog .v-card__actions,
+.component-library-diy-dialog .v-btn,
+.component-library-diy-dialog .caption {
+  font-size: 14pt !important;
+}
+
+.component-library-diy-dialog >>> .v-text-field input,
+.component-library-diy-dialog >>> .v-text-field .v-label,
+.component-library-diy-dialog >>> .v-messages__message {
+  font-size: 14pt !important;
+}
+
 .component-library-file-dialog >>> .v-btn,
 .component-library-diy-dialog >>> .v-btn {
   text-transform: none !important;
@@ -698,6 +716,15 @@ export default {
   background-color: #fb8c00 !important;
   border-color: #fb8c00 !important;
   color: #ffffff !important;
+  font-size: 17pt !important;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+}
+
+.diy-btn >>> .v-btn__content {
+  font-size: 17pt !important;
+  text-transform: none !important;
+  letter-spacing: normal !important;
 }
 
 .export-files-btn {
