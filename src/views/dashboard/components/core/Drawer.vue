@@ -2,9 +2,9 @@
   <v-navigation-drawer
     id="core-navigation-drawer"
     v-model="drawer"
-    :dark="barColor !== 'rgba(228, 226, 226, 1), rgba(255, 255, 255, 0.7)'"
+    dark
     :right="$vuetify.rtl"
-    :src="barImage"
+    :src="barImage || undefined"
     mobile-break-point="960"
     app
     mini-variant-width="56"

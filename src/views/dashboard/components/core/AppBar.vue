@@ -1,18 +1,20 @@
 <template>
   <v-app-bar
     id="app-bar"
+    class="neptune-app-bar"
     absolute
     app
-    color="transparent"
+    color="white"
     flat
-    height="75"
+    height="64"
   >
     <v-btn
-      class="mr-3 sidebar-toggle-btn"
-      elevation="1"
-      fab
+      class="mr-2 neptune-sidebar-toggle"
+      icon
+      outlined
       small
       color="primary"
+      aria-label="Toggle navigation menu"
       @click="setDrawer(!drawer)"
     >
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="sidebar-toggle-icon" aria-hidden="true">
@@ -26,7 +28,7 @@
     </v-btn>
 
     <v-toolbar-title
-      class="hidden-sm-and-down font-weight-light dashboard-appbar-title"
+      class="hidden-sm-and-down dashboard-appbar-title"
       v-text="$route.name"
     />
 
@@ -64,9 +66,10 @@
     >
       <template v-slot:activator="{ attrs, on }">
         <v-btn
-          class="ml-2"
+          class="ml-2 neptune-appbar-icon-btn"
           min-width="0"
           text
+          color="primary"
           v-bind="attrs"
           v-on="on"
         >
@@ -406,24 +409,19 @@
   }
 </script>
 <style scoped>
-/* Left sidebar toggle: dot + line per row, white */
-#app-bar .sidebar-toggle-btn .sidebar-toggle-icon {
-  color: #ffffff;
+/* Sidebar toggle: outlined control so it reads as a button */
+#app-bar .neptune-sidebar-toggle {
+  border-width: 1px !important;
+  box-shadow: 0 1px 2px rgba(0, 51, 73, 0.12);
 }
-#app-bar .sidebar-toggle-btn .sidebar-toggle-icon line {
+#app-bar .neptune-sidebar-toggle .sidebar-toggle-icon {
+  color: currentColor;
+}
+#app-bar .neptune-sidebar-toggle .sidebar-toggle-icon line {
   stroke: currentColor;
 }
-#app-bar .sidebar-toggle-btn .sidebar-toggle-icon circle {
+#app-bar .neptune-sidebar-toggle .sidebar-toggle-icon circle {
   fill: currentColor;
-}
-#app-bar .v-btn.fab .v-icon {
-  color: #ffffff !important;
-  opacity: 1;
-}
-/* Right-side buttons (bell, account): use theme primary blue */
-#app-bar .v-btn:not(.fab):not(.exit-btn) .v-icon {
-  color: #006994 !important;
-  opacity: 1;
 }
 /* Exit: red button, white icon and label; ALL CAPS; +2pt to match Editor toolbar */
 #app-bar .exit-btn,
@@ -437,10 +435,7 @@
   color: #ffffff !important;
   opacity: 1;
 }
-/* Dashboard / Editor page title: larger font */
-.dashboard-appbar-title {
-  font-size: 2.5rem;
-}
+/* Route title: size from src/sass/_neptune-typography.sass */
 .exit-btn {
   font-weight: 700;
 }

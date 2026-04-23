@@ -62,62 +62,23 @@ How to stop running commands:
 ## Ports and conflicts
 - Backend/API (`npm run server`): `http://localhost:8080`
 - Frontend/GUI (`npm run serve`): `http://localhost:8081`
-- Local 3DuF dev server: `http://localhost:8082`
+- Optional: if you run the **3DuF** repo’s dev server locally, it often uses `http://localhost:8082` (not started by NeptuneGUI).
 
 If you see `EADDRINUSE: address already in use` when starting the server, it means one of these ports is already taken by another process. Stop the process using that port and restart (or run the services on different ports, if you adjusted the code/config).
 
-## Local 3DuF integration (offline/local workflow)
+## 3DuF visualization (one-click)
 
-NeptuneGUI can work with a **local 3DuF** instance, so users do not need to rely on the public website.
+NeptuneGUI opens **[https://3duf.org/](https://3duf.org/)** in a new tab and sends the design JSON with `postMessage` (`loadDeviceFromJSON`). The base URL lives in **[src/lib/open3DuFPostMessage.js](./src/lib/open3DuFPostMessage.js)** (`THREE_DUF_APP_URL`). Neptune sends that payload **three times** (0ms / 450ms / 900ms) so a stock 3DuF build does not need any Neptune-specific code.
 
-### 1) Start NeptuneGUI locally
-From this repo:
+### Use one-click JSON → 3DuF
+1. Open NeptuneGUI: `http://localhost:8081` (or your deployed GUI URL)
+2. Go to **Dashboard** and select a workspace (or use **Component Library** for a component row)
+3. Click the **3DuF** control on a JSON file or library row
+4. Allow popups if the browser blocks the new tab
 
-```bash
-npm run start
-```
+### Optional: point NeptuneGUI at a local 3DuF dev server
 
-This starts:
-- Backend at `http://localhost:8080`
-- GUI at `http://localhost:8081`
-
-### 2) Start 3DuF locally (sibling folder)
-Assume `3DuF` is next to this repo, for example:
-- `/home/<you>/Downloads/NeptuneGUI_2026`
-- `/home/<you>/Downloads/3DuF`
-
-If you do not already have 3DuF locally, clone the recommended branch:
-
-```bash
-cd ..
-git clone -b webpack-build-2 https://github.com/CIDARLAB/3DuF.git
-```
-
-Recommended upstream branch: `webpack-build-2`  
-Repository: https://github.com/CIDARLAB/3DuF/tree/webpack-build-2
-
-Then run:
-
-```bash
-cd ../3DuF
-npm ci
-npm run vue-serve
-```
-
-3DuF should run at `http://localhost:8082`.
-
-Log warning note:
-- During `npm run vue-serve`, you may see many warnings (Sass/tooling deprecations, webpack notices, etc.).
-- These warnings are expected in the current Vue CLI/Webpack toolchain and usually do not mean the local integration failed.
-- If the terminal shows that the app is running on `http://localhost:8082`, you can continue using NeptuneGUI + 3DuF locally.
-
-### 3) Use one-click JSON -> 3DuF in NeptuneGUI
-1. Open NeptuneGUI: `http://localhost:8081`
-2. Go to **Dashboard** and select a workspace
-3. For a `.json` file, click the **3DuF** button on the file card
-4. NeptuneGUI opens local 3DuF (`localhost:8082`) and sends JSON via `postMessage`
-
-This flow is local-to-local and does not require `3duf.org`.
+For development, temporarily set `THREE_DUF_APP_URL` in `src/lib/open3DuFPostMessage.js` to your local origin (for example `http://localhost:8082`), rebuild or refresh the GUI, then run 3DuF from a local clone (see [CIDARLAB/3DuF](https://github.com/CIDARLAB/3DuF), branch `webpack-build-2`).
 
 - **Admin:** username `cidar`, password `12345`
 - **Guest:** click “Continue as Guest” to try without an account (data is temporary)

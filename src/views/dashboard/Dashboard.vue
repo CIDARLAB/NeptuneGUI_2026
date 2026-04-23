@@ -55,7 +55,7 @@
 
       <v-col cols="12">
         <div class="d-flex align-center flex-wrap">
-          <div class="font-weight-light mt-1 workspace-section-title">
+          <div class="mt-1 workspace-section-title neptune-section-heading">
             Workspaces
           </div>
           <v-spacer />
@@ -163,15 +163,15 @@
                       v-bind="attrs"
                       text
                       icon
-                      color="blue"
+                      color="primary"
                       class="workspace-card-action-btn"
                       v-on="on"
-                      @click="selectworkspace(workspace._id)"
+                      @click="toggleWorkspaceFiles(workspace._id)"
                     >
-                      <v-icon>mdi-view-split-vertical</v-icon>
+                      <v-icon>{{ dashboardFilesWorkspaceId === workspace._id ? 'mdi-chevron-up' : 'mdi-view-split-vertical' }}</v-icon>
                     </v-btn>
                   </template>
-                  <span>Show files in this workspace</span>
+                  <span>{{ dashboardFilesWorkspaceId === workspace._id ? 'Hide files for this workspace' : 'Show all files in this workspace' }}</span>
                 </v-tooltip>
 
                 <v-tooltip bottom>
@@ -180,7 +180,7 @@
                       v-bind="attrs"
                       text
                       icon
-                      color="red"
+                      color="error"
                       class="workspace-card-action-btn"
                       v-on="on"
                       @click="deleteworkspace(workspace._id)"
@@ -219,17 +219,14 @@
 
     </v-row>
             <v-row
-                v-if="files.length > 0"
+                v-if="dashboardFilesWorkspaceId"
                 class="files-section-row"
                 >
                 <v-col
                     cols="12"
                     class="d-flex align-center justify-space-between flex-wrap"
                 >
-                    <div
-                      class="font-weight-light mt-1 mr-4"
-                      style="font-size: 25px"
-                    >
+                    <div class="mt-1 mr-4 neptune-section-heading">
                       Files
                     </div>
                     <v-btn-toggle
@@ -283,7 +280,6 @@
                       md="4"
                       lg="3"
                       xl="2"
-                      v-if="files.length > 0"
                   >
                     <v-card class="file-grid-create-tile d-flex flex-column align-center justify-center">
                       <v-btn
@@ -499,10 +495,9 @@
   import axios from 'axios'
   import { log } from 'util'
   import * as Utils from '../../utils'
-  import guestStore, { EXAMPLE_WORKSPACE_NAME, fileContentForZipExport } from '@/lib/guestStore'
+  import guestStore, { fileContentForZipExport } from '@/lib/guestStore'
+  import { openAndLoadDeviceIn3DuF } from '@/lib/open3DuFPostMessage'
   import JSZip from 'jszip'
-
-  const LOCAL_3DUF_URL = 'http://localhost:8082'
 
   export default {
     name: 'DashboardDashboard',
@@ -553,7 +548,9 @@
         importConflictDialog: false,
         importConflicts: [],
         importOverwriteConfirmed: false,
-        _pendingImportZipFile: null
+        _pendingImportZipFile: null,
+        /** When set, the Files section shows this workspace's files; null = collapsed (default on load / after leaving Dashboard). */
+        dashboardFilesWorkspaceId: null,
     }),
     computed: {
       totalSales () {
@@ -884,7 +881,6 @@
           if (guestStore.importData(payload)) {
             this.refreshworkspacedata()
             this.$store.commit('SET_WORKSPACE', null)
-            if (this.workspaces.length) this.selectworkspace(this.workspaces[0]._id)
           }
 
           // Restore custom component-library rows from cache zip.
@@ -1244,31 +1240,14 @@
           return
         }
 
-        const win = window.open(LOCAL_3DUF_URL, '_blank')
-        if (!win) {
-          alert('Popup blocked. Please allow popups to open 3DuF.')
-          return
+        const result = openAndLoadDeviceIn3DuF(parsed.jsonObject)
+        if (!result.ok) {
+          if (result.reason === 'popup_blocked') {
+            alert('Popup blocked. Please allow popups to open 3DuF.')
+          } else {
+            alert('This file is not valid JSON and cannot be opened in 3DuF.')
+          }
         }
-
-        const payloadText = { type: 'loadDeviceFromJSON', json: parsed.jsonText }
-        const payloadObject = { type: 'loadDeviceFromJSON', json: parsed.jsonObject }
-        const targetOrigin = new URL(LOCAL_3DUF_URL).origin
-        const start = Date.now()
-        const interval = setInterval(() => {
-          if (win.closed || Date.now() - start > 10000) {
-            clearInterval(interval)
-            return
-          }
-          try {
-            // Send to strict target and wildcard for compatibility with different 3DuF dev setups.
-            win.postMessage(payloadText, targetOrigin)
-            win.postMessage(payloadObject, targetOrigin)
-            win.postMessage(payloadText, '*')
-            win.postMessage(payloadObject, '*')
-          } catch (_) {
-            // Ignore transient cross-window timing errors during page boot.
-          }
-        }, 450)
       },
       formattimestamp(datestring){
         return Utils.getprettytimestamp(datestring)
@@ -1277,6 +1256,7 @@
           this.workspaces = []
           this.workspacesobjects = {}
           this.files = []
+          this.dashboardFilesWorkspaceId = null
 
           if (this.$store.getters.isGuest) {
             guestStore.ensureExampleWorkspace()
@@ -1288,21 +1268,12 @@
             })
             const target = this.$route && this.$route.query && this.$route.query.workspace
             if (target && this.workspacesobjects[target]) {
-              this.selectworkspace(target)
-            } else if (this.$store.getters.currentWorkspace && this.workspacesobjects[this.$store.getters.currentWorkspace._id]) {
-              this.selectworkspace(this.$store.getters.currentWorkspace._id)
-            } else {
-              const example = list.find(w => String(w.name || '').trim() === EXAMPLE_WORKSPACE_NAME)
-              if (example) {
-                this.selectworkspace(example._id)
-              } else if (list.length) {
-                this.selectworkspace(list[0]._id)
-              } else {
-                this.$store.commit('SET_WORKSPACE', null)
-                this.$store.commit('SET_CURRENT_FILE', null)
-                this.selectedworkspace = { name: '', id: '' }
-                this.files = []
-              }
+              this.expandWorkspaceFiles(target)
+            } else if (!list.length) {
+              this.$store.commit('SET_WORKSPACE', null)
+              this.$store.commit('SET_CURRENT_FILE', null)
+              this.selectedworkspace = { name: '', id: '' }
+              this.files = []
             }
             return
           }
@@ -1343,10 +1314,8 @@
               })
               const target = this.$route && this.$route.query && this.$route.query.workspace
               if (target && this.workspacesobjects[target]) {
-                this.selectworkspace(target)
-              } else if (this.$store.getters.currentWorkspace && this.workspacesobjects[this.$store.getters.currentWorkspace._id]) {
-                this.selectworkspace(this.$store.getters.currentWorkspace._id)
-              } else {
+                this.expandWorkspaceFiles(target)
+              } else if (!loaded.length) {
                 this.$store.commit('SET_WORKSPACE', null)
                 this.$store.commit('SET_CURRENT_FILE', null)
                 this.selectedworkspace = { name: '', id: '' }
@@ -1359,7 +1328,6 @@
           if (this.$store.getters.isGuest) {
             guestStore.deleteWorkspace(wid)
             this.refreshworkspacedata()
-            if (this.workspaces.length) this.selectworkspace(this.workspaces[0]._id)
             return
           }
           const config = {
@@ -1369,7 +1337,7 @@
             headers: { 'Content-Type': 'application/json' },
           }
           axios.delete('/api/v1/workspace', config)
-            .then(() => { this.refreshworkspacedata(); if (this.workspaces.length) this.selectworkspace(this.workspaces[0]._id); })
+            .then(() => { this.refreshworkspacedata() })
             .catch((error) => { console.log(error) })
         },
 
@@ -1419,11 +1387,27 @@
             this.list[index] = !this.list[index]
         },
 
-        refreshFiles(id){
-          console.log("Refreshing Files", this.selectedworkspace.id)
-          this.selectworkspace(id)
+        refreshFiles (id) {
+          if (this.dashboardFilesWorkspaceId !== id) return
+          this.loadWorkspaceFiles(id)
         },
-        selectworkspace (workspace_id) {
+        toggleWorkspaceFiles (workspace_id) {
+          if (this.dashboardFilesWorkspaceId === workspace_id) {
+            this.collapseWorkspaceFilesPanel()
+            return
+          }
+          this.expandWorkspaceFiles(workspace_id)
+        },
+        collapseWorkspaceFilesPanel () {
+          this.dashboardFilesWorkspaceId = null
+          this.files = []
+          this.selectedworkspace = { name: '', id: '' }
+        },
+        expandWorkspaceFiles (workspace_id) {
+          this.dashboardFilesWorkspaceId = workspace_id
+          this.loadWorkspaceFiles(workspace_id)
+        },
+        loadWorkspaceFiles (workspace_id) {
           const obj = this.workspacesobjects[workspace_id]
           this.selectedworkspace = obj
           if (obj) this.$store.commit('SET_WORKSPACE', obj)
@@ -1451,7 +1435,7 @@
 </script>
 <style>
     #dashboard {
-        font-size: calc(1rem + 2pt);
+        font-size: var(--neptune-fs-body, 14pt);
     }
     /* Workspace card action buttons: ensure icons are visible */
     /* Match v-btn small (~13px) and keep both guest toolbar buttons visually identical */
@@ -1460,7 +1444,7 @@
         font-weight: 600 !important;
         text-transform: none !important;
         letter-spacing: normal !important;
-        font-size: calc(0.8125rem + 2pt) !important;
+        font-size: var(--neptune-fs-body, 14pt) !important;
     }
 
     #dashboard .dashboard-guest-import-btn {
@@ -1474,9 +1458,25 @@
         border-color: #00838f !important;
     }
 
-    /* Workspace card: compact; actions sit closer to blue heading */
+    /* "Workspaces" section heading: match Solutions "Jobs" card title size */
+    #dashboard .workspace-section-title.neptune-section-heading {
+        font-size: var(--neptune-fs-below-page-title) !important;
+    }
+
+    /* Workspace cards: light border + shallow shadow (step 3 density) */
     #dashboard .workspace-dashboard-chart-card.v-card.v-card--material {
         padding: 10px 10px 8px !important;
+        border: 1px solid rgba(0, 51, 73, 0.12) !important;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06) !important;
+    }
+    /* Same size as Solutions “Jobs”; not bold */
+    #dashboard .workspace-dashboard-chart-card .workspace-chart-heading-name {
+        font-size: var(--neptune-fs-below-page-title) !important;
+        font-weight: 400 !important;
+        min-height: 0 !important;
+        padding: 10px 12px !important;
+        line-height: 1.3 !important;
+        letter-spacing: -0.015em;
     }
     #dashboard .workspace-card-toolbar {
         width: 100%;
@@ -1487,15 +1487,19 @@
         margin-top: 2px;
     }
     #dashboard .workspace-card-actions {
-        gap: 16px;
+        gap: 8px;
     }
     #dashboard .workspace-card-action-btn {
         margin: 0 !important;
+        opacity: 0.92;
+    }
+    #dashboard .workspace-card-action-btn:hover {
+        opacity: 1;
     }
 
-    /* Create workspace hint: Editor explanation line */
+    /* Create workspace hint — same body size as LLM prompts */
     .create-workspace-hint {
-        font-size: 19pt;
+        font-size: var(--neptune-fs-body, 14pt);
         line-height: 1.6;
         color: rgba(0, 0, 0, 0.87);
     }
@@ -1511,17 +1515,12 @@
     color: #00838F;
 }
 .guest-storage-hint {
-    font-size: 19pt;
+    font-size: var(--neptune-fs-body, 14pt);
 }
 .guest-storage-text {
     display: inline-block;
     max-width: 640px;
 }
-#dashboard .workspace-section-title {
-    font-size: calc(25px + 5pt);
-}
-
-
     #dashboard .files-view-toggle .v-btn {
         text-transform: none !important;
         font-weight: 600 !important;
@@ -1552,14 +1551,16 @@
         height: 90px;
     }
     #dashboard .file-grid-create-label {
-        font-size: calc(14px + 3pt);
+        font-size: var(--neptune-fs-body, 14pt);
         font-weight: 600;
     }
+    /* File grid: “Last edited …” — same meta size as workspace Last Update */
     #dashboard .file-grid-card .caption {
-        font-size: calc(12px + 3pt) !important;
+        font-size: var(--neptune-fs-timestamp) !important;
     }
     #dashboard .workspace-card-last-update {
-        font-size: calc(12px + 3pt) !important;
+        font-size: var(--neptune-fs-timestamp) !important;
+        font-weight: 400 !important;
     }
     #dashboard .file-list-table-card {
         border: 1px solid rgba(0, 0, 0, 0.08);
@@ -1578,11 +1579,11 @@
     }
     #dashboard .file-list-table th {
         font-weight: 700;
-        font-size: calc(0.9rem + 5pt);
+        font-size: var(--neptune-fs-label, 13.25pt);
         white-space: nowrap;
     }
     #dashboard .file-list-table th.file-list-th-last-edited {
-        font-size: calc(0.9rem + 5pt + 3pt) !important;
+        font-size: var(--neptune-fs-label, 13.25pt) !important;
     }
     #dashboard .file-list-table td {
         vertical-align: middle;
@@ -1601,6 +1602,7 @@
     #dashboard .file-list-time-cell {
         white-space: nowrap;
         min-width: 0;
+        font-size: var(--neptune-fs-timestamp) !important;
     }
     #dashboard .file-list-name-cell {
         word-break: normal;

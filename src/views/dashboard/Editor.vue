@@ -63,11 +63,11 @@
 
     <v-row align="stretch">
       <v-col cols="12" class="pt-0 d-flex">
-        <v-card class="mt-0 editor-script-card flex d-flex flex-column" style="width: 100%;">
+        <v-card class="mt-0 editor-script-card editor-main-surface flex d-flex flex-column" style="width: 100%;">
           <v-progress-linear
             :indeterminate="isloading"
             :hidden="!isloading"
-            color="blue darken-2"
+            color="primary"
           />
           <v-list-item three-line v-if="fileobject.name">
             <v-list-item-content>
@@ -105,7 +105,7 @@
               <v-list-item-subtitle class="mt-1 editor-workspace-subtitle" v-text="newScriptWorkspaceSubtitle"></v-list-item-subtitle>
             </v-list-item-content>
           </v-list-item>
-          <v-card-text class="red--text text--darken-4 editor-card-text">
+          <v-card-text class="editor-card-text">
             <MonacoEditor
               ref="monaco"
               class="editor"
@@ -120,9 +120,9 @@
       </v-col>
     </v-row>
 
-  <v-dialog v-model="compiledialog" max-width="500px">
-    <v-card>
-      <v-card-title>Compile</v-card-title>
+  <v-dialog v-model="compiledialog" max-width="500px" content-class="editor-dialog-surface">
+    <v-card class="editor-dialog-card">
+      <v-card-title class="editor-dialog-title">Compile</v-card-title>
       <v-card-text>
         <v-select
           :items="configfiles"
@@ -131,6 +131,10 @@
           item-text="name"
           v-model="selectedconfig"
           :return-object="true"
+          outlined
+          dense
+          hide-details="auto"
+          color="primary"
         />
       </v-card-text>
       <v-card-actions>
@@ -141,9 +145,9 @@
   </v-dialog>
 
   <!-- Save to new workspace -->
-  <v-dialog v-model="saveDialog" max-width="480px" persistent>
-    <v-card>
-      <v-card-title>New workspace</v-card-title>
+  <v-dialog v-model="saveDialog" max-width="480px" persistent content-class="editor-dialog-surface">
+    <v-card class="editor-dialog-card">
+      <v-card-title class="editor-dialog-title">New workspace</v-card-title>
       <v-card-text>
         <v-text-field
           v-model="newWorkspaceName"
@@ -151,6 +155,7 @@
           outlined
           dense
           hide-details="auto"
+          color="primary"
           class="mb-3"
         />
         <v-textarea
@@ -160,6 +165,7 @@
           dense
           rows="2"
           hide-details="auto"
+          color="primary"
         />
       </v-card-text>
       <v-card-actions>
@@ -171,9 +177,9 @@
   </v-dialog>
 
   <!-- Save to existing workspace -->
-  <v-dialog v-model="existingWorkspaceDialog" max-width="480px" persistent>
-    <v-card>
-      <v-card-title>Save file to an existing workspace</v-card-title>
+  <v-dialog v-model="existingWorkspaceDialog" max-width="480px" persistent content-class="editor-dialog-surface">
+    <v-card class="editor-dialog-card">
+      <v-card-title class="editor-dialog-title">Save file to an existing workspace</v-card-title>
       <v-card-text>
         <v-select
           v-model="selectedExistingWorkspaceId"
@@ -184,6 +190,7 @@
           outlined
           dense
           hide-details="auto"
+          color="primary"
         />
         <p class="caption mt-2">Current content will be saved as a new file in the selected workspace.</p>
       </v-card-text>
@@ -194,6 +201,10 @@
       </v-card-actions>
     </v-card>
   </v-dialog>
+
+  <v-snackbar v-model="snackbar" :color="snackbarColor" :timeout="5000" bottom>
+    {{ snackbarText }}
+  </v-snackbar>
 
   </v-container>
 
@@ -385,6 +396,9 @@ export default {
       selectedExistingWorkspaceId: null,
       existingWorkspacesList: [],
       editableFileBaseName: '',
+      snackbar: false,
+      snackbarText: '',
+      snackbarColor: 'success',
     }
   },
   watch: {
@@ -396,10 +410,8 @@ export default {
       immediate: true,
     },
     selectedScriptLanguage (newVal, oldVal) {
-      if (oldVal == null) return
-      if (!this.fileobject || !this.fileobject.id) {
-        this.loadExampleScript()
-      }
+      if (oldVal == null || newVal === oldVal) return
+      this.handleScriptLanguageChange(newVal)
     },
     editorLanguage () {
       this.$nextTick(() => this.updateLfrFlowVarDecorations())
@@ -473,6 +485,113 @@ export default {
 
   },
   methods: {
+    showSnack (text, color = 'info') {
+      this.snackbarText = text
+      this.snackbarColor = color
+      this.snackbar = true
+    },
+    // Build the starter editor content shown when the user switches language
+    // but the workspace has no same-named file in the target language. We
+    // surface the situation inline (top comment) AND as a snackbar, then
+    // drop in the full language example so the user has something runnable.
+    buildLanguageStarterTemplate (lang, baseName) {
+      const prettyLang = lang === 'mint' ? 'MINT' : 'LFR'
+      const safeBase = (baseName && baseName.trim()) || 'your script'
+      const example = lang === 'mint' ? EXAMPLE_MINT_SCRIPT : EXAMPLE_LFR_SCRIPT
+      const header = [
+        `// No matching .${lang} file was found in this workspace for "${safeBase}".`,
+        `// Write your ${prettyLang} definition below — the example that follows`,
+        '// is a starting point you can modify or delete.',
+        '',
+        '',
+      ].join('\n')
+      return header + example
+    },
+    handleScriptLanguageChange (newLang) {
+      const targetExt = '.' + String(newLang || '').toLowerCase()
+      const currentExt = String((this.fileobject && this.fileobject.ext) || '').toLowerCase()
+      const currentName = String((this.fileobject && this.fileobject.name) || '')
+      const currentExtFromName = (currentName.match(/\.[0-9a-z]+$/i) || [''])[0].toLowerCase()
+      const effectiveCurrentExt = currentExt || currentExtFromName
+
+      if (effectiveCurrentExt === targetExt) return
+
+      // No file open / no workspace: fall back to the bundled example. This
+      // is "new script from scratch", not a missing-sibling situation, so we
+      // don't show the snack here.
+      if (!this.fileobject || !this.fileobject.id) {
+        this.loadExampleScript()
+        return
+      }
+
+      const ws = this.currentworkspace
+      const wid = ws && ws._id
+      if (!wid) {
+        this.loadExampleScript()
+        return
+      }
+
+      const pickSibling = (files) => {
+        const matches = (files || []).filter((f) => {
+          if (!f) return false
+          const ext = String(f.ext || '').toLowerCase()
+          const nameExt = (String(f.name || '').match(/\.[0-9a-z]+$/i) || [''])[0].toLowerCase()
+          return ext === targetExt || nameExt === targetExt
+        })
+        if (matches.length === 0) return null
+        const baseName = currentName.replace(/\.[^.]+$/, '')
+        return matches.find((f) => String(f.name || '').replace(/\.[^.]+$/, '') === baseName) || matches[0]
+      }
+
+      const showMissingSiblingNotice = () => {
+        const baseName = currentName.replace(/\.[^.]+$/, '') || currentName
+        const prettyLang = newLang === 'mint' ? 'MINT' : 'LFR'
+        this.showSnack(
+          `No same-named .${newLang} file found for "${baseName}" in this workspace — showing a ${prettyLang} starter you can edit.`,
+          'warning',
+        )
+        this.code = this.buildLanguageStarterTemplate(newLang, baseName)
+      }
+
+      if (this.$store.getters.isGuest) {
+        const files = guestStore.getFiles(wid) || []
+        const sibling = pickSibling(files)
+        if (sibling) {
+          this.$store.commit('SET_CURRENT_FILE', sibling.id)
+          this.fileobject = { id: sibling.id, name: sibling.name, ext: sibling.ext }
+          this.editableFileBaseName = String(sibling.name || '').replace(/\.[^.]+$/, '') || sibling.name
+          this.code = sibling.content || ''
+          return
+        }
+        showMissingSiblingNotice()
+        return
+      }
+
+      const config = { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
+      const self = this
+      axios.get('/api/v1/files', { params: { id: wid }, ...config })
+        .then((res) => {
+          const ids = res.data || []
+          return Promise.all(ids.map((fid) =>
+            axios.get('/api/v1/file', { params: { id: fid }, ...config }).then((r) => r.data)
+          ))
+        })
+        .then((files) => {
+          const sibling = pickSibling(files)
+          if (!sibling) {
+            showMissingSiblingNotice()
+            return null
+          }
+          self.fileobject = sibling
+          self.editableFileBaseName = String(sibling.name || '').replace(/\.[^.]+$/, '') || sibling.name
+          self.$store.commit('SET_CURRENT_FILE', sibling.id)
+          return axios.get('/api/v1/fs', { params: { id: sibling.id }, ...config })
+        })
+        .then((r) => {
+          if (r && typeof r.data === 'string') self.code = r.data
+        })
+        .catch(() => { showMissingSiblingNotice() })
+    },
     loadExampleScript () {
       const lang = (this.selectedScriptLanguage || 'lfr').toLowerCase()
       if (this.$store.getters.isGuest) {
@@ -831,10 +950,6 @@ export default {
         })
     },
     compilefile (event) {
-      if (this.$store.getters.isGuest) {
-        alert('Compiling requires a registered account. Please log in to run the compiler.')
-        return
-      }
       let self = this
       self.isloading = true
       this.compiledialog = false
@@ -1080,13 +1195,13 @@ export default {
   min-height: 300px;
 }
 .neptune-console-title {
-  font-size: 16pt;
+  font-size: var(--neptune-fs-section, 1.1875rem);
   font-weight: 600;
   color: #006994;
   margin-bottom: 6px;
 }
 .neptune-console-desc {
-  font-size: 12pt;
+  font-size: var(--neptune-fs-body, 14pt);
   color: rgba(0, 0, 0, 0.7);
   margin-bottom: 12px;
   line-height: 1.4;
@@ -1101,7 +1216,7 @@ export default {
 .neptune-console-run-row .v-input label,
 .neptune-console-run-row .v-input .v-input__slot input,
 .neptune-console-run-row .v-btn {
-  font-size: 12pt !important;
+  font-size: var(--neptune-fs-body, 14pt) !important;
 }
 .neptune-console-run-row .v-input label {
   font-weight: 600;
@@ -1140,8 +1255,9 @@ export default {
   right: 0;
 }
 
-/* Space below toolbar buttons before Script language row */
+/* Breathing room below app bar + before Script language row */
 .editor-page .editor-toolbar-row {
+  padding-top: 10pt;
   margin-bottom: 10pt;
 }
 
@@ -1155,7 +1271,7 @@ export default {
   gap: 6px;
 }
 .editor-page .editor-toolbar .v-btn {
-  font-size: calc(15px + 2pt + 1pt) !important;
+  font-size: var(--neptune-fs-body, 14pt) !important;
   color: #fff;
   min-width: 0;
   padding-left: 12px;
@@ -1163,7 +1279,7 @@ export default {
 }
 .editor-page .editor-toolbar .v-btn .v-btn__content {
   justify-content: center;
-  font-size: calc(15px + 2pt + 1pt) !important;
+  font-size: var(--neptune-fs-body, 14pt) !important;
 }
 .editor-page .editor-toolbar .v-btn .v-icon {
   color: inherit;
@@ -1179,23 +1295,23 @@ export default {
 /* File name: label +2pt (16pt); text inside box matches */
 .editor-page .editor-page-filename-input label,
 .editor-page .new-script-filename-input label {
-  font-size: 16pt !important;
+  font-size: var(--neptune-fs-label, 13.25pt) !important;
   font-weight: 600;
   color: #9e9e9e !important;
 }
 .editor-page .editor-page-filename-input .v-input__slot input,
 .editor-page .new-script-filename-input .v-input__slot input,
 .editor-page .new-script-filename-input .v-input__slot {
-  font-size: 16pt !important;
+  font-size: var(--neptune-fs-body, 14pt) !important;
   font-weight: 600;
   color: #006994 !important;
 }
 .editor-page .v-card .v-list-item__subtitle:not(.editor-workspace-subtitle) {
-  font-size: 12pt !important;
+  font-size: var(--neptune-fs-small, 12.75pt) !important;
 }
 .editor-page .v-card .v-list-item__subtitle.editor-workspace-subtitle,
 .editor-page .v-card .editor-workspace-subtitle.v-list-item__subtitle {
-  font-size: 15pt !important;
+  font-size: var(--neptune-fs-body, 14pt) !important;
   color: #006994 !important;
 }
 .theme--dark .editor-page .v-card .v-list-item__subtitle.editor-workspace-subtitle,
@@ -1204,25 +1320,23 @@ export default {
 }
 .editor-page .v-card-title,
 .editor-page .v-card-text.subtitle-1 {
-  font-size: 12pt;
+  font-size: var(--neptune-fs-body, 14pt);
 }
 
-/* Script language: label +2pt (16pt) */
 .editor-page .script-language-select label {
-  font-size: 16pt !important;
+  font-size: var(--neptune-fs-label, 13.25pt) !important;
   font-weight: 600;
   color: #9e9e9e !important;
 }
 .editor-page .script-language-select .v-input__slot input,
 .editor-page .script-language-select .v-select__selection {
-  font-size: 16pt !important;
+  font-size: var(--neptune-fs-body, 14pt) !important;
   font-weight: 600;
   color: #006994 !important;
 }
-/* Dropdown list options (when opened) 14pt */
 .script-language-select-menu .v-list-item,
 .script-language-select-menu .v-list-item__title {
-  font-size: 16pt !important;
+  font-size: var(--neptune-fs-body, 14pt) !important;
 }
 /* Script language: arrow + hint 12pt (explanatory) */
 .script-language-wrapper {
@@ -1232,7 +1346,7 @@ export default {
   gap: 12px;
 }
 .script-language-wrapper .script-language-arrow {
-  font-size: 12pt;
+  font-size: var(--neptune-fs-label, 13.25pt);
   font-weight: bold;
   color: #9e9e9e;
   line-height: 1;
@@ -1241,7 +1355,7 @@ export default {
   color: #9e9e9e;
 }
 .script-language-hint {
-  font-size: 14pt !important;
+  font-size: var(--neptune-fs-body, 14pt) !important;
   font-weight: 500;
   color: #006994;
 }
@@ -1258,14 +1372,21 @@ export default {
 }
 
 .editor-page-filename-ext {
-  font-size: 16pt;
+  font-size: var(--neptune-fs-body, 14pt);
   font-weight: 600;
   color: #006994;
 }
-/* Monaco editor: +2pt (14pt) */
+/* Code buffer: Cursor/VS Code–style system monospace (--neptune-font-code), separate from UI sans */
 .editor .monaco-editor,
-.editor .monaco-editor .view-lines {
-  font-size: 14pt !important;
+.editor .monaco-editor .view-lines,
+.editor .monaco-editor .view-line,
+.editor .monaco-mouse-cursor-text {
+  font-family: var(--neptune-font-code) !important;
+  font-size: var(--neptune-fs-body, 14pt) !important;
+}
+.editor .monaco-editor .margin,
+.editor .monaco-editor .line-numbers {
+  font-family: var(--neptune-font-code) !important;
 }
 
 /* LFR: finput/foutput variable occurrences (document decoration) */
@@ -1300,4 +1421,38 @@ export default {
   left: 0 !important;
 }
 .editor .line-numbers.lh-odd { width: 24px !important; }
+
+/* Main script card + dialogs: match Library / Dashboard surfaces */
+.editor-page .editor-main-surface.v-card {
+  border: 1px solid rgba(0, 51, 73, 0.12);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.editor-dialog-surface .editor-dialog-card.v-card {
+  border-radius: 6px;
+  border: 1px solid rgba(0, 51, 73, 0.12);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
+}
+
+.editor-dialog-title {
+  font-size: var(--neptune-fs-section, 1.1875rem) !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.015em;
+  color: #006994 !important;
+  padding-bottom: 4px !important;
+}
+
+.theme--dark .editor-dialog-title {
+  color: #00acc1 !important;
+}
+
+.editor-dialog-card .v-card__text {
+  font-size: var(--neptune-fs-body, 14pt);
+}
+
+.editor-dialog-card .v-card__actions .v-btn {
+  font-size: var(--neptune-fs-body, 14pt);
+}
 </style>

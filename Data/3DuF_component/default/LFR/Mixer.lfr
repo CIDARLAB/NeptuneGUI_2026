@@ -1,5 +1,5 @@
 // Minimal LFR case corresponding to a basic MIXER.
-module mixer_default(
+module Mixer(
     finput in_1, in_2,
     foutput out_1
 );

@@ -1,9 +1,9 @@
 <template>
-  <v-container fluid>
+  <v-container fluid id="component-library" class="component-library-page">
     <v-row>
       <v-col cols="12">
-        <v-card>
-          <v-card-text>
+        <v-card class="component-library-main-card" flat>
+          <v-card-text class="component-library-card-text">
             <v-alert
               dense
               outlined
@@ -50,36 +50,57 @@
               </template>
 
               <template v-slot:item.threeDuF="{ item }">
-                <v-btn
-                  small
-                  class="three-duf-go-btn white--text"
-                  @click="openInLocal3DuF(item)"
-                >
-                  Go to 3DuF
-                </v-btn>
+                <v-tooltip bottom>
+                  <template v-slot:activator="{ on, attrs }">
+                    <v-btn
+                      small
+                      class="three-duf-go-btn white--text"
+                      v-bind="attrs"
+                      v-on="on"
+                      @click="openIn3DuF(item)"
+                    >
+                      Go to 3DuF
+                    </v-btn>
+                  </template>
+                  <span>Open 3DuF with this component’s JSON for visualization</span>
+                </v-tooltip>
               </template>
 
               <template v-slot:item.diy="{ item }">
-                <v-btn
-                  small
-                  class="diy-btn white--text"
-                  @click="openDiyDialog(item)"
-                >
-                  DIY this component
-                </v-btn>
+                <v-tooltip bottom>
+                  <template v-slot:activator="{ on, attrs }">
+                    <v-btn
+                      small
+                      class="diy-btn white--text"
+                      v-bind="attrs"
+                      v-on="on"
+                      @click="openDiyDialog(item)"
+                    >
+                      Yes
+                    </v-btn>
+                  </template>
+                  <span>DIY this component — edit numeric parameters</span>
+                </v-tooltip>
               </template>
 
               <template v-slot:item.export="{ item }">
-                <v-btn
-                  small
-                  class="export-files-btn white--text"
-                  color="success"
-                  depressed
-                  dark
-                  @click="exportAllFiles(item)"
-                >
-                  Export files
-                </v-btn>
+                <v-tooltip bottom>
+                  <template v-slot:activator="{ on, attrs }">
+                    <v-btn
+                      small
+                      class="export-files-btn white--text"
+                      color="success"
+                      depressed
+                      dark
+                      v-bind="attrs"
+                      v-on="on"
+                      @click="exportAllFiles(item)"
+                    >
+                      Yes
+                    </v-btn>
+                  </template>
+                  <span>Export this component’s JSON as a .json file</span>
+                </v-tooltip>
               </template>
 
               <template v-slot:item.remove="{ item }">
@@ -115,7 +136,7 @@
 
     <v-dialog v-model="fileDialog" max-width="900px">
       <v-card class="component-library-file-dialog">
-        <v-card-title class="headline">
+        <v-card-title class="headline component-library-dialog-title">
           {{ fileDialogTitle }}
         </v-card-title>
         <v-card-text>
@@ -138,7 +159,7 @@
 
     <v-dialog v-model="diyDialog" max-width="700px" persistent>
       <v-card class="component-library-diy-dialog">
-        <v-card-title class="headline">
+        <v-card-title class="headline component-library-dialog-title">
           DIY this component: {{ diyComponent ? diyComponent.syntax : '' }}
         </v-card-title>
         <v-card-text>
@@ -171,9 +192,7 @@
 
 <script>
 import axios from 'axios'
-import JSZip from 'jszip'
-
-const LOCAL_3DUF_URL = 'http://localhost:8082'
+import { openAndLoadDeviceIn3DuF } from '@/lib/open3DuFPostMessage'
 
 export default {
   name: 'Library',
@@ -188,7 +207,7 @@ export default {
         { text: 'JSON file', value: 'jsonScript', sortable: false, width: '120px', align: 'center' },
         { text: '3DuF visualization', value: 'threeDuF', sortable: false, width: '180px', align: 'center' },
         { text: 'DIY this component', value: 'diy', sortable: false, width: '200px', align: 'center' },
-        { text: 'Export', value: 'export', sortable: false, width: '150px', align: 'center' },
+        { text: 'Export JSON', value: 'export', sortable: false, width: '150px', align: 'center' },
         { text: 'Remove', value: 'remove', sortable: false, width: '110px', align: 'center' },
       ],
       fileDialog: false,
@@ -348,13 +367,11 @@ export default {
       const isJson = /\.json$/i.test(this.fileDialogFileName)
       this.exportTextFile(this.fileDialogFileName, this.fileDialogContent, isJson ? 'application/json' : 'text/plain')
     },
-    async exportAllFiles (item) {
+    exportAllFiles (item) {
       const syntax = item.syntax || 'component'
-      const zip = new JSZip()
-      zip.file(`${syntax}.json`, item.jsonScript || '')
-      const blob = await zip.generateAsync({ type: 'blob' })
+      const content = item.jsonScript || ''
       const stamp = new Date().toISOString().replace(/[:.]/g, '-')
-      this.saveBlobAsFile(`${syntax}_files_${stamp}.zip`, blob)
+      this.exportTextFile(`${syntax}_${stamp}.json`, content, 'application/json')
     },
     openDiyDialog (item) {
       this.diyComponent = item
@@ -559,7 +576,7 @@ export default {
       return { error: 'invalid_json' }
     },
 
-    openInLocal3DuF (item) {
+    openIn3DuF (item) {
       const rawJsonPayload = item && item.jsonScript != null ? item.jsonScript : ''
       const isEmptyString = (typeof rawJsonPayload === 'string' && !rawJsonPayload.trim())
       if (rawJsonPayload == null || isEmptyString) {
@@ -577,39 +594,34 @@ export default {
         return
       }
 
-      const win = window.open(LOCAL_3DUF_URL, '_blank')
-      if (!win) {
-        this.showSnack('Popup blocked. Please allow popups to open 3DuF.', 'warning')
-        return
+      const result = openAndLoadDeviceIn3DuF(parsed.jsonObject)
+      if (!result.ok) {
+        if (result.reason === 'popup_blocked') {
+          this.showSnack('Popup blocked. Please allow popups to open 3DuF.', 'warning')
+        } else {
+          this.showSnack('Component JSON is invalid and cannot be opened in 3DuF.', 'error')
+        }
       }
-
-      const payloadText = { type: 'loadDeviceFromJSON', json: parsed.jsonText }
-      const payloadObject = { type: 'loadDeviceFromJSON', json: parsed.jsonObject }
-      const targetOrigin = new URL(LOCAL_3DUF_URL).origin
-      const start = Date.now()
-      const interval = setInterval(() => {
-        if (win.closed || Date.now() - start > 10000) {
-          clearInterval(interval)
-          return
-        }
-        try {
-          // Send to strict target and wildcard for compatibility with different 3DuF dev setups.
-          win.postMessage(payloadText, targetOrigin)
-          win.postMessage(payloadObject, targetOrigin)
-          win.postMessage(payloadText, '*')
-          win.postMessage(payloadObject, '*')
-        } catch (_) {
-          // Ignore transient cross-window timing errors during page boot.
-        }
-      }, 450)
     },
   },
 }
 </script>
 
 <style scoped>
+/* —— Page shell (align with Dashboard workspace cards) —— */
+#component-library .component-library-main-card {
+  border: 1px solid rgba(0, 51, 73, 0.12) !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06) !important;
+  border-radius: 6px;
+}
+
+#component-library .component-library-card-text {
+  padding: 20px 24px 24px !important;
+}
+
 .component-library-case-hint.v-alert--outlined {
-  border-color: rgba(0, 105, 148, 0.54) !important;
+  border-color: rgba(0, 105, 148, 0.45) !important;
+  background: rgba(0, 105, 148, 0.04) !important;
 }
 
 .component-library-case-hint >>> .v-alert__icon {
@@ -617,68 +629,78 @@ export default {
 }
 
 .component-library-case-hint >>> .v-alert__content {
-  font-size: calc(0.875rem + 5pt) !important;
-  line-height: 1.5;
-  color: #006994 !important;
+  font-size: var(--neptune-fs-body, 14pt) !important;
+  line-height: 1.55;
+  color: rgba(0, 0, 0, 0.87) !important;
+}
+
+.theme--dark .component-library-case-hint >>> .v-alert__content {
+  color: rgba(255, 255, 255, 0.9) !important;
 }
 
 .component-library-case-hint >>> .v-alert__content strong {
   color: #006994 !important;
+  font-weight: 600;
 }
 
-.component-library-table >>> .v-data-table__wrapper table,
-.component-library-table >>> .v-data-table__wrapper table th,
-.component-library-table >>> .v-data-table__wrapper table td,
+.component-library-table >>> .v-data-table__wrapper table thead th {
+  font-size: var(--neptune-fs-label, 13.25pt) !important;
+  font-weight: 600 !important;
+  color: rgba(0, 0, 0, 0.75) !important;
+  border-bottom: thin solid rgba(0, 51, 73, 0.12) !important;
+}
+
+.theme--dark .component-library-table >>> .v-data-table__wrapper table thead th {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.component-library-table >>> .v-data-table__wrapper table tbody td,
 .component-library-table >>> .v-data-footer,
 .component-library-table >>> .v-data-footer * {
-  font-size: 14pt !important;
+  font-size: var(--neptune-fs-body, 14pt) !important;
 }
 
-/* Table action buttons: casing + 1pt larger than table body (14pt) */
+.component-library-table >>> .v-data-table__wrapper table tbody tr:hover {
+  background: rgba(0, 105, 148, 0.04) !important;
+}
+
 .component-library-table >>> tbody .v-btn,
 .component-library-table >>> tbody .v-btn .v-btn__content {
-  font-size: calc(14pt + 1pt) !important;
+  font-size: var(--neptune-fs-body, 14pt) !important;
   text-transform: none !important;
   letter-spacing: normal !important;
 }
 
 .component-library-table .syntax-cell {
-  font-family: monospace;
+  font-family: var(--neptune-font-code), monospace;
   background: rgba(0, 105, 148, 0.08);
   padding: 4px 8px;
   border-radius: 4px;
+  font-size: var(--neptune-fs-body, 14pt);
 }
 
-.component-library-file-dialog .v-card__title,
-.component-library-diy-dialog .v-card__title {
-  font-size: 14pt !important;
+.component-library-dialog-title {
+  font-size: var(--neptune-fs-section, 1.1875rem) !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.015em;
+  line-height: 1.35;
 }
 
 .component-library-file-dialog .v-card__text,
 .component-library-file-dialog .v-card__actions,
 .component-library-diy-dialog .v-card__text,
-.component-library-diy-dialog .v-card__actions,
-.component-library-diy-dialog .v-btn,
-.component-library-file-dialog .v-btn {
-  font-size: 12pt !important;
+.component-library-diy-dialog .v-card__actions {
+  font-size: var(--neptune-fs-body, 14pt) !important;
 }
 
-/* DIY dialog readability: +2pt for title/notes/parameter helper text. */
-.component-library-diy-dialog .v-card__title {
-  font-size: 16pt !important;
-}
-
-.component-library-diy-dialog .v-card__text,
-.component-library-diy-dialog .v-card__actions,
-.component-library-diy-dialog .v-btn,
 .component-library-diy-dialog .caption {
-  font-size: 14pt !important;
+  font-size: var(--neptune-fs-label, 13.25pt) !important;
 }
 
 .component-library-diy-dialog >>> .v-text-field input,
 .component-library-diy-dialog >>> .v-text-field .v-label,
 .component-library-diy-dialog >>> .v-messages__message {
-  font-size: 14pt !important;
+  font-size: var(--neptune-fs-body, 14pt) !important;
 }
 
 .component-library-file-dialog >>> .v-btn,
@@ -694,12 +716,13 @@ export default {
 }
 
 .readonly-file-textarea >>> .v-input__slot textarea {
-  font-family: monospace;
-  font-size: 12pt;
+  font-family: var(--neptune-font-code), monospace !important;
+  font-size: var(--neptune-fs-body, 14pt) !important;
+  line-height: 1.45;
 }
 
+/* 3DuF partner accent (Material indigo), distinct from Neptune primary */
 .three-duf-go-btn {
-  /* Matches src/assets/3duf_icon.png dominant blue: rgb(63, 81, 181) */
   background-color: rgb(63, 81, 181) !important;
   border-color: rgb(63, 81, 181) !important;
   color: #ffffff !important;
@@ -716,13 +739,13 @@ export default {
   background-color: #fb8c00 !important;
   border-color: #fb8c00 !important;
   color: #ffffff !important;
-  font-size: 17pt !important;
+  font-size: var(--neptune-fs-body, 14pt) !important;
   text-transform: none !important;
   letter-spacing: normal !important;
 }
 
 .diy-btn >>> .v-btn__content {
-  font-size: 17pt !important;
+  font-size: var(--neptune-fs-body, 14pt) !important;
   text-transform: none !important;
   letter-spacing: normal !important;
 }
@@ -748,13 +771,13 @@ export default {
 .import-json-btn {
   background-color: #006994 !important;
   border-color: #006994 !important;
-  font-size: calc(14pt + 2pt) !important;
+  font-size: var(--neptune-fs-body, 14pt) !important;
   text-transform: none !important;
   letter-spacing: normal !important;
 }
 
 .import-json-btn >>> .v-btn__content {
-  font-size: calc(14pt + 2pt) !important;
+  font-size: var(--neptune-fs-body, 14pt) !important;
   text-transform: none !important;
   letter-spacing: normal !important;
 }

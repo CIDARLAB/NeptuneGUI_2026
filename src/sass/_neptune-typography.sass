@@ -1,0 +1,73 @@
+// Neptune UI type scale — body matches LLM prompts hint (14pt); page title largest; sections next.
+\:root
+  // App bar + workspace card names (another +2pt vs prior)
+  --neptune-fs-page-title: calc(1.625rem + 4pt)
+  // Section/card labels such as Solutions “Jobs” / workspace names on cards — not bold, 4pt below page title
+  --neptune-fs-below-page-title: calc(var(--neptune-fs-page-title) - 4pt)
+  // “Last Update” / “Last edited” lines (2pt smaller than previous −2pt vs body → −4pt vs body)
+  --neptune-fs-timestamp: calc(var(--neptune-fs-body) - 4pt)
+  --neptune-fs-section: 1.1875rem
+  --neptune-fs-body: 14pt
+  --neptune-fs-label: 13.25pt
+  --neptune-fs-small: 12.75pt
+  // Matches typical Cursor/VS Code editor defaults (Consolas/Menlo); no webfonts
+  --neptune-font-code: Consolas, Menlo, Monaco, 'Courier New', 'Droid Sans Mono', 'Ubuntu Monospace', 'Liberation Mono', ui-monospace, monospace
+
+// Route name in app bar (Dashboard, Editor, …) — largest text in the shell
+.theme--light .dashboard-appbar-title,
+.theme--dark .dashboard-appbar-title
+  font-size: var(--neptune-fs-page-title) !important
+  font-weight: 600
+  letter-spacing: -0.02em
+  line-height: 1.25
+  color: rgba(0, 0, 0, 0.87)
+
+.theme--dark .dashboard-appbar-title
+  color: rgba(255, 255, 255, 0.95)
+
+// In-page section headings (Workspaces, Files, LLM prompts title, …)
+.neptune-section-heading
+  font-size: var(--neptune-fs-section) !important
+  font-weight: 600
+  letter-spacing: -0.015em
+  line-height: 1.35
+  color: rgba(0, 0, 0, 0.87)
+
+.theme--dark .neptune-section-heading
+  color: rgba(255, 255, 255, 0.95)
+
+// Same size as app bar route title (e.g. “LLM prompts” in Editor side panel)
+.neptune-page-title-match
+  font-size: var(--neptune-fs-page-title) !important
+  font-weight: 600
+  letter-spacing: -0.02em
+  line-height: 1.25
+  color: rgba(0, 0, 0, 0.87)
+
+.theme--dark .neptune-page-title-match
+  color: rgba(255, 255, 255, 0.95)
+
+// Card headings that sit under the app bar title (e.g. Solutions Jobs / example file cards)
+.neptune-card-page-subheading
+  font-size: var(--neptune-fs-below-page-title) !important
+  font-weight: 400 !important
+  letter-spacing: -0.015em
+  line-height: 1.3
+  color: rgba(0, 0, 0, 0.87)
+
+.theme--dark .neptune-card-page-subheading
+  color: rgba(255, 255, 255, 0.92)
+
+// Default readable copy inside main content (Vuetify 2 uses v-content)
+.theme--light.v-application .v-main,
+.theme--dark.v-application .v-main,
+.theme--light.v-application .v-content,
+.theme--dark.v-application .v-content
+  font-size: var(--neptune-fs-body)
+
+// Floating / field labels — slightly smaller than body, still legible
+.theme--light.v-application .v-main .v-label,
+.theme--dark.v-application .v-main .v-label,
+.theme--light.v-application .v-content .v-label,
+.theme--dark.v-application .v-content .v-label
+  font-size: var(--neptune-fs-label) !important

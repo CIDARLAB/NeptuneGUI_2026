@@ -590,41 +590,98 @@ function buildJsonViewScript (jsonScript, lfrText, mintText) {
   return [...sections, String(jsonScript || '')].join('\n')
 }
 
+// Locate the single "primary" component-or-connection node in `jsonObj` for
+// the given DIY syntax. The match rule is entirely structure-driven and
+// works for any JSON file a user drops into Data/3DuF_component/default/JSON —
+// there is no hardcoded list of known syntaxes:
+//   1. Prefer a `components[*]` whose `entity` (case-insensitive) starts with
+//      the syntax name (so `Valve.json` → VALVE3D, `Port.json` → PORT, etc.).
+//   2. Otherwise prefer a `connections[*]` whose `entity` starts with the
+//      syntax name (so `Channel.json` → CHANNEL).
+//   3. Fall back to the first `components[0]` / `connections[0]` with params.
+// Returns the actual node reference, so callers can both read its params and
+// mutate them in place without re-walking the tree.
+function findDiySourceNode (syntax, jsonObj) {
+  if (!jsonObj || typeof jsonObj !== 'object') return null
+  const upper = data.sanitizeComponentSyntax(syntax).toUpperCase()
+  const hasParams = (n) => n && typeof n === 'object' && n.params && typeof n.params === 'object'
+  const matchByEntity = (n) => {
+    if (!hasParams(n)) return false
+    const ent = String(n.entity || '').toUpperCase()
+    return upper.length > 0 && ent.startsWith(upper)
+  }
+  if (Array.isArray(jsonObj.components)) {
+    const hit = jsonObj.components.find(matchByEntity)
+    if (hit) return hit
+  }
+  if (Array.isArray(jsonObj.connections)) {
+    const hit = jsonObj.connections.find(matchByEntity)
+    if (hit) return hit
+  }
+  if (Array.isArray(jsonObj.components)) {
+    const hit = jsonObj.components.find(hasParams)
+    if (hit) return hit
+  }
+  if (Array.isArray(jsonObj.connections)) {
+    const hit = jsonObj.connections.find(hasParams)
+    if (hit) return hit
+  }
+  return null
+}
+
 function pickEditableParams (syntax, jsonObj) {
-  const safe = data.sanitizeComponentSyntax(syntax)
-  if (!jsonObj || typeof jsonObj !== 'object') return {}
-  let source = null
-  if (safe === 'channel' && Array.isArray(jsonObj.connections) && jsonObj.connections[0] && jsonObj.connections[0].params) {
-    source = jsonObj.connections[0].params
-  } else if (safe === 'valve' && Array.isArray(jsonObj.components)) {
-    const valveComp = jsonObj.components.find(c => String(c && c.entity || '').toUpperCase().includes('VALVE'))
-    source = valveComp && valveComp.params
-  }
-  if (!source && Array.isArray(jsonObj.components) && jsonObj.components[0] && jsonObj.components[0].params) {
-    source = jsonObj.components[0].params
-  }
-  if (!source || typeof source !== 'object') return {}
+  const src = findDiySourceNode(syntax, jsonObj)
+  if (!src || !src.params) return {}
   const params = {}
-  Object.keys(source).forEach((k) => {
-    const v = source[k]
-    if (typeof v === 'number') params[k] = v
+  Object.keys(src.params).forEach((k) => {
+    const v = src.params[k]
+    if (typeof v === 'number' && Number.isFinite(v)) params[k] = v
   })
   return params
 }
 
-function applyEditableParamsDeep (node, params) {
-  if (Array.isArray(node)) {
-    node.forEach((it) => applyEditableParamsDeep(it, params))
-    return
-  }
-  if (!node || typeof node !== 'object') return
-  Object.keys(node).forEach((k) => {
-    const v = node[k]
-    if (typeof v === 'number' && Object.prototype.hasOwnProperty.call(params, k) && Number.isFinite(params[k])) {
-      node[k] = params[k]
-      return
+// In 3DuF JSON the same primary component/connection is mirrored inside
+// `renderLayers[*].features[*]` and `layers[*].features[*]` (linked by
+// `referenceID === <source.id>`). DIY edits need to be applied to the source
+// node AND every mirror so the rendering and hit-testing stay consistent.
+function collectDiyMirrorNodes (jsonObj, sourceId) {
+  if (!sourceId) return []
+  const mirrors = []
+  const visit = (node) => {
+    if (Array.isArray(node)) { node.forEach(visit); return }
+    if (!node || typeof node !== 'object') return
+    if (node.referenceID === sourceId && node.params && typeof node.params === 'object') {
+      mirrors.push(node)
     }
-    if (v && typeof v === 'object') applyEditableParamsDeep(v, params)
+    Object.keys(node).forEach((k) => {
+      if (k === 'params') return
+      const v = node[k]
+      if (v && typeof v === 'object') visit(v)
+    })
+  }
+  if (jsonObj && typeof jsonObj === 'object') {
+    if (jsonObj.renderLayers) visit(jsonObj.renderLayers)
+    if (jsonObj.layers) visit(jsonObj.layers)
+    if (jsonObj.features) visit(jsonObj.features)
+  }
+  return mirrors
+}
+
+// Apply DIY params ONLY to (a) the primary source node we picked for this
+// syntax and (b) its render-layer / layer mirrors. The root device's
+// `params` (canvas width / length) and unrelated components never receive
+// the edits — this is the fix for the "editing a valve zeroed out the
+// device canvas" regression.
+function applyEditableParamsScoped (syntax, root, params) {
+  const paramKeys = Object.keys(params || {}).filter(k => Number.isFinite(params[k]))
+  if (!paramKeys.length) return
+  const src = findDiySourceNode(syntax, root)
+  if (!src || !src.params) return
+  const targets = [src, ...collectDiyMirrorNodes(root, src.id)]
+  targets.forEach((node) => {
+    paramKeys.forEach((k) => {
+      if (typeof node.params[k] === 'number') node.params[k] = params[k]
+    })
   })
 }
 
@@ -719,7 +776,7 @@ app.put('/api/v1/componentFiles/:syntax', requireAuth, (req, res) => {
   if (customIdx >= 0) {
     let parsed = null
     try { parsed = JSON.parse(custom[customIdx].jsonScript) } catch (_) { parsed = {} }
-    applyEditableParamsDeep(parsed, nextParams)
+    applyEditableParamsScoped(custom[customIdx].syntax, parsed, nextParams)
     custom[customIdx].jsonScript = JSON.stringify(parsed, null, 2)
     writeCustomComponents(req.session, custom)
     return res.json({
@@ -738,10 +795,18 @@ app.put('/api/v1/componentFiles/:syntax', requireAuth, (req, res) => {
     })
   }
 
-  const loaded = data.loadComponentJson(syntax)
-  if (!loaded) return res.status(404).json({ error: 'Component JSON not found in Data/3DuF_component/default/JSON' })
-  const nextJson = JSON.parse(JSON.stringify(loaded.json))
-  applyEditableParamsDeep(nextJson, nextParams)
+  // Always reset to the pristine default before applying the new params.
+  // Reading from tmp (via loadComponentJson) would layer edits on top of the
+  // previous tmp and compound any drift.
+  const defaultPath = data.getComponentDefaultPath(syntax)
+  if (!defaultPath || !fs.existsSync(defaultPath)) {
+    return res.status(404).json({ error: 'Component JSON not found in Data/3DuF_component/default/JSON' })
+  }
+  let baseJson = null
+  try { baseJson = JSON.parse(fs.readFileSync(defaultPath, 'utf8')) } catch (_) { baseJson = null }
+  if (!baseJson) return res.status(500).json({ error: 'Failed to read default component JSON' })
+  const nextJson = JSON.parse(JSON.stringify(baseJson))
+  applyEditableParamsScoped(syntax, nextJson, nextParams)
   data.saveComponentTmpJson(syntax, nextJson)
   const updated = data.loadComponentJson(syntax)
   if (!updated) return res.status(500).json({ error: 'Failed to reload updated component JSON' })

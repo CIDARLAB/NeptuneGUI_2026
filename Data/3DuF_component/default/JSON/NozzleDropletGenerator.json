@@ -1,0 +1,209 @@
+{
+  "_LFR_filename": "NozzleDropletGenerator.lfr",
+  "_LFR_source": [
+    "// Minimal LFR case corresponding to a NOZZLE DROPLET GENERATOR.",
+    "// Matches the MINT primitive in QuickTest/default/MINT/NozzleDropletGenerator.mint.",
+    "// A continuous oil phase and a dispersed water phase converge at a",
+    "// flow-focusing nozzle to produce a droplet output stream.",
+    "// The #MAP / #CONSTRAIN directives tell the technology mapper to realize",
+    "// the `&` operator as a NOZZLE DROPLET GENERATOR with a target droplet rate.",
+    "module NozzleDropletGenerator(",
+    "    finput oil_in, water_in,",
+    "    foutput droplet_out",
+    ");",
+    "    #MAP \"NOZZLE DROPLET GENERATOR\" \"&\"",
+    "    #CONSTRAIN \"&\" DROPLET_RATE = 30 Hz",
+    "    assign droplet_out = oil_in & water_in;",
+    "endmodule"
+  ],
+  "_MINT_filename": "NozzleDropletGenerator.mint",
+  "_MINT_source": [
+    "DEVICE nozzledropletgenerator",
+    "",
+    "LAYER FLOW",
+    "",
+    "NOZZLE DROPLET GENERATOR nozzledropletgenerator componentSpacing=1000 orificeSize=200 orificeLength=400 oilInputWidth=800 waterInputWidth=600 outputWidth=600 outputLength=600 height=250 rotation=0;",
+    "",
+    "END LAYER"
+  ],
+  "name": "My Other Device",
+  "params": {
+    "width": 135000,
+    "length": 85000
+  },
+  "renderLayers": [
+    {
+      "id": "8f41fba0-3de4-11f1-8ca3-538340abed7f",
+      "name": "RenderLayerFlow_1",
+      "modellayer": "4952d7a0-f16c-11eb-8c04-ff751cb31c4c",
+      "type": "FLOW",
+      "features": [
+        {
+          "id": "93f598a0-3de4-11f1-8ca3-538340abed7f",
+          "name": "New Feature",
+          "macro": "DropletGen",
+          "params": {
+            "position": [
+              10000,
+              10000
+            ],
+            "componentSpacing": 1000,
+            "orificeSize": 200,
+            "orificeLength": 400,
+            "oilInputWidth": 800,
+            "waterInputWidth": 600,
+            "outputWidth": 600,
+            "outputLength": 600,
+            "height": 250,
+            "rotation": 0,
+            "mirrorByX": 0,
+            "mirrorByY": 0
+          },
+          "type": "XY",
+          "referenceID": "93f634e0-3de4-11f1-8ca3-538340abed7f",
+          "dxfData": [],
+          "layerID": "4952d7a0-f16c-11eb-8c04-ff751cb31c4c"
+        }
+      ],
+      "color": "indigo"
+    },
+    {
+      "id": "8f41fba1-3de4-11f1-8ca3-538340abed7f",
+      "name": "RenderLayerControl_1",
+      "modellayer": "4952feb0-f16c-11eb-8c04-ff751cb31c4c",
+      "type": "CONTROL",
+      "features": [],
+      "color": "red"
+    },
+    {
+      "id": "8f41fba2-3de4-11f1-8ca3-538340abed7f",
+      "name": "RenderLayerIntegration_1",
+      "modellayer": "4952feb1-f16c-11eb-8c04-ff751cb31c4c",
+      "type": "INTEGRATION",
+      "features": [],
+      "color": "green"
+    }
+  ],
+  "layers": [
+    {
+      "id": "4952d7a0-f16c-11eb-8c04-ff751cb31c4c",
+      "name": "LayerFlow_1",
+      "type": "FLOW",
+      "group": "0",
+      "params": {
+        "z_offset": 0,
+        "flip": false
+      },
+      "features": [
+        {
+          "id": "93f598a0-3de4-11f1-8ca3-538340abed7f",
+          "name": "New Feature",
+          "macro": "DropletGen",
+          "params": {
+            "position": [
+              10000,
+              10000
+            ],
+            "componentSpacing": 1000,
+            "orificeSize": 200,
+            "orificeLength": 400,
+            "oilInputWidth": 800,
+            "waterInputWidth": 600,
+            "outputWidth": 600,
+            "outputLength": 600,
+            "height": 250,
+            "rotation": 0,
+            "mirrorByX": 0,
+            "mirrorByY": 0
+          },
+          "type": "XY",
+          "referenceID": "93f634e0-3de4-11f1-8ca3-538340abed7f",
+          "dxfData": [],
+          "layerID": "4952d7a0-f16c-11eb-8c04-ff751cb31c4c"
+        }
+      ]
+    },
+    {
+      "id": "4952feb0-f16c-11eb-8c04-ff751cb31c4c",
+      "name": "LayerControl_1",
+      "type": "CONTROL",
+      "group": "0",
+      "params": {
+        "z_offset": 0,
+        "flip": false
+      },
+      "features": []
+    },
+    {
+      "id": "4952feb1-f16c-11eb-8c04-ff751cb31c4c",
+      "name": "LayerIntegration_1",
+      "type": "INTEGRATION",
+      "group": "0",
+      "params": {
+        "z_offset": 0,
+        "flip": false
+      },
+      "features": []
+    }
+  ],
+  "groups": [],
+  "components": [
+    {
+      "id": "93f634e0-3de4-11f1-8ca3-538340abed7f",
+      "name": "DropletGen_1",
+      "entity": "NOZZLE DROPLET GENERATOR",
+      "params": {
+        "position": [
+          10000,
+          9700
+        ],
+        "componentSpacing": 1000,
+        "orificeSize": 200,
+        "orificeLength": 400,
+        "oilInputWidth": 800,
+        "waterInputWidth": 600,
+        "outputWidth": 600,
+        "outputLength": 600,
+        "height": 250,
+        "rotation": 0,
+        "mirrorByX": 0,
+        "mirrorByY": 0
+      },
+      "x-span": 1800,
+      "y-span": 600,
+      "ports": [
+        {
+          "x": 400,
+          "y": -300,
+          "layer": "FLOW",
+          "label": "1"
+        },
+        {
+          "x": 1800,
+          "y": 0,
+          "layer": "FLOW",
+          "label": "2"
+        },
+        {
+          "x": 400,
+          "y": 300,
+          "layer": "FLOW",
+          "label": "3"
+        },
+        {
+          "x": 0,
+          "y": 0,
+          "layer": "FLOW",
+          "label": "4"
+        }
+      ],
+      "layers": [
+        "4952d7a0-f16c-11eb-8c04-ff751cb31c4c"
+      ]
+    }
+  ],
+  "connections": [],
+  "valves": [],
+  "features": [],
+  "version": "1.2"
+}

@@ -1,0 +1,198 @@
+{
+  "_LFR_filename": "ReactionChamber.lfr",
+  "_LFR_source": [
+    "// Minimal LFR case corresponding to a REACTION CHAMBER.",
+    "// Matches the MINT primitive `Chamber ...` in QuickTest/default/MINT/ReactionChamber.mint.",
+    "// Fluid flows into the chamber, undergoes an incubation / reaction step",
+    "// (mapped to the `~` operator), and flows out. #MAP directs the technology",
+    "// mapper to realize `~` as a physical reaction chamber.",
+    "module ReactionChamber(",
+    "    finput in_1,",
+    "    foutput out_1",
+    ");",
+    "    #MAP \"CHAMBER\" \"~\"",
+    "    assign out_1 = ~in_1;",
+    "endmodule"
+  ],
+  "_MINT_filename": "ReactionChamber.mint",
+  "_MINT_source": [
+    "DEVICE reactionchamber",
+    "",
+    "LAYER FLOW",
+    "",
+    "Chamber reactionchamber componentSpacing=1000 width=5000 length=5000 height=1100 cornerRadius=200 rotation=0;",
+    "",
+    "END LAYER"
+  ],
+  "name": "My Other Device",
+  "params": {
+    "width": 135000,
+    "length": 85000
+  },
+  "renderLayers": [
+    {
+      "id": "6ab51983-3de3-11f1-a242-89896c81f7a2",
+      "name": "RenderLayerFlow_1",
+      "modellayer": "4952d7a0-f16c-11eb-8c04-ff751cb31c4c",
+      "type": "FLOW",
+      "features": [
+        {
+          "id": "7026d660-3de3-11f1-a242-89896c81f7a2",
+          "name": "New Feature",
+          "macro": "Chamber",
+          "params": {
+            "position": [
+              10000,
+              10000
+            ],
+            "componentSpacing": 1000,
+            "width": 5000,
+            "length": 5000,
+            "height": 250,
+            "cornerRadius": 200,
+            "rotation": 0,
+            "mirrorByX": 0,
+            "mirrorByY": 0
+          },
+          "type": "XY",
+          "referenceID": "70274b90-3de3-11f1-a242-89896c81f7a2",
+          "dxfData": [],
+          "layerID": "4952d7a0-f16c-11eb-8c04-ff751cb31c4c"
+        }
+      ],
+      "color": "indigo"
+    },
+    {
+      "id": "6ab51984-3de3-11f1-a242-89896c81f7a2",
+      "name": "RenderLayerControl_1",
+      "modellayer": "4952feb0-f16c-11eb-8c04-ff751cb31c4c",
+      "type": "CONTROL",
+      "features": [],
+      "color": "red"
+    },
+    {
+      "id": "6ab51985-3de3-11f1-a242-89896c81f7a2",
+      "name": "RenderLayerIntegration_1",
+      "modellayer": "4952feb1-f16c-11eb-8c04-ff751cb31c4c",
+      "type": "INTEGRATION",
+      "features": [],
+      "color": "green"
+    }
+  ],
+  "layers": [
+    {
+      "id": "4952d7a0-f16c-11eb-8c04-ff751cb31c4c",
+      "name": "LayerFlow_1",
+      "type": "FLOW",
+      "group": "0",
+      "params": {
+        "z_offset": 0,
+        "flip": false
+      },
+      "features": [
+        {
+          "id": "7026d660-3de3-11f1-a242-89896c81f7a2",
+          "name": "New Feature",
+          "macro": "Chamber",
+          "params": {
+            "position": [
+              10000,
+              10000
+            ],
+            "componentSpacing": 1000,
+            "width": 5000,
+            "length": 5000,
+            "height": 250,
+            "cornerRadius": 200,
+            "rotation": 0,
+            "mirrorByX": 0,
+            "mirrorByY": 0
+          },
+          "type": "XY",
+          "referenceID": "70274b90-3de3-11f1-a242-89896c81f7a2",
+          "dxfData": [],
+          "layerID": "4952d7a0-f16c-11eb-8c04-ff751cb31c4c"
+        }
+      ]
+    },
+    {
+      "id": "4952feb0-f16c-11eb-8c04-ff751cb31c4c",
+      "name": "LayerControl_1",
+      "type": "CONTROL",
+      "group": "0",
+      "params": {
+        "z_offset": 0,
+        "flip": false
+      },
+      "features": []
+    },
+    {
+      "id": "4952feb1-f16c-11eb-8c04-ff751cb31c4c",
+      "name": "LayerIntegration_1",
+      "type": "INTEGRATION",
+      "group": "0",
+      "params": {
+        "z_offset": 0,
+        "flip": false
+      },
+      "features": []
+    }
+  ],
+  "groups": [],
+  "components": [
+    {
+      "id": "70274b90-3de3-11f1-a242-89896c81f7a2",
+      "name": "Chamber_1",
+      "entity": "REACTION CHAMBER",
+      "params": {
+        "position": [
+          7500,
+          7500
+        ],
+        "componentSpacing": 1000,
+        "width": 5000,
+        "length": 5000,
+        "height": 250,
+        "cornerRadius": 200,
+        "rotation": 0,
+        "mirrorByX": 0,
+        "mirrorByY": 0
+      },
+      "x-span": 5000,
+      "y-span": 5000,
+      "ports": [
+        {
+          "x": 0,
+          "y": -2500,
+          "layer": "FLOW",
+          "label": "1"
+        },
+        {
+          "x": 2500,
+          "y": 0,
+          "layer": "FLOW",
+          "label": "2"
+        },
+        {
+          "x": 0,
+          "y": 2500,
+          "layer": "FLOW",
+          "label": "3"
+        },
+        {
+          "x": -2500,
+          "y": 0,
+          "layer": "FLOW",
+          "label": "4"
+        }
+      ],
+      "layers": [
+        "4952d7a0-f16c-11eb-8c04-ff751cb31c4c"
+      ]
+    }
+  ],
+  "connections": [],
+  "valves": [],
+  "features": [],
+  "version": "1.2"
+}

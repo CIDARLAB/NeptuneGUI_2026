@@ -1,0 +1,238 @@
+{
+  "_LFR_filename": "Tree.lfr",
+  "_LFR_source": [
+    "// Minimal LFR case corresponding to a 1-to-8 fanout TREE.",
+    "// Matches the MINT primitive `TREE ... in=1 out=8` in QuickTest/default/MINT/Tree.mint.",
+    "// The single input is broadcast to an intermediate 8-wide flow bus and then",
+    "// routed to eight outputs. The LFR compiler realizes the 1->N broadcast as a",
+    "// physical TREE splitter during technology mapping.",
+    "module Tree(",
+    "    finput in_1,",
+    "    foutput [0:7] outputs",
+    ");",
+    "    flow [0:7] temp;",
+    "    assign temp[0:7] = in_1;",
+    "    assign outputs[0:7] = temp[0:7];",
+    "endmodule"
+  ],
+  "_MINT_filename": "Tree.mint",
+  "_MINT_source": [
+    "DEVICE tree",
+    "",
+    "LAYER FLOW",
+    "",
+    "TREE tree componentSpacing=1000 flowChannelWidth=800 rotation=0 spacing=4000 in=1 out=8 width=2460 height=250 stageLength=4000;",
+    "",
+    "END LAYER"
+  ],
+  "name": "My Other Device",
+  "params": {
+    "width": 135000,
+    "length": 85000
+  },
+  "renderLayers": [
+    {
+      "id": "db3382e3-3de4-11f1-b6d5-a5f355496edf",
+      "name": "RenderLayerFlow_1",
+      "modellayer": "4952d7a0-f16c-11eb-8c04-ff751cb31c4c",
+      "type": "FLOW",
+      "features": [
+        {
+          "id": "e6979e50-3de4-11f1-b6d5-a5f355496edf",
+          "name": "New Feature",
+          "macro": "Tree",
+          "params": {
+            "position": [
+              10000,
+              10000
+            ],
+            "componentSpacing": 1000,
+            "flowChannelWidth": 800,
+            "rotation": 0,
+            "spacing": 4000,
+            "in": 1,
+            "out": 8,
+            "width": 2460,
+            "height": 250,
+            "stageLength": 4000,
+            "mirrorByX": 0,
+            "mirrorByY": 0
+          },
+          "type": "XY",
+          "referenceID": "e6981380-3de4-11f1-b6d5-a5f355496edf",
+          "dxfData": [],
+          "layerID": "4952d7a0-f16c-11eb-8c04-ff751cb31c4c"
+        }
+      ],
+      "color": "indigo"
+    },
+    {
+      "id": "db3382e4-3de4-11f1-b6d5-a5f355496edf",
+      "name": "RenderLayerControl_1",
+      "modellayer": "4952feb0-f16c-11eb-8c04-ff751cb31c4c",
+      "type": "CONTROL",
+      "features": [],
+      "color": "red"
+    },
+    {
+      "id": "db3382e5-3de4-11f1-b6d5-a5f355496edf",
+      "name": "RenderLayerIntegration_1",
+      "modellayer": "4952feb1-f16c-11eb-8c04-ff751cb31c4c",
+      "type": "INTEGRATION",
+      "features": [],
+      "color": "green"
+    }
+  ],
+  "layers": [
+    {
+      "id": "4952d7a0-f16c-11eb-8c04-ff751cb31c4c",
+      "name": "LayerFlow_1",
+      "type": "FLOW",
+      "group": "0",
+      "params": {
+        "z_offset": 0,
+        "flip": false
+      },
+      "features": [
+        {
+          "id": "e6979e50-3de4-11f1-b6d5-a5f355496edf",
+          "name": "New Feature",
+          "macro": "Tree",
+          "params": {
+            "position": [
+              10000,
+              10000
+            ],
+            "componentSpacing": 1000,
+            "flowChannelWidth": 800,
+            "rotation": 0,
+            "spacing": 4000,
+            "in": 1,
+            "out": 8,
+            "width": 2460,
+            "height": 250,
+            "stageLength": 4000,
+            "mirrorByX": 0,
+            "mirrorByY": 0
+          },
+          "type": "XY",
+          "referenceID": "e6981380-3de4-11f1-b6d5-a5f355496edf",
+          "dxfData": [],
+          "layerID": "4952d7a0-f16c-11eb-8c04-ff751cb31c4c"
+        }
+      ]
+    },
+    {
+      "id": "4952feb0-f16c-11eb-8c04-ff751cb31c4c",
+      "name": "LayerControl_1",
+      "type": "CONTROL",
+      "group": "0",
+      "params": {
+        "z_offset": 0,
+        "flip": false
+      },
+      "features": []
+    },
+    {
+      "id": "4952feb1-f16c-11eb-8c04-ff751cb31c4c",
+      "name": "LayerIntegration_1",
+      "type": "INTEGRATION",
+      "group": "0",
+      "params": {
+        "z_offset": 0,
+        "flip": false
+      },
+      "features": []
+    }
+  ],
+  "groups": [],
+  "components": [
+    {
+      "id": "e6981380-3de4-11f1-b6d5-a5f355496edf",
+      "name": "Tree_1",
+      "entity": "TREE",
+      "params": {
+        "position": [
+          -7900,
+          10000
+        ],
+        "componentSpacing": 1000,
+        "flowChannelWidth": 800,
+        "rotation": 0,
+        "spacing": 4000,
+        "in": 1,
+        "out": 8,
+        "width": 2460,
+        "height": 250,
+        "stageLength": 4000,
+        "mirrorByX": 0,
+        "mirrorByY": 0
+      },
+      "x-span": 35800,
+      "y-span": 18400,
+      "ports": [
+        {
+          "x": 0,
+          "y": 0,
+          "layer": "FLOW",
+          "label": "1"
+        },
+        {
+          "x": 17500,
+          "y": 18400,
+          "layer": "FLOW",
+          "label": "2"
+        },
+        {
+          "x": 12500,
+          "y": 18400,
+          "layer": "FLOW",
+          "label": "3"
+        },
+        {
+          "x": 7500,
+          "y": 18400,
+          "layer": "FLOW",
+          "label": "4"
+        },
+        {
+          "x": 2500,
+          "y": 18400,
+          "layer": "FLOW",
+          "label": "5"
+        },
+        {
+          "x": -2500,
+          "y": 18400,
+          "layer": "FLOW",
+          "label": "6"
+        },
+        {
+          "x": -7500,
+          "y": 18400,
+          "layer": "FLOW",
+          "label": "7"
+        },
+        {
+          "x": -12500,
+          "y": 18400,
+          "layer": "FLOW",
+          "label": "8"
+        },
+        {
+          "x": -17500,
+          "y": 18400,
+          "layer": "FLOW",
+          "label": "9"
+        }
+      ],
+      "layers": [
+        "4952d7a0-f16c-11eb-8c04-ff751cb31c4c"
+      ]
+    }
+  ],
+  "connections": [],
+  "valves": [],
+  "features": [],
+  "version": "1.2"
+}

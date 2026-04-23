@@ -13,9 +13,9 @@
           cols="4"
           class="agent-panel-col pa-0"
         >
-          <v-card class="agent-panel-card d-flex flex-column" outlined>
-            <v-card-title class="agent-panel-header">
-              <div class="agent-panel-title">
+          <div class="agent-panel-stack d-flex flex-column">
+            <div class="agent-panel-header pa-4 pb-2">
+              <div class="agent-panel-title neptune-page-title-match">
                 LLM prompts
               </div>
               <div class="agent-panel-subtitle">
@@ -26,11 +26,11 @@
                   <span class="agent-panel-keep-together">Editor</span>.
                 </span>
               </div>
-            </v-card-title>
+            </div>
 
-            <v-divider />
+            <v-divider class="agent-panel-divider" />
 
-            <v-card-text class="agent-panel-body flex-grow-1">
+            <div class="agent-panel-body flex-grow-1 pa-4 pt-3">
               <v-select
                 v-model="selectedModel"
                 :items="llmModels"
@@ -88,8 +88,8 @@
                   <span>Open {{ selectedModel.label }} chat</span>
                 </v-btn>
               </div>
-            </v-card-text>
-          </v-card>
+            </div>
+          </div>
         </v-col>
       </v-row>
     </v-container>
@@ -212,10 +212,15 @@
   padding-top: 0 !important;
 }
 
-.agent-panel-card {
+.agent-panel-stack {
   height: 100%;
-  border-radius: 0;
-  border-left: 1px solid rgba(0, 0, 0, 0.08);
+  min-height: 0;
+  background: transparent;
+  border-left: 1px solid rgba(0, 51, 73, 0.12);
+}
+
+.agent-panel-divider {
+  opacity: 0.55;
 }
 
 .agent-panel-header {
@@ -225,15 +230,14 @@
 }
 
 .agent-panel-title {
-  font-size: calc(20px + 2pt);
-  font-weight: 600;
+  margin-bottom: 6px;
 }
 
 .agent-panel-subtitle {
-  font-size: calc(14px + 2pt);
-  opacity: 0.8;
-  line-height: 1.4;
-  font-weight: 400;
+  font-size: var(--neptune-fs-label, 13.25pt);
+  opacity: 0.88;
+  line-height: 1.45;
+  font-weight: 500;
 }
 
 /* Avoid breaking words mid-token; keep “LFR” / “Editor” intact */
@@ -249,12 +253,11 @@
 
 .agent-panel-body {
   overflow-y: auto;
-  padding-top: 16px;
+  min-height: 0;
 }
 
-/* +2pt vs previous 12pt; body text black */
 .agent-panel-hint {
-  font-size: 14pt !important;
+  font-size: var(--neptune-fs-body, 14pt) !important;
   font-weight: 500;
   line-height: 1.45;
   color: rgba(0, 0, 0, 0.87) !important;
@@ -295,21 +298,20 @@
 /* Match sidebar Export: 14pt, normal case (see Drawer.vue .drawer-export-rect-btn) */
 .agent-panel-export-btn {
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18) !important;
-  font-size: 14pt !important;
-  font-weight: 400 !important;
+  font-size: var(--neptune-fs-body, 14pt) !important;
+  font-weight: 500 !important;
   text-transform: none !important;
   letter-spacing: normal !important;
 }
 
 .agent-panel-export-btn ::v-deep .v-btn__content {
-  font-size: 14pt !important;
-  font-weight: 400 !important;
+  font-size: var(--neptune-fs-body, 14pt) !important;
+  font-weight: 500 !important;
   letter-spacing: normal !important;
 }
 
-/* Match Editor labels: +2pt (16pt) */
 .agent-panel-model-select ::v-deep label {
-  font-size: 16pt !important;
+  font-size: var(--neptune-fs-label, 13.25pt) !important;
   font-weight: 600 !important;
   color: #9e9e9e !important;
 }
@@ -317,7 +319,7 @@
 .agent-panel-model-select ::v-deep .v-select__selection,
 .agent-panel-model-select ::v-deep .v-select__selection--comma,
 .agent-panel-model-select ::v-deep .v-input__slot input {
-  font-size: 16pt !important;
+  font-size: var(--neptune-fs-body, 14pt) !important;
   font-weight: 600 !important;
   color: #006994 !important;
   line-height: 1.35 !important;
@@ -334,7 +336,7 @@
 /* Menu is portaled; match Editor script-language dropdown */
 .agent-panel-model-select-menu .v-list-item,
 .agent-panel-model-select-menu .v-list-item__title {
-  font-size: 16pt !important;
+  font-size: var(--neptune-fs-body, 14pt) !important;
   font-weight: 600 !important;
   color: #006994 !important;
 }

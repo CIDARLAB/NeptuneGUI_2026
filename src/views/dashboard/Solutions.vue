@@ -317,11 +317,12 @@
 </script>
 
 <style lang="sass" scoped>
-/* Card titles (Jobs + workspace file cards): match Dashboard #dashboard .workspace-section-title */
+/* Jobs + file name card titles: page title minus 4pt, bold to match Dashboard "Workspaces" */
 .solutions-page
   ::v-deep .v-card--material .card-title
-    font-size: calc(25px + 5pt) !important
-    font-weight: 300 !important
+    font-size: var(--neptune-fs-below-page-title) !important
+    font-weight: 600 !important
+    letter-spacing: -0.015em
 
   /* Jobs table: match Component Library .component-library-table (14pt) */
   ::v-deep .solutions-jobs-table

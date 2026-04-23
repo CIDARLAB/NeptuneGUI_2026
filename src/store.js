@@ -5,8 +5,9 @@ Vue.use(Vuex)
 
 export default new Vuex.Store({
   state: {
-    barColor: 'rgba(0, 0, 0, .8), rgba(0, 0, 0, .8)',
-    barImage: './images/CNCpic.png',
+    // Drawer gradient (top → bottom), aligned with brand primary #006994
+    barColor: 'rgba(0, 58, 82, 0.98), rgba(0, 32, 48, 1)',
+    barImage: '',
     drawer: null,
     fontSize: 'normal',
     isLoggedIn: false,

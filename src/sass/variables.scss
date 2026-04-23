@@ -1,7 +1,9 @@
 $font-size-root: 14px;
-$body-font-family: 'Times New Roman', Times, serif;
-$heading-font-family: 'Times New Roman', Times, serif;
-$sheet-border-radius: 4px;
+// UI sans stack (no webfont — fast, works offline; aligns with tool/dashboard UIs)
+$ui-font-stack: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+$body-font-family: $ui-font-stack;
+$heading-font-family: $ui-font-stack;
+$sheet-border-radius: 6px;
 $list-item-title-font-size: 0.929rem;
 $list-item-dense-title-font-size: 0.929rem;
 $list-item-dense-title-font-weight: initial;
@@ -10,7 +12,7 @@ $btn-font-sizes: ( default: 1rem, large: 1rem );
 $btn-sizes: ( default: 41, large: 54 );
 $btn-letter-spacing: 0;
 $btn-font-weight: 400;
-$card-text-font-size: 16px;
+$card-text-font-size: 14pt;
 
 $headings: (
   'h1': (

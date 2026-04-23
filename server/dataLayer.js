@@ -44,10 +44,23 @@ function sanitizeComponentSyntax (syntax) {
   return String(syntax || '').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '')
 }
 
+// Case-insensitive lookup: we don't care whether the file is `valve.json`,
+// `Valve.json`, or `VALVE.json` on disk — any of them should resolve for
+// the syntax `valve`. This also means renaming a file doesn't silently
+// remove it from the library.
+function resolveComponentFilename (dir, syntax, extRe) {
+  if (!fs.existsSync(dir)) return null
+  const want = sanitizeComponentSyntax(syntax)
+  if (!want) return null
+  const entries = fs.readdirSync(dir)
+  return entries.find(name =>
+    extRe.test(name) && name.replace(extRe, '').toLowerCase() === want,
+  ) || null
+}
+
 function getComponentDefaultPath (syntax) {
-  const safe = sanitizeComponentSyntax(syntax)
-  if (!safe) return null
-  return path.join(COMPONENT_DEFAULT_JSON_DIR, `${safe}.json`)
+  const fname = resolveComponentFilename(COMPONENT_DEFAULT_JSON_DIR, syntax, /\.json$/i)
+  return fname ? path.join(COMPONENT_DEFAULT_JSON_DIR, fname) : null
 }
 
 function getComponentTmpPath (syntax) {
@@ -91,15 +104,13 @@ function loadComponentJson (syntax) {
 }
 
 function getComponentDefaultLfrPath (syntax) {
-  const safe = sanitizeComponentSyntax(syntax)
-  if (!safe) return null
-  return path.join(COMPONENT_DEFAULT_LFR_DIR, `${safe}.lfr`)
+  const fname = resolveComponentFilename(COMPONENT_DEFAULT_LFR_DIR, syntax, /\.lfr$/i)
+  return fname ? path.join(COMPONENT_DEFAULT_LFR_DIR, fname) : null
 }
 
 function getComponentDefaultMintPath (syntax) {
-  const safe = sanitizeComponentSyntax(syntax)
-  if (!safe) return null
-  return path.join(COMPONENT_DEFAULT_MINT_DIR, `${safe}.mint`)
+  const fname = resolveComponentFilename(COMPONENT_DEFAULT_MINT_DIR, syntax, /\.mint$/i)
+  return fname ? path.join(COMPONENT_DEFAULT_MINT_DIR, fname) : null
 }
 
 function readTextIfExists (p) {

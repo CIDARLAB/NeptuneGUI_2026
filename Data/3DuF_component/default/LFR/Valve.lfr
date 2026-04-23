@@ -1,5 +1,5 @@
 // Minimal LFR case corresponding to valve behavior controlled by one control signal.
-module valve_default(
+module Valve(
     finput in_a, in_b,
     foutput out_1,
     control c
