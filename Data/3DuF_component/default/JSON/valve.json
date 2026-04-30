@@ -1,22 +1,37 @@
 {
-  "_LFR_filename": "Channel.lfr",
+  "_LFR_filename": "valve.lfr",
   "_LFR_source": [
-    "// Minimal LFR case corresponding to a single CHANNEL between two ports.",
-    "module Channel(",
-    "    finput src,",
-    "    foutput dst",
+    "// Minimal LFR case corresponding to valve behavior controlled by one control signal.",
+    "module valve(",
+    "    finput in_a, in_b,",
+    "    foutput out_1,",
+    "    control c",
     ");",
-    "    assign dst = src;",
+    "    distribute@(c)",
+    "    begin",
+    "        if (c == 1)",
+    "        begin",
+    "            out_1 <= in_a;",
+    "        end",
+    "        else",
+    "        begin",
+    "            out_1 <= in_b;",
+    "        end",
+    "    end",
     "endmodule"
   ],
-  "_MINT_filename": "Channel.mint",
+  "_MINT_filename": "valve.mint",
   "_MINT_source": [
-    "DEVICE channel",
+    "DEVICE valve",
     "",
     "LAYER FLOW",
     "PORT port_1 componentSpacing=1000.0 portRadius=700.0 height=1100.0;",
     "PORT port_2 componentSpacing=1000.0 portRadius=700.0 height=1100.0;",
     "CHANNEL channel_1 from port_1 1 to port_2 1 connectionSpacing=1600 channelWidth=800 height=250;",
+    "END LAYER",
+    "",
+    "LAYER CONTROL",
+    "VALVE valve_1 on channel_1 componentSpacing=1000.0 rotation=90.0 width=2400.0 length=2400.0 height=250.0;",
     "END LAYER"
   ],
   "name": "My Other Device",
@@ -37,8 +52,8 @@
           "macro": "Port",
           "params": {
             "position": [
-              10000,
-              10000
+              40000,
+              20000
             ],
             "componentSpacing": 1000,
             "portRadius": 700,
@@ -55,8 +70,8 @@
           "macro": "Port",
           "params": {
             "position": [
-              10000,
-              30000
+              40000,
+              40000
             ],
             "componentSpacing": 1000,
             "portRadius": 700,
@@ -74,52 +89,52 @@
           "params": {
             "start": [
               "Point",
-              10000,
-              10000
+              40000,
+              20000
             ],
             "end": [
-              10000,
-              30000
+              40000,
+              40000
             ],
             "wayPoints": [
               [
-                10000,
-                10000
+                40000,
+                20000
               ],
               [
-                10000,
-                30000
+                40000,
+                40000
               ]
             ],
             "segments": [
               [
                 [
-                  10000,
-                  10000
+                  40000,
+                  20000
                 ],
                 [
-                  10000,
-                  10000
+                  40000,
+                  20000
                 ]
               ],
               [
                 [
-                  10000,
-                  10000
+                  40000,
+                  20000
                 ],
                 [
-                  10000,
-                  30000
+                  40000,
+                  40000
                 ]
               ],
               [
                 [
-                  10000,
-                  30000
+                  40000,
+                  40000
                 ],
                 [
-                  10000,
-                  30000
+                  40000,
+                  40000
                 ]
               ]
             ],
@@ -140,7 +155,30 @@
       "name": "RenderLayerControl_1",
       "modellayer": "4952feb0-f16c-11eb-8c04-ff751cb31c4c",
       "type": "CONTROL",
-      "features": [],
+      "features": [
+        {
+          "id": "892faf90-376e-11f1-b572-e1b82a6fa485",
+          "name": "New Feature",
+          "macro": "Valve3D_control",
+          "params": {
+            "position": [
+              40000,
+              30000
+            ],
+            "rotation": 90,
+            "componentSpacing": 1000,
+            "valveRadius": 1200,
+            "height": 250,
+            "gap": 600,
+            "width": 2400,
+            "length": 2400
+          },
+          "type": "XY",
+          "referenceID": "8930e810-376e-11f1-b572-e1b82a6fa485",
+          "dxfData": [],
+          "layerID": "4952feb0-f16c-11eb-8c04-ff751cb31c4c"
+        }
+      ],
       "color": "red"
     },
     {
@@ -169,8 +207,8 @@
           "macro": "Port",
           "params": {
             "position": [
-              10000,
-              10000
+              40000,
+              20000
             ],
             "componentSpacing": 1000,
             "portRadius": 700,
@@ -187,8 +225,8 @@
           "macro": "Port",
           "params": {
             "position": [
-              10000,
-              30000
+              40000,
+              40000
             ],
             "componentSpacing": 1000,
             "portRadius": 700,
@@ -206,52 +244,52 @@
           "params": {
             "start": [
               "Point",
-              10000,
-              10000
+              40000,
+              20000
             ],
             "end": [
-              10000,
-              30000
+              40000,
+              40000
             ],
             "wayPoints": [
               [
-                10000,
-                10000
+                40000,
+                20000
               ],
               [
-                10000,
-                30000
+                40000,
+                40000
               ]
             ],
             "segments": [
               [
                 [
-                  10000,
-                  10000
+                  40000,
+                  20000
                 ],
                 [
-                  10000,
-                  10000
+                  40000,
+                  20000
                 ]
               ],
               [
                 [
-                  10000,
-                  10000
+                  40000,
+                  20000
                 ],
                 [
-                  10000,
-                  30000
+                  40000,
+                  40000
                 ]
               ],
               [
                 [
-                  10000,
-                  30000
+                  40000,
+                  40000
                 ],
                 [
-                  10000,
-                  30000
+                  40000,
+                  40000
                 ]
               ]
             ],
@@ -275,7 +313,30 @@
         "z_offset": 0,
         "flip": false
       },
-      "features": []
+      "features": [
+        {
+          "id": "892faf90-376e-11f1-b572-e1b82a6fa485",
+          "name": "New Feature",
+          "macro": "Valve3D_control",
+          "params": {
+            "position": [
+              40000,
+              30000
+            ],
+            "rotation": 90,
+            "componentSpacing": 1000,
+            "valveRadius": 1200,
+            "height": 250,
+            "gap": 600,
+            "width": 2400,
+            "length": 2400
+          },
+          "type": "XY",
+          "referenceID": "8930e810-376e-11f1-b572-e1b82a6fa485",
+          "dxfData": [],
+          "layerID": "4952feb0-f16c-11eb-8c04-ff751cb31c4c"
+        }
+      ]
     },
     {
       "id": "4952feb1-f16c-11eb-8c04-ff751cb31c4c",
@@ -297,8 +358,8 @@
       "entity": "PORT",
       "params": {
         "position": [
-          9300,
-          9300
+          39300,
+          19300
         ],
         "componentSpacing": 1000,
         "portRadius": 700,
@@ -324,8 +385,8 @@
       "entity": "PORT",
       "params": {
         "position": [
-          9300,
-          29300
+          39300,
+          39300
         ],
         "componentSpacing": 1000,
         "portRadius": 700,
@@ -343,6 +404,37 @@
       ],
       "layers": [
         "4952d7a0-f16c-11eb-8c04-ff751cb31c4c"
+      ]
+    },
+    {
+      "id": "8930e810-376e-11f1-b572-e1b82a6fa485",
+      "name": "Valve3D_control_1",
+      "entity": "VALVE3D",
+      "params": {
+        "position": [
+          48800,
+          48800
+        ],
+        "rotation": 90,
+        "componentSpacing": 1000,
+        "valveRadius": 1200,
+        "height": 250,
+        "gap": 600,
+        "width": 2400,
+        "length": 2400
+      },
+      "x-span": 2400,
+      "y-span": 2400,
+      "ports": [
+        {
+          "x": 0,
+          "y": 0,
+          "layer": "CONTROL",
+          "label": "1"
+        }
+      ],
+      "layers": [
+        "4952feb0-f16c-11eb-8c04-ff751cb31c4c"
       ]
     }
   ],
@@ -373,12 +465,12 @@
           },
           "wayPoints": [
             [
-              10000,
-              10000
+              40000,
+              20000
             ],
             [
-              10000,
-              30000
+              40000,
+              40000
             ]
           ],
           "features": []
@@ -387,52 +479,52 @@
       "params": {
         "start": [
           "Point",
-          10000,
-          10000
+          40000,
+          20000
         ],
         "end": [
-          10000,
-          30000
+          40000,
+          40000
         ],
         "wayPoints": [
           [
-            10000,
-            10000
+            40000,
+            20000
           ],
           [
-            10000,
-            30000
+            40000,
+            40000
           ]
         ],
         "segments": [
           [
             [
-              10000,
-              10000
+              40000,
+              20000
             ],
             [
-              10000,
-              10000
+              40000,
+              20000
             ]
           ],
           [
             [
-              10000,
-              10000
+              40000,
+              20000
             ],
             [
-              10000,
-              30000
+              40000,
+              40000
             ]
           ],
           [
             [
-              10000,
-              30000
+              40000,
+              40000
             ],
             [
-              10000,
-              30000
+              40000,
+              40000
             ]
           ]
         ],
@@ -443,7 +535,14 @@
       "layer": "4952d7a0-f16c-11eb-8c04-ff751cb31c4c"
     }
   ],
-  "valves": [],
+  "valves": [
+    {
+      "componentid": "8930e810-376e-11f1-b572-e1b82a6fa485",
+      "connectionid": "7de13f00-376e-11f1-b572-e1b82a6fa485",
+      "type": "NORMALLY_OPEN",
+      "params": {}
+    }
+  ],
   "features": [],
   "version": "1.2"
 }

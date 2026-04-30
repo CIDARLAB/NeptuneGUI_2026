@@ -1,10 +1,10 @@
 {
-  "_LFR_filename": "Mux.lfr",
+  "_LFR_filename": "mux.lfr",
   "_LFR_source": [
     "// Minimal LFR case corresponding to a 1-to-8 MUX (multiplexer, fanout).",
-    "// Matches the MINT primitive `MUX ... in=1 out=8` in QuickTest/default/MINT/Mux.mint.",
+    "// Matches the MINT primitive `MUX ... in=1 out=8` in QuickTest/default/MINT/mux.mint.",
     "// The 3-bit control signal `c_select` steers the single input to one of eight outputs.",
-    "module Mux(",
+    "module mux(",
     "    finput input,",
     "    foutput [0:7] outputs,",
     "    control [0:2] c_select",
@@ -24,7 +24,7 @@
     "    end",
     "endmodule"
   ],
-  "_MINT_filename": "Mux.mint",
+  "_MINT_filename": "mux.mint",
   "_MINT_source": [
     "DEVICE mux",
     "",
@@ -52,8 +52,8 @@
           "macro": "Mux",
           "params": {
             "position": [
-              40000,
-              20000
+              39962.79844045862,
+              19904.487818650774
             ],
             "componentSpacing": 1000,
             "flowChannelWidth": 800,
@@ -89,8 +89,8 @@
           "macro": "Mux_control",
           "params": {
             "position": [
-              40000,
-              20000
+              39962.79844045862,
+              19904.487818650774
             ],
             "componentSpacing": 1000,
             "flowChannelWidth": 800,
@@ -140,8 +140,8 @@
           "macro": "Mux",
           "params": {
             "position": [
-              40000,
-              20000
+              39962.79844045862,
+              19904.487818650774
             ],
             "componentSpacing": 1000,
             "flowChannelWidth": 800,
@@ -180,8 +180,8 @@
           "macro": "Mux_control",
           "params": {
             "position": [
-              40000,
-              20000
+              39962.79844045862,
+              19904.487818650774
             ],
             "componentSpacing": 1000,
             "flowChannelWidth": 800,
@@ -224,8 +224,8 @@
       "entity": "MUX",
       "params": {
         "position": [
-          16400,
-          20000
+          16362.798440458615,
+          19904.487818650774
         ],
         "componentSpacing": 1000,
         "flowChannelWidth": 800,

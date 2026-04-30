@@ -80,8 +80,7 @@ NeptuneGUI opens **[https://3duf.org/](https://3duf.org/)** in a new tab and sen
 
 For development, temporarily set `THREE_DUF_APP_URL` in `src/lib/open3DuFPostMessage.js` to your local origin (for example `http://localhost:8082`), rebuild or refresh the GUI, then run 3DuF from a local clone (see [CIDARLAB/3DuF](https://github.com/CIDARLAB/3DuF), branch `webpack-build-2`).
 
-- **Admin:** username `cidar`, password `12345`
-- **Guest:** click “Continue as Guest” to try without an account (data is temporary)
+- **Accounts:** Neptune GUI is **online guest–only** in this product. There is **no** in-app user registration; you use the app as a session guest. **We do not keep your work on the server for you.** Export (ZIP / downloads) anything you care about—**refreshing or reopening the page clears all non-default data** (your workspaces, uploads, imported library components, and DIY overrides to built-in components). Data loss from not exporting is **not** recoverable here.
 
 - **Run LFR and compile:** see **[RUN_LFR.md](./RUN_LFR.md)** (connect Editor to Neptune_2026 and store output in Data).
 - More details: **TESTING.md**, **Data/README.md**.

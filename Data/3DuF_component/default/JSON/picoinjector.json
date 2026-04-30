@@ -1,12 +1,12 @@
 {
-  "_LFR_filename": "Picoinjector.lfr",
+  "_LFR_filename": "picoinjector.lfr",
   "_LFR_source": [
     "// Minimal LFR case corresponding to a PICOINJECTOR.",
-    "// Matches the MINT primitive in QuickTest/default/MINT/Picoinjector.mint.",
+    "// Matches the MINT primitive in QuickTest/default/MINT/picoinjector.mint.",
     "// A passing droplet stream `droplet_in` is merged with a reagent stream",
     "// `inject_in` when the electrode control signal `c` is asserted, yielding",
     "// the picoinjected droplet stream `droplet_out`.",
-    "module Picoinjector(",
+    "module picoinjector(",
     "    finput droplet_in, inject_in,",
     "    foutput droplet_out,",
     "    control c",
@@ -24,7 +24,7 @@
     "    end",
     "endmodule"
   ],
-  "_MINT_filename": "Picoinjector.mint",
+  "_MINT_filename": "picoinjector.mint",
   "_MINT_source": [
     "DEVICE picoinjector",
     "",
@@ -52,8 +52,8 @@
           "macro": "PicoInjection",
           "params": {
             "position": [
-              9899.864017953589,
-              10096.876475254192
+              39899.86401795359,
+              20096.87647525419
             ],
             "componentSpacing": 1000,
             "height": 250,
@@ -98,8 +98,8 @@
           "macro": "PicoInjection_integration",
           "params": {
             "position": [
-              9899.864017953589,
-              10096.876475254192
+              39899.86401795359,
+              20096.87647525419
             ],
             "componentSpacing": 1000,
             "height": 250,
@@ -142,8 +142,8 @@
           "macro": "PicoInjection",
           "params": {
             "position": [
-              9899.864017953589,
-              10096.876475254192
+              39899.86401795359,
+              20096.87647525419
             ],
             "componentSpacing": 1000,
             "height": 250,
@@ -194,8 +194,8 @@
           "macro": "PicoInjection_integration",
           "params": {
             "position": [
-              9899.864017953589,
-              10096.876475254192
+              39899.86401795359,
+              20096.87647525419
             ],
             "componentSpacing": 1000,
             "height": 250,
@@ -228,8 +228,8 @@
       "entity": "PICOINJECTOR",
       "params": {
         "position": [
-          4899.864017953589,
-          6296.876475254192
+          34899.86401795359,
+          16296.876475254192
         ],
         "componentSpacing": 1000,
         "height": 250,

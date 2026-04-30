@@ -1,11 +1,51 @@
 /**
- * Guest workspace storage: localStorage so data survives tab close.
- * Guest can export to a file (save to a path) and later import from that file to restore.
+ * Guest workspace storage in localStorage (survives SPA navigation within one tab).
+ *
+ * Neptune GUI is online guest–only: there are no registered accounts. Each full browser
+ * load of the app resets local guest state to defaults (Example seeds only). Users must
+ * export if they want to keep data; refresh or reopening the tab discards non-default work.
+ *
+ * Server-side guest cookie data and Data/3DuF_component/tmp overrides are cleared via
+ * POST /api/v2/guest/clearBrowserReloadState on each GUI document load.
  */
 
 import { EXAMPLE_SEED_SPECS } from './exampleSeedSpecs'
 
 const KEY = 'neptune_guest_data'
+
+/** True when this page load was triggered by an explicit reload (F5), not first visit. */
+export function isBrowserReloadNavigation () {
+  try {
+    const nav = performance.getEntriesByType && performance.getEntriesByType('navigation')[0]
+    if (nav && nav.type === 'reload') return true
+  } catch (_) {}
+  try {
+    const perfNav = performance.navigation
+    if (perfNav && perfNav.type === perfNav.TYPE_RELOAD) return true
+  } catch (_) {}
+  return false
+}
+
+/**
+ * Each full load of the Neptune GUI document: wipe local guest workspaces/files, then
+ * rebuild only the bundled Example workspace (non-default content is not kept).
+ */
+export function resetGuestLocalStoreToDefaultsOnly () {
+  save({ workspaces: [], nextWorkspaceId: 1, nextFileId: 1 })
+  ensureExampleWorkspace()
+}
+
+/**
+ * Align server with guest-only policy: clear guest Temp dir when cookie is guest, and
+ * always remove built-in component tmp JSON overrides (see clearBrowserReloadState).
+ */
+export async function syncServerEphemeralStateAfterGuiPageLoad (axiosInstance) {
+  const ax = axiosInstance
+  if (!ax || typeof ax.post !== 'function') return
+  try {
+    await ax.post('/api/v2/guest/clearBrowserReloadState', {}, { withCredentials: true })
+  } catch (_) {}
+}
 
 export const EXAMPLE_WORKSPACE_NAME = 'Example'
 

@@ -156,6 +156,24 @@ app.post('/api/v2/guest', (req, res) => {
   res.json({ user: { _id: sessionId, email: 'guest@session', isGuest: true } })
 })
 
+/**
+ * Called once each time the Neptune GUI document loads (online guest mode).
+ * Clears guest Temp session when cookie is guest; clears imported component rows for
+ * user/admin cookies too (legacy login otherwise keeps uploads such as "terrace").
+ * Always removes Data/3DuF_component/tmp JSON overrides.
+ */
+app.post('/api/v2/guest/clearBrowserReloadState', (req, res) => {
+  const clearedTmp = !!data.clearAllComponentTmpJsonFiles()
+  const session = parseSession(req)
+  let clearedSession = false
+  if (session && session.type === 'guest') {
+    clearedSession = !!data.clearGuestSessionUserData(session)
+  } else if (session && (session.type === 'user' || session.type === 'admin')) {
+    clearedSession = !!data.clearSessionImportedComponents(session)
+  }
+  return res.json({ ok: true, clearedSession, clearedTmp })
+})
+
 // ---------- Workspaces ----------
 app.get('/api/v1/workspaces', requireAuth, (req, res) => {
   const ids = data.getWorkspaceIds(req.session)

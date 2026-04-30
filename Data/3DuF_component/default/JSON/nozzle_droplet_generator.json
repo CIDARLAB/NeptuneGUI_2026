@@ -1,13 +1,13 @@
 {
-  "_LFR_filename": "NozzleDropletGenerator.lfr",
+  "_LFR_filename": "nozzle_droplet_generator.lfr",
   "_LFR_source": [
     "// Minimal LFR case corresponding to a NOZZLE DROPLET GENERATOR.",
-    "// Matches the MINT primitive in QuickTest/default/MINT/NozzleDropletGenerator.mint.",
+    "// Matches the MINT primitive in QuickTest/default/MINT/nozzle_droplet_generator.mint.",
     "// A continuous oil phase and a dispersed water phase converge at a",
     "// flow-focusing nozzle to produce a droplet output stream.",
     "// The #MAP / #CONSTRAIN directives tell the technology mapper to realize",
     "// the `&` operator as a NOZZLE DROPLET GENERATOR with a target droplet rate.",
-    "module NozzleDropletGenerator(",
+    "module nozzle_droplet_generator(",
     "    finput oil_in, water_in,",
     "    foutput droplet_out",
     ");",
@@ -16,13 +16,13 @@
     "    assign droplet_out = oil_in & water_in;",
     "endmodule"
   ],
-  "_MINT_filename": "NozzleDropletGenerator.mint",
+  "_MINT_filename": "nozzle_droplet_generator.mint",
   "_MINT_source": [
-    "DEVICE nozzledropletgenerator",
+    "DEVICE nozzle_droplet_generator",
     "",
     "LAYER FLOW",
     "",
-    "NOZZLE DROPLET GENERATOR nozzledropletgenerator componentSpacing=1000 orificeSize=200 orificeLength=400 oilInputWidth=800 waterInputWidth=600 outputWidth=600 outputLength=600 height=250 rotation=0;",
+    "NOZZLE DROPLET GENERATOR nozzle_droplet_generator_1 componentSpacing=1000 orificeSize=200 orificeLength=400 oilInputWidth=800 waterInputWidth=600 outputWidth=600 outputLength=600 height=250 rotation=0;",
     "",
     "END LAYER"
   ],
@@ -44,8 +44,8 @@
           "macro": "DropletGen",
           "params": {
             "position": [
-              10000,
-              10000
+              40000,
+              20000
             ],
             "componentSpacing": 1000,
             "orificeSize": 200,
@@ -101,8 +101,8 @@
           "macro": "DropletGen",
           "params": {
             "position": [
-              10000,
-              10000
+              40000,
+              20000
             ],
             "componentSpacing": 1000,
             "orificeSize": 200,
@@ -154,8 +154,8 @@
       "entity": "NOZZLE DROPLET GENERATOR",
       "params": {
         "position": [
-          10000,
-          9700
+          40000,
+          19700
         ],
         "componentSpacing": 1000,
         "orificeSize": 200,

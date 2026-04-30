@@ -1,5 +1,5 @@
 // Minimal LFR case corresponding to a single CHANNEL between two ports.
-module Channel(
+module channel(
     finput src,
     foutput dst
 );

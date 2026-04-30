@@ -132,6 +132,23 @@ function resetComponentTmpJson (syntax) {
   return true
 }
 
+/** Remove all JSON overrides under Data/3DuF_component/tmp (DIY edits to built-in components). */
+function clearAllComponentTmpJsonFiles () {
+  ensureDirs()
+  if (!fs.existsSync(COMPONENT_TMP_DIR)) return true
+  try {
+    for (const name of fs.readdirSync(COMPONENT_TMP_DIR)) {
+      if (!/\.json$/i.test(name)) continue
+      try {
+        fs.unlinkSync(path.join(COMPONENT_TMP_DIR, name))
+      } catch (_) {}
+    }
+  } catch (_) {
+    return false
+  }
+  return true
+}
+
 function getAdmin () {
   ensureDirs()
   const raw = fs.readFileSync(ADMIN_FILE, 'utf8')
@@ -409,6 +426,50 @@ function saveComponentLibrary (session, data) {
   return true
 }
 
+/** Guest Temp session only: empty workspaces, remove per-workspace file blobs, clear custom library imports. */
+function clearGuestSessionUserData (session) {
+  if (!session || session.type !== 'guest' || !session.id) return false
+  ensureSessionDir(session)
+  const dir = getTempDir(session.id)
+  if (dir && fs.existsSync(dir)) {
+    try {
+      const entries = fs.readdirSync(dir)
+      for (const name of entries) {
+        if (name.startsWith('workspace_') && name.endsWith('_files.json')) {
+          try {
+            fs.unlinkSync(path.join(dir, name))
+          } catch (_) {}
+        }
+      }
+    } catch (_) {}
+  }
+  try {
+    saveWorkspaces(session, [])
+    saveComponentLibrary(session, { customComponents: [] })
+  } catch (_) {
+    return false
+  }
+  return true
+}
+
+/**
+ * Clear imported/custom component rows only (built-in defaults unchanged).
+ * Used on each GUI load for admin/user cookies so uploads like "terrace" do not persist
+ * when the product is treated as guest-only but legacy cookies remain.
+ */
+function clearSessionImportedComponents (session) {
+  if (!session || !session.id) return false
+  const t = session.type
+  if (t !== 'guest' && t !== 'user' && t !== 'admin') return false
+  try {
+    ensureSessionDir(session)
+    saveComponentLibrary(session, { customComponents: [] })
+    return true
+  } catch (_) {
+    return false
+  }
+}
+
 module.exports = {
   ensureDirs,
   getAdmin,
@@ -439,11 +500,14 @@ module.exports = {
   deleteFile,
   getComponentLibrary,
   saveComponentLibrary,
+  clearGuestSessionUserData,
+  clearSessionImportedComponents,
   sanitizeComponentSyntax,
   listDefaultComponentSyntaxes,
   loadComponentJson,
   saveComponentTmpJson,
   resetComponentTmpJson,
+  clearAllComponentTmpJsonFiles,
   getComponentDefaultPath,
   getComponentDefaultLfrPath,
   getComponentDefaultMintPath,

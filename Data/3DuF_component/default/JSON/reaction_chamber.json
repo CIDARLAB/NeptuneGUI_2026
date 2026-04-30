@@ -1,27 +1,26 @@
 {
-  "_LFR_filename": "Tree.lfr",
+  "_LFR_filename": "reaction_chamber.lfr",
   "_LFR_source": [
-    "// Minimal LFR case corresponding to a 1-to-8 fanout TREE.",
-    "// Matches the MINT primitive `TREE ... in=1 out=8` in QuickTest/default/MINT/Tree.mint.",
-    "// The single input is broadcast to an intermediate 8-wide flow bus and then",
-    "// routed to eight outputs. The LFR compiler realizes the 1->N broadcast as a",
-    "// physical TREE splitter during technology mapping.",
-    "module Tree(",
+    "// Minimal LFR case corresponding to a REACTION CHAMBER.",
+    "// Matches the MINT primitive `CHAMBER ...` in QuickTest/default/MINT/reaction_chamber.mint.",
+    "// Fluid flows into the chamber, undergoes an incubation / reaction step",
+    "// (mapped to the `~` operator), and flows out. #MAP directs the technology",
+    "// mapper to realize `~` as a physical reaction chamber.",
+    "module reaction_chamber(",
     "    finput in_1,",
-    "    foutput [0:7] outputs",
+    "    foutput out_1",
     ");",
-    "    flow [0:7] temp;",
-    "    assign temp[0:7] = in_1;",
-    "    assign outputs[0:7] = temp[0:7];",
+    "    #MAP \"CHAMBER\" \"~\"",
+    "    assign out_1 = ~in_1;",
     "endmodule"
   ],
-  "_MINT_filename": "Tree.mint",
+  "_MINT_filename": "reaction_chamber.mint",
   "_MINT_source": [
-    "DEVICE tree",
+    "DEVICE reaction_chamber",
     "",
     "LAYER FLOW",
     "",
-    "TREE tree componentSpacing=1000 flowChannelWidth=800 rotation=0 spacing=4000 in=1 out=8 width=2460 height=250 stageLength=4000;",
+    "CHAMBER reaction_chamber_1 componentSpacing=1000 width=5000 length=5000 height=1100 cornerRadius=200 rotation=0;",
     "",
     "END LAYER"
   ],
@@ -32,34 +31,31 @@
   },
   "renderLayers": [
     {
-      "id": "db3382e3-3de4-11f1-b6d5-a5f355496edf",
+      "id": "6ab51983-3de3-11f1-a242-89896c81f7a2",
       "name": "RenderLayerFlow_1",
       "modellayer": "4952d7a0-f16c-11eb-8c04-ff751cb31c4c",
       "type": "FLOW",
       "features": [
         {
-          "id": "e6979e50-3de4-11f1-b6d5-a5f355496edf",
+          "id": "7026d660-3de3-11f1-a242-89896c81f7a2",
           "name": "New Feature",
-          "macro": "Tree",
+          "macro": "Chamber",
           "params": {
             "position": [
-              10000,
-              10000
+              40000,
+              20000
             ],
             "componentSpacing": 1000,
-            "flowChannelWidth": 800,
-            "rotation": 0,
-            "spacing": 4000,
-            "in": 1,
-            "out": 8,
-            "width": 2460,
+            "width": 5000,
+            "length": 5000,
             "height": 250,
-            "stageLength": 4000,
+            "cornerRadius": 200,
+            "rotation": 0,
             "mirrorByX": 0,
             "mirrorByY": 0
           },
           "type": "XY",
-          "referenceID": "e6981380-3de4-11f1-b6d5-a5f355496edf",
+          "referenceID": "70274b90-3de3-11f1-a242-89896c81f7a2",
           "dxfData": [],
           "layerID": "4952d7a0-f16c-11eb-8c04-ff751cb31c4c"
         }
@@ -67,7 +63,7 @@
       "color": "indigo"
     },
     {
-      "id": "db3382e4-3de4-11f1-b6d5-a5f355496edf",
+      "id": "6ab51984-3de3-11f1-a242-89896c81f7a2",
       "name": "RenderLayerControl_1",
       "modellayer": "4952feb0-f16c-11eb-8c04-ff751cb31c4c",
       "type": "CONTROL",
@@ -75,7 +71,7 @@
       "color": "red"
     },
     {
-      "id": "db3382e5-3de4-11f1-b6d5-a5f355496edf",
+      "id": "6ab51985-3de3-11f1-a242-89896c81f7a2",
       "name": "RenderLayerIntegration_1",
       "modellayer": "4952feb1-f16c-11eb-8c04-ff751cb31c4c",
       "type": "INTEGRATION",
@@ -95,28 +91,25 @@
       },
       "features": [
         {
-          "id": "e6979e50-3de4-11f1-b6d5-a5f355496edf",
+          "id": "7026d660-3de3-11f1-a242-89896c81f7a2",
           "name": "New Feature",
-          "macro": "Tree",
+          "macro": "Chamber",
           "params": {
             "position": [
-              10000,
-              10000
+              40000,
+              20000
             ],
             "componentSpacing": 1000,
-            "flowChannelWidth": 800,
-            "rotation": 0,
-            "spacing": 4000,
-            "in": 1,
-            "out": 8,
-            "width": 2460,
+            "width": 5000,
+            "length": 5000,
             "height": 250,
-            "stageLength": 4000,
+            "cornerRadius": 200,
+            "rotation": 0,
             "mirrorByX": 0,
             "mirrorByY": 0
           },
           "type": "XY",
-          "referenceID": "e6981380-3de4-11f1-b6d5-a5f355496edf",
+          "referenceID": "70274b90-3de3-11f1-a242-89896c81f7a2",
           "dxfData": [],
           "layerID": "4952d7a0-f16c-11eb-8c04-ff751cb31c4c"
         }
@@ -148,82 +141,49 @@
   "groups": [],
   "components": [
     {
-      "id": "e6981380-3de4-11f1-b6d5-a5f355496edf",
-      "name": "Tree_1",
-      "entity": "TREE",
+      "id": "70274b90-3de3-11f1-a242-89896c81f7a2",
+      "name": "Chamber_1",
+      "entity": "REACTION CHAMBER",
       "params": {
         "position": [
-          -7900,
-          10000
+          37500,
+          17500
         ],
         "componentSpacing": 1000,
-        "flowChannelWidth": 800,
-        "rotation": 0,
-        "spacing": 4000,
-        "in": 1,
-        "out": 8,
-        "width": 2460,
+        "width": 5000,
+        "length": 5000,
         "height": 250,
-        "stageLength": 4000,
+        "cornerRadius": 200,
+        "rotation": 0,
         "mirrorByX": 0,
         "mirrorByY": 0
       },
-      "x-span": 35800,
-      "y-span": 18400,
+      "x-span": 5000,
+      "y-span": 5000,
       "ports": [
         {
           "x": 0,
-          "y": 0,
+          "y": -2500,
           "layer": "FLOW",
           "label": "1"
         },
         {
-          "x": 17500,
-          "y": 18400,
+          "x": 2500,
+          "y": 0,
           "layer": "FLOW",
           "label": "2"
         },
         {
-          "x": 12500,
-          "y": 18400,
+          "x": 0,
+          "y": 2500,
           "layer": "FLOW",
           "label": "3"
         },
         {
-          "x": 7500,
-          "y": 18400,
+          "x": -2500,
+          "y": 0,
           "layer": "FLOW",
           "label": "4"
-        },
-        {
-          "x": 2500,
-          "y": 18400,
-          "layer": "FLOW",
-          "label": "5"
-        },
-        {
-          "x": -2500,
-          "y": 18400,
-          "layer": "FLOW",
-          "label": "6"
-        },
-        {
-          "x": -7500,
-          "y": 18400,
-          "layer": "FLOW",
-          "label": "7"
-        },
-        {
-          "x": -12500,
-          "y": 18400,
-          "layer": "FLOW",
-          "label": "8"
-        },
-        {
-          "x": -17500,
-          "y": 18400,
-          "layer": "FLOW",
-          "label": "9"
         }
       ],
       "layers": [

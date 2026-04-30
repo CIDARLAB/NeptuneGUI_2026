@@ -16,6 +16,7 @@ import axios from "axios";
 import App from "./App.vue";
 import router from "./router";
 import store from "./store";
+import { resetGuestLocalStoreToDefaultsOnly, syncServerEphemeralStateAfterGuiPageLoad } from "@/lib/guestStore";
 import "@mdi/font/css/materialdesignicons.css";
 import "./plugins/base";
 
@@ -62,16 +63,25 @@ Vue.use(
   })
 );
 
-router.beforeEach((to, from, next) => {
+resetGuestLocalStoreToDefaultsOnly();
+
+let guiPageLoadServerSyncDone = false;
+
+router.beforeEach(async (to, from, next) => {
+  if (!guiPageLoadServerSyncDone) {
+    guiPageLoadServerSyncDone = true;
+    await syncServerEphemeralStateAfterGuiPageLoad(axios);
+  }
+
   const authRequired = to.matched.some(route => route.meta.requiresAuth);
-  const canAccess = store.getters.canAccessApp; // logged-in user or guest
+  const canAccess = store.getters.canAccessApp;
 
   if (canAccess && (to.path === '' || to.path === '/')) {
     next('/dashboard');
     return;
   }
   if (authRequired && !canAccess) {
-    // App now runs in no-login mode; auto-enter local mode.
+    // Guest-only product mode: no registered login; local Vuex guest session.
     store.commit('setGuest');
     next('/dashboard');
     return;
@@ -79,18 +89,17 @@ router.beforeEach((to, from, next) => {
   next();
 });
 
-// Warn when leaving during guest mode (tab close / refresh).
-// Note: browsers do not allow custom text or buttons in this dialog.
+// Guest-only product: always confirm before closing the tab/window, refreshing, or
+// navigating away. Browsers show a generic message (custom text is not allowed).
+// Next time Neptune is opened, only bundled defaults remain unless the user exported.
 window.addEventListener('beforeunload', (e) => {
   try {
-    // No-login product mode: always warn user to export before leaving.
-    if (!store.getters.canAccessApp) return;
     e.preventDefault();
-    // Chrome requires returnValue to be set.
+    // Chrome requires returnValue to be set for the dialog to appear.
     e.returnValue = '';
     return '';
   } catch (_) {
-    // If store is unavailable, do nothing.
+    // If the event object is unavailable, do nothing.
   }
 });
 

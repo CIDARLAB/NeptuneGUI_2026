@@ -1,10 +1,10 @@
 // Minimal LFR case corresponding to a NOZZLE DROPLET GENERATOR.
-// Matches the MINT primitive in QuickTest/default/MINT/NozzleDropletGenerator.mint.
+// Matches the MINT primitive in QuickTest/default/MINT/nozzle_droplet_generator.mint.
 // A continuous oil phase and a dispersed water phase converge at a
 // flow-focusing nozzle to produce a droplet output stream.
 // The #MAP / #CONSTRAIN directives tell the technology mapper to realize
 // the `&` operator as a NOZZLE DROPLET GENERATOR with a target droplet rate.
-module NozzleDropletGenerator(
+module nozzle_droplet_generator(
     finput oil_in, water_in,
     foutput droplet_out
 );

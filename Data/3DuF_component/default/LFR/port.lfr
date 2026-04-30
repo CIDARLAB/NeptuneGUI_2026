@@ -1,6 +1,6 @@
 // Minimal LFR case corresponding to a basic PORT path.
 // Result is a direct inlet->outlet connection (PORT + CHANNEL in compiled output).
-module Port(
+module port(
     finput in_1,
     foutput out_1
 );

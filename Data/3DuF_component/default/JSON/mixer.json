@@ -1,21 +1,20 @@
 {
-  "_LFR_filename": "Port.lfr",
+  "_LFR_filename": "mixer.lfr",
   "_LFR_source": [
-    "// Minimal LFR case corresponding to a basic PORT path.",
-    "// Result is a direct inlet->outlet connection (PORT + CHANNEL in compiled output).",
-    "module Port(",
-    "    finput in_1,",
+    "// Minimal LFR case corresponding to a basic MIXER.",
+    "module mixer(",
+    "    finput in_1, in_2,",
     "    foutput out_1",
     ");",
-    "    assign out_1 = in_1;",
+    "    assign out_1 = in_1 + in_2;",
     "endmodule"
   ],
-  "_MINT_filename": "Port.mint",
+  "_MINT_filename": "mixer.mint",
   "_MINT_source": [
-    "DEVICE port",
+    "DEVICE mixer",
     "",
     "LAYER FLOW",
-    "PORT port_1 componentSpacing=1000.0 portRadius=700.0 height=1100.0;",
+    "MIXER mixer_1 componentSpacing=1000.0 channelWidth=800.0 bendSpacing=1230.0 numberOfBends=1.0 rotation=0.0 bendLength=2460.0 height=250.0;",
     "END LAYER"
   ],
   "name": "My Other Device",
@@ -25,26 +24,32 @@
   },
   "renderLayers": [
     {
-      "id": "41a86043-376e-11f1-8259-5d8d47e5f884",
+      "id": "2d2425f0-376e-11f1-ab95-cbe8493028d6",
       "name": "RenderLayerFlow_1",
       "modellayer": "4952d7a0-f16c-11eb-8c04-ff751cb31c4c",
       "type": "FLOW",
       "features": [
         {
-          "id": "575b0870-376e-11f1-8259-5d8d47e5f884",
+          "id": "31009cd0-376e-11f1-ab95-cbe8493028d6",
           "name": "New Feature",
-          "macro": "Port",
+          "macro": "BetterMixer",
           "params": {
             "position": [
-              10000,
-              10000
+              40000,
+              20000
             ],
             "componentSpacing": 1000,
-            "portRadius": 700,
-            "height": 1100
+            "bendSpacing": 1230,
+            "numberOfBends": 1,
+            "channelWidth": 800,
+            "bendLength": 2460,
+            "rotation": 0,
+            "height": 250,
+            "mirrorByX": 0,
+            "mirrorByY": 0
           },
           "type": "XY",
-          "referenceID": "575c19e0-376e-11f1-8259-5d8d47e5f884",
+          "referenceID": "31016020-376e-11f1-ab95-cbe8493028d6",
           "dxfData": [],
           "layerID": "4952d7a0-f16c-11eb-8c04-ff751cb31c4c"
         }
@@ -52,7 +57,7 @@
       "color": "indigo"
     },
     {
-      "id": "41a86044-376e-11f1-8259-5d8d47e5f884",
+      "id": "2d2425f1-376e-11f1-ab95-cbe8493028d6",
       "name": "RenderLayerControl_1",
       "modellayer": "4952feb0-f16c-11eb-8c04-ff751cb31c4c",
       "type": "CONTROL",
@@ -60,7 +65,7 @@
       "color": "red"
     },
     {
-      "id": "41a86045-376e-11f1-8259-5d8d47e5f884",
+      "id": "2d2425f2-376e-11f1-ab95-cbe8493028d6",
       "name": "RenderLayerIntegration_1",
       "modellayer": "4952feb1-f16c-11eb-8c04-ff751cb31c4c",
       "type": "INTEGRATION",
@@ -80,20 +85,26 @@
       },
       "features": [
         {
-          "id": "575b0870-376e-11f1-8259-5d8d47e5f884",
+          "id": "31009cd0-376e-11f1-ab95-cbe8493028d6",
           "name": "New Feature",
-          "macro": "Port",
+          "macro": "BetterMixer",
           "params": {
             "position": [
-              10000,
-              10000
+              40000,
+              20000
             ],
             "componentSpacing": 1000,
-            "portRadius": 700,
-            "height": 1100
+            "bendSpacing": 1230,
+            "numberOfBends": 1,
+            "channelWidth": 800,
+            "bendLength": 2460,
+            "rotation": 0,
+            "height": 250,
+            "mirrorByX": 0,
+            "mirrorByY": 0
           },
           "type": "XY",
-          "referenceID": "575c19e0-376e-11f1-8259-5d8d47e5f884",
+          "referenceID": "31016020-376e-11f1-ab95-cbe8493028d6",
           "dxfData": [],
           "layerID": "4952d7a0-f16c-11eb-8c04-ff751cb31c4c"
         }
@@ -125,26 +136,38 @@
   "groups": [],
   "components": [
     {
-      "id": "575c19e0-376e-11f1-8259-5d8d47e5f884",
-      "name": "Port_1",
-      "entity": "PORT",
+      "id": "31016020-376e-11f1-ab95-cbe8493028d6",
+      "name": "BetterMixer_1",
+      "entity": "MIXER",
       "params": {
         "position": [
-          9300,
-          9300
+          40000,
+          20000
         ],
         "componentSpacing": 1000,
-        "portRadius": 700,
-        "height": 1100
+        "bendSpacing": 1230,
+        "numberOfBends": 1,
+        "channelWidth": 800,
+        "bendLength": 2460,
+        "rotation": 0,
+        "height": 250,
+        "mirrorByX": 0,
+        "mirrorByY": 0
       },
-      "x-span": 1400,
-      "y-span": 1400,
+      "x-span": 4060,
+      "y-span": 4860,
       "ports": [
         {
-          "x": 0,
+          "x": 2030,
           "y": 0,
           "layer": "FLOW",
           "label": "1"
+        },
+        {
+          "x": 2030,
+          "y": 4860,
+          "layer": "FLOW",
+          "label": "2"
         }
       ],
       "layers": [
