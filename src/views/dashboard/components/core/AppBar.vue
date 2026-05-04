@@ -174,7 +174,6 @@
   import { mapState, mapMutations } from 'vuex'
 
   import axios from 'axios'
-  import router from '../../../../router'
   import guestStore, { fileContentForZipExport } from '@/lib/guestStore'
   import JSZip from 'jszip'
 
@@ -243,6 +242,16 @@
         setDrawer: 'SET_DRAWER',
       }),
 
+      /** Leave Neptune in this tab (close if allowed, else blank page—not Landing). */
+      leaveApplication () {
+        try {
+          window.close()
+        } catch (_) {}
+        try {
+          window.location.replace('about:blank')
+        } catch (_) {}
+      },
+
       logout (event, context) {
         const isGuest = this.$store.getters.isGuest
 
@@ -260,7 +269,7 @@
           // Directly perform logout according to user type
           if (isGuest) {
             this.$store.commit('clearGuest')
-            router.push('/')
+            this.leaveApplication()
           } else {
             const config = {
               withCredentials: true,
@@ -268,8 +277,8 @@
               headers: { 'Content-Type': 'application/json' },
             }
             axios.get('/api/v2/logout', config)
-              .then(() => { router.push('/') })
-              .catch((error) => { console.log(error) })
+              .then(() => { this.leaveApplication() })
+              .catch((error) => { console.log(error); this.leaveApplication() })
           }
           return
         }
@@ -304,7 +313,7 @@
         this.guestLogoutDialog = false
         if (isGuest) {
           this.$store.commit('clearGuest')
-          router.push('/')
+          this.leaveApplication()
         } else {
           const config = {
             withCredentials: true,
@@ -312,8 +321,8 @@
             headers: { 'Content-Type': 'application/json' },
           }
           axios.get('/api/v2/logout', config)
-            .then(() => { router.push('/') })
-            .catch((error) => { console.log(error) })
+            .then(() => { this.leaveApplication() })
+            .catch((error) => { console.log(error); this.leaveApplication() })
         }
       },
 
@@ -385,7 +394,7 @@
 
           if (isGuest) {
             this.$store.commit('clearGuest')
-            router.push('/')
+            this.leaveApplication()
           } else {
             const config = {
               withCredentials: true,
@@ -393,8 +402,8 @@
               headers: { 'Content-Type': 'application/json' },
             }
             axios.get('/api/v2/logout', config)
-              .then(() => { router.push('/') })
-              .catch((error) => { console.log(error) })
+              .then(() => { this.leaveApplication() })
+              .catch((error) => { console.log(error); this.leaveApplication() })
           }
         } catch (e) {
           // If export fails, still close dialog but keep session so user can try again

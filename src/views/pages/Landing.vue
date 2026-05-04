@@ -10,7 +10,7 @@
 
     <v-row justify="center" align="center" class="fill-height landing-content-row">
       <v-col cols="12" md="9" lg="8" class="text-center">
-        <p class="mt-2 landing-guest-text">
+        <p class="mt-2 landing-guest-text landing-main-disclaimer">
           Neptune runs in <strong>online guest mode only</strong>—there is no sign-up. We do not store your work for you: use <strong>Export</strong> to save workspaces and component library state you care about. <strong>Refreshing or opening this site again removes everything except the built-in examples and default component library.</strong> If you do not export, data loss is not our responsibility.
         </p>
       </v-col>
@@ -91,6 +91,10 @@
   font-size: 15pt;
   opacity: 0.92;
 }
+.landing-main-disclaimer {
+  transform: translateY(-20pt);
+}
+
 .landing-guest-text {
   max-width: 1280px;
   margin-left: auto;

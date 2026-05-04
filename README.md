@@ -16,16 +16,27 @@ This section summarizes the **bring-your-own-key** path from **English descripti
 
 - **If your deployment includes** “API / model settings” (names vary): choose provider → paste key → save; use **test connection** if offered.
 - **If your deployment includes** a dedicated **English → LFR** screen: describe the design in English, pick a model if available, run **Generate LFR**, then review compile results and iterate.
-- **This open-source NeptuneGUI_2026** focuses on the **Editor**, workspace files, and compile integration with Neptune_2026 (see **[RUN_LFR.md](./RUN_LFR.md)**). It **does not require** in-app cloud API key fields to be present. For LLM-assisted authoring, use the **Editor** sidebar **“LLM prompts”**: download the **prompt `.zip`**, use the files with your provider’s chat or API, then paste LFR back into the Editor.
+- **This open-source NeptuneGUI_2026** focuses on the **Editor**, workspace files, and compile integration with Neptune_2026 (see **[RUN_LFR.md](./RUN_LFR.md)**). It **does not require** in-app cloud API key fields to be present. For LLM-assisted authoring, use the **Editor** sidebar **“LLM prompts”**: **export** the **prompt `.zip`**, use the files with your provider’s chat or API, then paste LFR back into the Editor.
 
 ### In this GUI today
 
 | Step | What to do |
 |------|------------|
-| Prompts | **Editor** → sidebar **LLM prompts** → choose model → **Download** zip (`src/Prompt` templates). |
+| Prompts | **Editor** → sidebar **LLM prompts** → choose model → **Export prompt package (.zip)** (`src/Prompt` templates); optionally **Open … chat** for your provider. |
 | Guide | In-app page **`/prompt/steps`** (route `PromptSteps`) renders **[src/Prompt/Steps.md](./src/Prompt/Steps.md)**. |
 | Write LFR | Paste into **Editor**, set **Script language** to **LFR**, **Save** / **Compile** per **[RUN_LFR.md](./RUN_LFR.md)**. |
-| Export | Use **Download** / copy in the Editor as implemented in your build. |
+| Workspace backup | **Dashboard** → **Export workspaces** / **Import workspaces** (.zip restores workspaces and component-library cache). Same ZIP export is available from the sidebar **Export** button and when confirming exit (guest). |
+
+### Neptune screens (sidebar)
+
+These routes are what the **guest UI** exposes today:
+
+- **Dashboard** — Workspaces and files; **3DuF** on JSON rows; **Export workspaces** / **Import workspaces** (.zip).
+- **Editor** — Monaco editor; **Save**, **Compile**, per-file **Import** / **Export**; integrated **terminal** (talks to the local API / Neptune stack via Socket.IO per your setup); **LLM prompts** sidebar **only** on this route.
+- **Solutions** — **Jobs** table for compile runs: download outputs, open a job as a workspace, inspect files, delete jobs.
+- **Component Library** — Component table (syntax is **case-sensitive** in-app); **Import JSON component**; **DIY** overrides; **Go to 3DuF** per row.
+
+Legacy Material Dashboard demo routes (charts, maps, etc.) still exist under `src/router.js` but are **not** linked from the main drawer.
 
 ### Fees & privacy
 
@@ -80,7 +91,8 @@ NeptuneGUI opens **[https://3duf.org/](https://3duf.org/)** in a new tab and sen
 
 For development, temporarily set `THREE_DUF_APP_URL` in `src/lib/open3DuFPostMessage.js` to your local origin (for example `http://localhost:8082`), rebuild or refresh the GUI, then run 3DuF from a local clone (see [CIDARLAB/3DuF](https://github.com/CIDARLAB/3DuF), branch `webpack-build-2`).
 
-- **Accounts:** Neptune GUI is **online guest–only** in this product. There is **no** in-app user registration; you use the app as a session guest. **We do not keep your work on the server for you.** Export (ZIP / downloads) anything you care about—**refreshing or reopening the page clears all non-default data** (your workspaces, uploads, imported library components, and DIY overrides to built-in components). Data loss from not exporting is **not** recoverable here.
+- **Accounts:** Neptune GUI is **online guest–only**. There is **no** in-app user registration; protected routes use a **local guest session** (see `src/main.js`). **We do not keep your work on the server for you.** Use **Export workspaces** (ZIP includes workspace files and `component_table.json` for the library cache), the sidebar **Export** button, or export-on-exit when offered. **Refreshing or reopening the site clears non-default data** (workspaces, uploads, imported library components, DIY overrides). Data loss from not exporting is **not** recoverable here.
+- **Server vs. GUI:** The bundled **`server/`** still implements **register/login** HTTP APIs for older deployments; **this GUI build does not use that flow.**
 
 - **Run LFR and compile:** see **[RUN_LFR.md](./RUN_LFR.md)** (connect Editor to Neptune_2026 and store output in Data).
 - More details: **TESTING.md**, **Data/README.md**.

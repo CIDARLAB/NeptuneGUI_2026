@@ -1,8 +1,8 @@
-/** Public 3DuF app opened by Neptune “open in 3DuF” actions. */
-export const THREE_DUF_APP_URL = 'https://3duf.org'
+/** 3DuF app opened by Neptune “open in 3DuF” actions (local dev: match your 3DuF dev server). */
+export const THREE_DUF_APP_URL = 'http://localhost:8082'
 
 // Module-level reference to the 3DuF tab we last opened, and the timestamp at
-// which that window finished navigating to 3duf.org for the first time. We
+// which that window finished navigating to the 3DuF app for the first time. We
 // use this to give the caller an "instant" path (<50 ms) when the same tab
 // is still open — the SPA is already mounted and its message listener is
 // attached, so a single postMessage lands immediately.
