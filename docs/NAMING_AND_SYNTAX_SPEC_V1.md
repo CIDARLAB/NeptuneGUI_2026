@@ -6,7 +6,7 @@ This document defines the naming and syntax normalization rules for Neptune MINT
 
 - Keep MINT and LFR visually distinct.
 - Make parser behavior predictable.
-- Allow GUI input to be user-friendly while preserving strict saved output.
+- Enforce strict LFR naming for imported custom components.
 
 ## 2) Canonical Internal Form
 
@@ -33,23 +33,34 @@ This document defines the naming and syntax normalization rules for Neptune MINT
 7. **Numbers and units keep numeric meaning**
    - Numeric value parsing MUST preserve value.
    - Unit formatting should be normalized by the parser/formatter policy.
-8. **GUI accepts flexible input**
-   - GUI may accept mixed case input for convenience.
-9. **Save/export is strict**
-   - When saved or exported, output MUST be normalized to strict mode casing.
+8. **Imported custom components must follow LFR naming**
+   - Import validation for custom components MUST enforce lowercase `snake_case` names.
+9. **GUI-assisted correction is optional, final naming is strict**
+   - If an imported component name violates LFR naming, GUI SHOULD prompt:
+     - `This component name does not follow LFR naming rules. Convert to lowercase snake_case?`
+   - If user confirms, GUI auto-converts before import commit.
+   - If user declines, import MUST be blocked with a clear error.
 10. **Round-trip stability**
    - `MINT -> AST -> MINT` and `LFR -> AST -> LFR` should produce stable normalized text.
 
 ## 4) Normalization Pipeline
 
-1. Parse user input (tolerant mode in GUI).
-2. Convert identifiers to canonical lowercase `snake_case` in AST.
-3. Validate syntax and semantic constraints.
-4. Emit output by target mode:
+1. Parse user input.
+2. Validate imported custom components against strict LFR lowercase `snake_case`.
+3. If invalid, show conversion confirmation dialog.
+4. Convert accepted identifiers to canonical lowercase `snake_case` in AST.
+5. Validate syntax and semantic constraints.
+6. Emit output by target mode:
    - MINT emitter: uppercase identifiers.
    - LFR emitter: lowercase identifiers.
 
-## 5) Examples
+## 5) GUI Display Requirement
+
+- In component library table view, component syntax MUST be displayed using LFR naming style.
+- Recommended fixed UI notice text:
+  - `Components in this library are displayed using the LFR naming standard (lowercase snake_case).`
+
+## 6) Examples
 
 1. Component type
    - Canonical: `droplet_generator`
@@ -77,15 +88,16 @@ This document defines the naming and syntax normalization rules for Neptune MINT
    - MINT export: `FLOW_RATE`
    - LFR export: `flow_rate`
 
-## 6) Suggested Validation Messages
+## 7) Suggested Validation Messages
 
 - `Invalid identifier: use letters, digits, and underscore only.`
 - `Invalid identifier format: use snake_case for multi-word names.`
 - `LFR requires lowercase identifiers.`
 - `MINT requires uppercase identifiers.`
-- `Identifier normalized from "<input>" to "<normalized>".`
+- `This component name does not follow LFR naming rules. Convert to lowercase snake_case?`
+- `Import blocked: custom component names must follow LFR lowercase snake_case.`
 
-## 7) Versioning
+## 8) Versioning
 
 - Version: `v1`
 - This spec applies to component library definitions and generated syntax views in both NeptuneGUI and Neptune compiler workflows.

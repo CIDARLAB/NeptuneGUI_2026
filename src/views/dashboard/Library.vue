@@ -11,8 +11,27 @@
               icon="mdi-information"
               class="mb-3 component-library-case-hint"
             >
-              Component syntax is <strong>case-sensitive</strong> and must match LFR tokens exactly.
-              When you import a JSON component, the name you enter becomes that syntax—use the same casing you will reference in LFR. DIY changes apply to the listed syntax only.
+              <div class="component-library-case-hint-row">
+                <div class="component-library-case-hint-text">
+                  <strong>All component syntax in the table below is shown using the LFR naming convention</strong>
+                  (lowercase <code>snake_case</code>; MINT uses the uppercase form, e.g.
+                  <code>droplet_generator</code> / <code>DROPLET_GENERATOR</code>).
+                  Custom components must be imported with names that strictly follow the LFR convention&mdash;non-conforming
+                  names will be flagged with an option to auto-convert.
+                </div>
+                <v-btn
+                  small
+                  outlined
+                  color="primary"
+                  class="component-library-spec-btn ml-3"
+                  :href="namingSpecUrl"
+                  target="_blank"
+                  rel="noopener"
+                >
+                  <v-icon left small>mdi-github</v-icon>
+                  View full spec
+                </v-btn>
+              </div>
             </v-alert>
             <div class="d-flex justify-end mb-3">
               <v-btn small class="import-json-btn white--text" @click="triggerJsonImport">
@@ -33,17 +52,24 @@
               :items-per-page="10"
               class="component-library-table"
             >
-              <template v-slot:header.name="{ header }">
-                <span>{{ header.text }}</span>
-                <v-tooltip bottom max-width="320">
-                  <template v-slot:activator="{ on, attrs }">
-                    <v-icon small class="ml-1" v-bind="attrs" v-on="on">mdi-help-circle-outline</v-icon>
-                  </template>
-                  <span>Component syntax is case-sensitive: it must match the LFR token exactly (e.g. VALVE100, not valve100). Import and DIY use this same spelling.</span>
-                </v-tooltip>
-              </template>
               <template v-slot:item.name="{ item }">
-                <code class="syntax-cell">{{ item.name || item.syntax }}</code>
+                <div class="syntax-cell-wrap">
+                  <code class="syntax-cell">{{ item.name || item.syntax }}</code>
+                  <v-tooltip v-if="descriptionFor(item)" bottom max-width="320">
+                    <template v-slot:activator="{ on, attrs }">
+                      <v-icon
+                        small
+                        class="ml-1 syntax-cell-help"
+                        v-bind="attrs"
+                        v-on="on"
+                        tabindex="0"
+                      >
+                        mdi-help-circle-outline
+                      </v-icon>
+                    </template>
+                    <span>{{ descriptionFor(item) }}</span>
+                  </v-tooltip>
+                </div>
               </template>
               <template v-slot:item.jsonScript="{ item }">
                 <v-btn small text color="primary" @click="openFileView(item, 'json')">View</v-btn>
@@ -164,7 +190,7 @@
         </v-card-title>
         <v-card-text>
           <p class="caption grey--text text--darken-1 mb-3">
-            Syntax is case-sensitive. In LFR, reference this component with the same spelling as shown above.
+            The name above is shown in LFR form (lowercase snake_case). Reference it as-is in LFR; in MINT use the uppercase form.
           </p>
           <div v-if="diyParamKeys.length === 0" class="grey--text text--darken-1">
             No editable numeric parameters were found for this component.
@@ -187,12 +213,50 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <v-dialog v-model="namingDialog" max-width="520px" persistent>
+      <v-card class="component-library-naming-dialog">
+        <v-card-title class="headline component-library-dialog-title">
+          Apply LFR naming convention?
+        </v-card-title>
+        <v-card-text>
+          <p class="mb-3">
+            The name you entered does not match the LFR naming convention
+            (lowercase <code>snake_case</code>).
+          </p>
+          <div class="naming-diff">
+            <div class="naming-diff-row">
+              <span class="naming-diff-label">You entered</span>
+              <code class="naming-diff-original">{{ namingDialogOriginal }}</code>
+            </div>
+            <div class="naming-diff-row">
+              <span class="naming-diff-label">LFR form</span>
+              <code class="naming-diff-normalized">{{ namingDialogNormalized }}</code>
+            </div>
+          </div>
+          <p class="caption grey--text text--darken-1 mt-3 mb-0">
+            Choose <strong>Use LFR name</strong> to import as
+            <code>{{ namingDialogNormalized }}</code>, or <strong>Cancel</strong>
+            to abort and re-enter the name yourself.
+          </p>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn text color="grey darken-1" @click="cancelNamingDialog">Cancel</v-btn>
+          <v-btn color="primary" depressed @click="confirmNamingDialog">Use LFR name</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
 <script>
 import axios from 'axios'
 import { openAndLoadDeviceIn3DuF } from '@/lib/open3DuFPostMessage'
+import {
+  LFR_NAMING_SPEC_URL,
+  validateAndNormalizeLfrName,
+} from '@/lib/lfrNaming'
 
 export default {
   name: 'Library',
@@ -220,6 +284,22 @@ export default {
       diyForm: {},
       guestSessionBootstrapped: false,
       removeBusySyntax: null,
+      namingSpecUrl: LFR_NAMING_SPEC_URL,
+      namingDialog: false,
+      namingDialogOriginal: '',
+      namingDialogNormalized: '',
+      namingDialogResolver: null,
+      defaultComponentDescriptions: {
+        channel: 'Microfluidic channel that conveys fluid between components.',
+        valve: 'Pneumatically actuated valve that gates flow on a channel.',
+        mixer: 'Serpentine mixer that combines two or more input streams via diffusion.',
+        mux: 'Multiplexer that routes one input to a selected output channel.',
+        port: 'External I/O port for connecting tubing or pressure lines to the chip.',
+        reaction_chamber: 'Chamber where reagents mix, react, or incubate.',
+        tree: 'Branching network that splits a single stream into multiple equal outputs.',
+        nozzle_droplet_generator: 'Flow-focusing nozzle that generates monodisperse droplets in a continuous phase.',
+        picoinjector: 'Injects picoliter volumes of reagent into passing droplets.',
+      },
     }
   },
   computed: {
@@ -238,6 +318,15 @@ export default {
       this.snackbarText = text
       this.snackbarColor = color
       this.snackbar = true
+    },
+    /**
+     * Return a short function description for a built-in default component, or '' otherwise.
+     * Custom-imported components have no canonical description, so the help icon stays hidden.
+     */
+    descriptionFor (item) {
+      if (!item || item.source === 'custom') return ''
+      const key = String(item.syntax || item.name || '').toLowerCase()
+      return this.defaultComponentDescriptions[key] || ''
     },
     /** Only session custom rows (upload / workspace import / zip restore), not built-in defaults. */
     isRemovableComponent (item) {
@@ -307,7 +396,32 @@ export default {
       const el = this.$refs.jsonImportInput
       if (el) el.click()
     },
-    onJsonImportSelected (e) {
+    /** Show the normalize-confirmation dialog and resolve true (Use LFR) / false (Cancel). */
+    askToNormalizeLfrName (originalName, normalizedName) {
+      return new Promise((resolve) => {
+        this.namingDialogOriginal = originalName
+        this.namingDialogNormalized = normalizedName
+        this.namingDialogResolver = resolve
+        this.namingDialog = true
+      })
+    },
+    confirmNamingDialog () {
+      const resolver = this.namingDialogResolver
+      this.closeNamingDialog()
+      if (resolver) resolver(true)
+    },
+    cancelNamingDialog () {
+      const resolver = this.namingDialogResolver
+      this.closeNamingDialog()
+      if (resolver) resolver(false)
+    },
+    closeNamingDialog () {
+      this.namingDialog = false
+      this.namingDialogOriginal = ''
+      this.namingDialogNormalized = ''
+      this.namingDialogResolver = null
+    },
+    async onJsonImportSelected (e) {
       const file = e && e.target && e.target.files && e.target.files[0]
       try { e.target.value = '' } catch (_) {}
       if (!file) return
@@ -316,31 +430,57 @@ export default {
         this.showSnack('Only .json files can be imported. Choose a file whose name ends with .json.', 'warning')
         return
       }
-      file.text()
-        .then((raw) => {
-          let parsed = null
-          try { parsed = JSON.parse(raw) } catch (_) {
-            this.showSnack('Imported file is not valid JSON.', 'error')
-            return
-          }
-          const baseName = String(file.name || 'component').replace(/\.json$/i, '')
-          const customName = window.prompt(
-            'Component name for library (case-sensitive; must match LFR token exactly):',
-            baseName
-          )
-          if (!customName || !String(customName).trim()) return
-          return axios.post('/api/v1/componentFiles/upload', {
-            name: String(customName).trim(),
-            jsonText: JSON.stringify(parsed),
-          }, this.apiConfig())
-            .then(() => {
-              this.showSnack('JSON component imported into component library.', 'success')
-              this.loadComponents()
-            })
-        })
-        .catch(() => {
-          this.showSnack('Failed to read imported file.', 'error')
-        })
+
+      let raw
+      try {
+        raw = await file.text()
+      } catch (_) {
+        this.showSnack('Failed to read imported file.', 'error')
+        return
+      }
+
+      let parsed
+      try {
+        parsed = JSON.parse(raw)
+      } catch (_) {
+        this.showSnack('Imported file is not valid JSON.', 'error')
+        return
+      }
+
+      const baseName = String(file.name || 'component').replace(/\.json$/i, '')
+      const customName = window.prompt(
+        'Component name for the library (LFR naming convention: lowercase snake_case, e.g. droplet_generator):',
+        baseName
+      )
+      if (!customName || !String(customName).trim()) return
+
+      const check = validateAndNormalizeLfrName(customName)
+      if (!check.valid) {
+        this.showSnack(`Invalid component name: ${check.reason}`, 'error')
+        return
+      }
+
+      let finalName = check.normalized
+      if (check.needsNormalization) {
+        const accepted = await this.askToNormalizeLfrName(String(customName).trim(), check.normalized)
+        if (!accepted) {
+          this.showSnack('Import canceled. Re-enter the name in LFR form (lowercase snake_case) to import.', 'warning')
+          return
+        }
+        finalName = check.normalized
+      }
+
+      try {
+        await axios.post('/api/v1/componentFiles/upload', {
+          name: finalName,
+          jsonText: JSON.stringify(parsed),
+        }, this.apiConfig())
+        this.showSnack(`JSON component imported as "${finalName}".`, 'success')
+        this.loadComponents()
+      } catch (err) {
+        const msg = (err.response && err.response.data && err.response.data.error) || err.message || 'Unknown error'
+        this.showSnack(`Failed to import component: ${msg}`, 'error')
+      }
     },
     closeFileDialog () {
       this.fileDialog = false
@@ -643,6 +783,43 @@ export default {
   font-weight: 600;
 }
 
+.component-library-case-hint >>> .v-alert__content code {
+  font-family: var(--neptune-font-code), monospace;
+  background: rgba(0, 105, 148, 0.08);
+  color: #006994;
+  padding: 0 4px;
+  border-radius: 3px;
+  font-size: 0.95em;
+}
+
+.theme--dark .component-library-case-hint >>> .v-alert__content code {
+  background: rgba(255, 255, 255, 0.08);
+  color: #80deea;
+}
+
+.component-library-case-hint-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.component-library-case-hint-text {
+  flex: 1 1 320px;
+  min-width: 0;
+}
+
+.component-library-spec-btn {
+  text-transform: none !important;
+  letter-spacing: normal !important;
+  flex: 0 0 auto;
+}
+
+.component-library-spec-btn >>> .v-btn__content {
+  text-transform: none !important;
+  letter-spacing: normal !important;
+}
+
 .component-library-table >>> .v-data-table__wrapper table thead th {
   font-size: var(--neptune-fs-label, 13.25pt) !important;
   font-weight: 600 !important;
@@ -679,6 +856,32 @@ export default {
   font-size: var(--neptune-fs-body, 14pt);
 }
 
+.component-library-table .syntax-cell-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.component-library-table .syntax-cell-help {
+  color: rgba(0, 105, 148, 0.6);
+  outline: none;
+  transition: color 120ms ease;
+}
+
+.component-library-table .syntax-cell-help:hover,
+.component-library-table .syntax-cell-help:focus {
+  color: #006994;
+}
+
+.theme--dark .component-library-table .syntax-cell-help {
+  color: rgba(128, 222, 234, 0.65);
+}
+
+.theme--dark .component-library-table .syntax-cell-help:hover,
+.theme--dark .component-library-table .syntax-cell-help:focus {
+  color: #80deea;
+}
+
 .component-library-dialog-title {
   font-size: var(--neptune-fs-section, 1.1875rem) !important;
   font-weight: 600 !important;
@@ -689,8 +892,83 @@ export default {
 .component-library-file-dialog .v-card__text,
 .component-library-file-dialog .v-card__actions,
 .component-library-diy-dialog .v-card__text,
-.component-library-diy-dialog .v-card__actions {
+.component-library-diy-dialog .v-card__actions,
+.component-library-naming-dialog .v-card__text,
+.component-library-naming-dialog .v-card__actions {
   font-size: var(--neptune-fs-body, 14pt) !important;
+}
+
+.component-library-naming-dialog .caption {
+  font-size: var(--neptune-fs-label, 13.25pt) !important;
+}
+
+.component-library-naming-dialog code {
+  font-family: var(--neptune-font-code), monospace;
+  background: rgba(0, 105, 148, 0.08);
+  color: #006994;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 0.95em;
+}
+
+.theme--dark .component-library-naming-dialog code {
+  background: rgba(255, 255, 255, 0.08);
+  color: #80deea;
+}
+
+.component-library-naming-dialog .naming-diff {
+  border: 1px solid rgba(0, 51, 73, 0.12);
+  border-radius: 6px;
+  padding: 10px 14px;
+  background: rgba(0, 105, 148, 0.03);
+}
+
+.theme--dark .component-library-naming-dialog .naming-diff {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.component-library-naming-dialog .naming-diff-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 0;
+}
+
+.component-library-naming-dialog .naming-diff-label {
+  flex: 0 0 110px;
+  color: rgba(0, 0, 0, 0.6);
+  font-size: var(--neptune-fs-label, 13.25pt);
+}
+
+.theme--dark .component-library-naming-dialog .naming-diff-label {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.component-library-naming-dialog .naming-diff-original {
+  color: #c62828;
+  background: rgba(198, 40, 40, 0.08);
+}
+
+.theme--dark .component-library-naming-dialog .naming-diff-original {
+  color: #ef9a9a;
+  background: rgba(239, 154, 154, 0.12);
+}
+
+.component-library-naming-dialog .naming-diff-normalized {
+  color: #2e7d32;
+  background: rgba(46, 125, 50, 0.08);
+}
+
+.theme--dark .component-library-naming-dialog .naming-diff-normalized {
+  color: #a5d6a7;
+  background: rgba(165, 214, 167, 0.12);
+}
+
+.component-library-naming-dialog >>> .v-btn,
+.component-library-naming-dialog >>> .v-btn .v-btn__content {
+  text-transform: none !important;
+  letter-spacing: normal !important;
 }
 
 .component-library-diy-dialog .caption {

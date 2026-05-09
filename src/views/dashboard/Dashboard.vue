@@ -124,6 +124,37 @@
           </v-card-actions>
         </v-card>
       </v-dialog>
+      <v-dialog v-model="namingDialog" max-width="520px" persistent>
+        <v-card class="dashboard-naming-dialog">
+          <v-card-title class="headline">Apply LFR naming convention?</v-card-title>
+          <v-card-text>
+            <p class="mb-3">
+              The name you entered does not match the LFR naming convention
+              (lowercase <code>snake_case</code>).
+            </p>
+            <div class="naming-diff">
+              <div class="naming-diff-row">
+                <span class="naming-diff-label">You entered</span>
+                <code class="naming-diff-original">{{ namingDialogOriginal }}</code>
+              </div>
+              <div class="naming-diff-row">
+                <span class="naming-diff-label">LFR form</span>
+                <code class="naming-diff-normalized">{{ namingDialogNormalized }}</code>
+              </div>
+            </div>
+            <p class="caption grey--text text--darken-1 mt-3 mb-0">
+              Choose <strong>Use LFR name</strong> to import as
+              <code>{{ namingDialogNormalized }}</code>, or <strong>Cancel</strong>
+              to abort and re-enter the name yourself.
+            </p>
+          </v-card-text>
+          <v-card-actions>
+            <v-spacer />
+            <v-btn text color="grey darken-1" @click="cancelNamingDialog">Cancel</v-btn>
+            <v-btn color="primary" depressed @click="confirmNamingDialog">Use LFR name</v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
       <v-col
         cols="12"
         lg="3"
@@ -497,6 +528,7 @@
   import * as Utils from '../../utils'
   import guestStore, { fileContentForZipExport } from '@/lib/guestStore'
   import { openAndLoadDeviceIn3DuF } from '@/lib/open3DuFPostMessage'
+  import { validateAndNormalizeLfrName } from '@/lib/lfrNaming'
   import JSZip from 'jszip'
 
   export default {
@@ -551,6 +583,10 @@
         _pendingImportZipFile: null,
         /** When set, the Files section shows this workspace's files; null = collapsed (default on load / after leaving Dashboard). */
         dashboardFilesWorkspaceId: null,
+        namingDialog: false,
+        namingDialogOriginal: '',
+        namingDialogNormalized: '',
+        namingDialogResolver: null,
     }),
     computed: {
       totalSales () {
@@ -906,12 +942,54 @@
           e.target.value = ''
         }
       },
+      askToNormalizeLfrName (originalName, normalizedName) {
+        return new Promise((resolve) => {
+          this.namingDialogOriginal = originalName
+          this.namingDialogNormalized = normalizedName
+          this.namingDialogResolver = resolve
+          this.namingDialog = true
+        })
+      },
+      confirmNamingDialog () {
+        const resolver = this.namingDialogResolver
+        this.closeNamingDialog()
+        if (resolver) resolver(true)
+      },
+      cancelNamingDialog () {
+        const resolver = this.namingDialogResolver
+        this.closeNamingDialog()
+        if (resolver) resolver(false)
+      },
+      closeNamingDialog () {
+        this.namingDialog = false
+        this.namingDialogOriginal = ''
+        this.namingDialogNormalized = ''
+        this.namingDialogResolver = null
+      },
       async importWorkspaceJsonToComponentLibrary (file) {
         if (!file || !file.id) return
         const fallbackName = String(file.name || 'component').replace(/\.json$/i, '')
-        const customName = window.prompt('Component name for component library:', fallbackName)
+        const customName = window.prompt(
+          'Component name for the library (LFR naming convention: lowercase snake_case, e.g. droplet_generator):',
+          fallbackName
+        )
         if (!customName || !String(customName).trim()) return
-        const name = String(customName).trim()
+
+        const check = validateAndNormalizeLfrName(customName)
+        if (!check.valid) {
+          alert(`Invalid component name: ${check.reason}`)
+          return
+        }
+
+        let name = check.normalized
+        if (check.needsNormalization) {
+          const accepted = await this.askToNormalizeLfrName(String(customName).trim(), check.normalized)
+          if (!accepted) {
+            alert('Import canceled. Re-enter the name in LFR form (lowercase snake_case) to import.')
+            return
+          }
+          name = check.normalized
+        }
 
         try {
           if (this.$store.getters.isGuest) {
@@ -924,7 +1002,7 @@
               withCredentials: true,
               headers: { 'Content-Type': 'application/json' },
             })
-            alert('Imported JSON into Component Library.')
+            alert(`Imported JSON into Component Library as "${name}".`)
             return
           }
 
@@ -935,7 +1013,7 @@
             withCredentials: true,
             headers: { 'Content-Type': 'application/json' },
           })
-          alert('Imported JSON into Component Library.')
+          alert(`Imported JSON into Component Library as "${name}".`)
         } catch (err) {
           const msg = (err.response && err.response.data && (err.response.data.error || err.response.data.message)) || err.message
           alert('Import to component library failed: ' + (msg || 'please try again.'))
@@ -1664,6 +1742,69 @@
         color: #2e7d32 !important;
         font-weight: 600;
         font-size: 0.95rem;
+    }
+
+    .dashboard-naming-dialog .headline {
+        font-size: 1.1875rem !important;
+        font-weight: 600 !important;
+        letter-spacing: -0.015em;
+        line-height: 1.35;
+    }
+    .dashboard-naming-dialog code {
+        font-family: var(--neptune-font-code), monospace;
+        background: rgba(0, 105, 148, 0.08);
+        color: #006994;
+        padding: 1px 6px;
+        border-radius: 3px;
+        font-size: 0.95em;
+    }
+    .theme--dark .dashboard-naming-dialog code {
+        background: rgba(255, 255, 255, 0.08);
+        color: #80deea;
+    }
+    .dashboard-naming-dialog .naming-diff {
+        border: 1px solid rgba(0, 51, 73, 0.12);
+        border-radius: 6px;
+        padding: 10px 14px;
+        background: rgba(0, 105, 148, 0.03);
+    }
+    .theme--dark .dashboard-naming-dialog .naming-diff {
+        border-color: rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.03);
+    }
+    .dashboard-naming-dialog .naming-diff-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 4px 0;
+    }
+    .dashboard-naming-dialog .naming-diff-label {
+        flex: 0 0 110px;
+        color: rgba(0, 0, 0, 0.6);
+        font-size: 0.9rem;
+    }
+    .theme--dark .dashboard-naming-dialog .naming-diff-label {
+        color: rgba(255, 255, 255, 0.7);
+    }
+    .dashboard-naming-dialog .naming-diff-original {
+        color: #c62828;
+        background: rgba(198, 40, 40, 0.08);
+    }
+    .theme--dark .dashboard-naming-dialog .naming-diff-original {
+        color: #ef9a9a;
+        background: rgba(239, 154, 154, 0.12);
+    }
+    .dashboard-naming-dialog .naming-diff-normalized {
+        color: #2e7d32;
+        background: rgba(46, 125, 50, 0.08);
+    }
+    .theme--dark .dashboard-naming-dialog .naming-diff-normalized {
+        color: #a5d6a7;
+        background: rgba(165, 214, 167, 0.12);
+    }
+    .dashboard-naming-dialog .v-btn {
+        text-transform: none !important;
+        letter-spacing: normal !important;
     }
 
 </style>
