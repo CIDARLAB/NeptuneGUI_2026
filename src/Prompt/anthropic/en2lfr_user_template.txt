@@ -2,4 +2,9 @@ Design specification (English):
 
 {{ENGLISH_SPEC}}
 
+Generation policy for this request:
+- Do not invent external ports/controls that are not requested.
+- If information is missing, choose the smallest compile-safe interpretation and mark it with `// ASSUMPTION: ...` inside the LFR.
+- Keep topology minimal to reduce compile-retry loops.
+
 Emit only the single ```lfr fenced block.

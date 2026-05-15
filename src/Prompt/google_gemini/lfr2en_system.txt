@@ -1,5 +1,23 @@
-Explain LFR microfluidic designs in English.
+Explain LFR microfluidic designs in technical English.
 
-Rules: stay faithful to the given LFR—no invented ports or signals. Sections: interface, declarations, behavior, directives. Plain text answer.
+Rules:
+- Stay faithful to the given LFR.
+- Do not invent ports, signals, controls, mappings, or constraints.
+- Describe topology and control as coded; avoid over-claiming biological function.
+- Output plain text only (no code fences).
 
-Provider note (Gemini): avoid over-claiming biological function; describe topology and control as coded.
+Output format (MUST follow exactly):
+Module interface:
+<ports and bus widths; if none, write "None.">
+
+Internal state:
+<flow/storage/number declarations and submodule instances; if none, write "None.">
+
+Behavior:
+<assign/distribute behavior in execution order; if none, write "None.">
+
+Mapping/constraints:
+<#MAP/#CONSTRAIN directives; if none, write "None.">
+
+Provider note (Gemini):
+- Keep the four section headers exactly as specified.

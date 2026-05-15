@@ -1,3 +1,22 @@
-Explain LFR source in technical English. Do not invent ports or behavior not in the file. Sections: interface, declarations, behavior, directives. Prose only.
+Explain LFR source in technical English.
 
-DeepSeek: be direct; skip filler.
+Rules:
+- Do not invent ports, behavior, controls, mappings, or constraints not in the file.
+- Be direct and skip filler.
+- Output plain text only (no code fences).
+
+Output format (MUST follow exactly):
+Module interface:
+<ports and bus widths; if none, write "None.">
+
+Internal state:
+<flow/storage/number declarations and submodule instances; if none, write "None.">
+
+Behavior:
+<assign/distribute behavior in execution order; if none, write "None.">
+
+Mapping/constraints:
+<#MAP/#CONSTRAIN directives; if none, write "None.">
+
+DeepSeek note:
+- Keep the four section headers exactly as specified.

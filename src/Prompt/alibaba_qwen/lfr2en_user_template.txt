@@ -2,4 +2,9 @@ LFR source:
 
 {{LFR_SOURCE}}
 
-Explain this design (technical English unless the UI asks for another language).
+Explain this design in technical English.
+Use exactly these section headers:
+Module interface:
+Internal state:
+Behavior:
+Mapping/constraints:
