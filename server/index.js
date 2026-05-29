@@ -472,15 +472,29 @@ app.get('/api/v1/exampleScript', requireAuth, (req, res) => {
   })
 })
 
-// Compile: proxy to Neptune_2026 when NEPTUNE_COMPILE_URL is set
-function proxyCompile (req, res, path) {
+// Compile: proxy to Modal compute endpoint (NEPTUNE_COMPILE_URL).
+// Enriches the request with actual file content so Modal doesn't need
+// access to the local Data/ filesystem.
+function proxyCompile (req, res, routePath) {
   if (!NEPTUNE_COMPILE_URL) {
-    return res.status(501).json({ error: 'Compile not configured. Set NEPTUNE_COMPILE_URL to Neptune_2026 URL (e.g. http://localhost:5000) or see RUN_LFR.md.' })
+    return res.status(501).json({ error: 'Compile not configured. Set NEPTUNE_COMPILE_URL to the Modal endpoint URL.' })
   }
-  const url = NEPTUNE_COMPILE_URL.replace(/\/$/, '') + path
-  axios.post(url, req.body, { timeout: 60000, validateStatus: () => true })
+  const { sourcefileid, configfileid, workspace: workspaceId } = req.body || {}
+  let sourceContent = ''
+  let configContent = ''
+  if (sourcefileid && workspaceId) {
+    const f = data.getFile(req.session, workspaceId, sourcefileid)
+    if (f && f.content != null) sourceContent = typeof f.content === 'string' ? f.content : JSON.stringify(f.content)
+  }
+  if (configfileid && workspaceId) {
+    const f = data.getFile(req.session, workspaceId, configfileid)
+    if (f && f.content != null) configContent = typeof f.content === 'string' ? f.content : JSON.stringify(f.content)
+  }
+  const enrichedBody = { ...req.body, sourceContent, configContent }
+  const url = NEPTUNE_COMPILE_URL.replace(/\/$/, '') + routePath
+  axios.post(url, enrichedBody, { timeout: 60000, validateStatus: () => true })
     .then((axRes) => res.status(axRes.status).json(axRes.data))
-    .catch((err) => res.status(502).json({ error: 'Neptune_2026 compile error', message: err.message }))
+    .catch((err) => res.status(502).json({ error: 'Neptune compute error', message: err.message }))
 }
 app.post('/api/v1/fluigi', requireAuth, (req, res) => proxyCompile(req, res, '/api/v1/fluigi'))
 app.post('/api/v1/mushroommapper', requireAuth, (req, res) => proxyCompile(req, res, '/api/v1/mushroommapper'))
@@ -954,6 +968,15 @@ app.post('/api/v1/componentFiles/importWorkspaceJson', requireAuth, (req, res) =
   writeCustomComponents(req.session, custom)
   res.json({ ok: true, syntax })
 })
+
+app.get('/api/v2/health', (req, res) => res.json({ ok: true }))
+
+// Serve Vue SPA in production (dist/ is built into the container)
+const DIST_DIR = path.join(__dirname, '..', 'dist')
+if (require('fs').existsSync(DIST_DIR)) {
+  app.use(express.static(DIST_DIR))
+  app.get('*', (req, res) => res.sendFile(path.join(DIST_DIR, 'index.html')))
+}
 
 app.listen(PORT, () => {
   console.log('Neptune Data server running at http://localhost:' + PORT)

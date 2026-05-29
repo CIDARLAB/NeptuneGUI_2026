@@ -1,0 +1,24 @@
+app = "neptune-gui-cidar"
+primary_region = "iad"  # e.g. iad (US East), lax (US West), lhr (London)
+
+[build]
+
+[env]
+  NODE_ENV = "production"
+  PORT = "8080"
+  # NEPTUNE_COMPILE_URL is set via: fly secrets set NEPTUNE_COMPILE_URL=<modal url>
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"
+
+[[mounts]]
+  source = "neptune_data"
+  destination = "/app/Data"
