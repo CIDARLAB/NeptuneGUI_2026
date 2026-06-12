@@ -1,0 +1,9 @@
+{
+  "id": "alibaba_qwen",
+  "display_name": "Alibaba Qwen (DashScope)",
+  "button_order": 4,
+  "env_var_api_key": "DASHSCOPE_API_KEY",
+  "suggested_base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+  "default_model": "qwen3-max",
+  "notes": "OpenAI-compatible endpoint shown; region/deployment mode affects models and billing. User brings own key (BYOK)."
+}

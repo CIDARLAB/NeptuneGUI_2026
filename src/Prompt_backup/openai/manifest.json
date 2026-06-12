@@ -1,0 +1,9 @@
+{
+  "id": "openai",
+  "display_name": "OpenAI",
+  "button_order": 1,
+  "env_var_api_key": "OPENAI_API_KEY",
+  "suggested_base_url": "https://api.openai.com/v1",
+  "default_model": "gpt-5.4-mini",
+  "notes": "Use Chat Completions or Responses API; set model in your app. User brings own key (BYOK)."
+}

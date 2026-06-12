@@ -67,8 +67,8 @@ export default new Router({
           meta: { requiresAuth: true }
         },
         {
-          name: 'Solutions',
-          path: 'solutions',
+          name: 'Jobs',
+          path: 'jobs',
           component: () => import('@/views/dashboard/Solutions'),
           meta: { requiresAuth: true }
         },

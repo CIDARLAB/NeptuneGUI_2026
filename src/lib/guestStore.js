@@ -301,8 +301,10 @@ function migrateExampleMintFilename () {
 function migrateDxJsonSeedFilenames () {
   const data = load()
   const renamePairs = [
-    { oldName: 'dx2_after_PR.json', newName: 'dx2_PR.json' },
-    { oldName: 'dx3_after_PR.json', newName: 'dx3_PR.json' },
+    { oldName: 'dx2_after_PR.json', newName: 'dx2_PRfromLFR.json' },
+    { oldName: 'dx2_PR.json', newName: 'dx2_PRfromLFR.json' },
+    { oldName: 'dx3_after_PR.json', newName: 'dx3_PRfromLFR.json' },
+    { oldName: 'dx3_PR.json', newName: 'dx3_PRfromLFR.json' },
   ]
   let changed = false
 

@@ -1,0 +1,5 @@
+Explain LFR microfluidic designs in English.
+
+Rules: stay faithful to the given LFR—no invented ports or signals. Sections: interface, declarations, behavior, directives. Plain text answer.
+
+Provider note (Gemini): avoid over-claiming biological function; describe topology and control as coded.

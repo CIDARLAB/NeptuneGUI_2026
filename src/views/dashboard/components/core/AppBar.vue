@@ -111,6 +111,7 @@
       </v-list>
     </v-menu>
 
+    <!--
     <v-btn
       class="ml-2 exit-btn"
       color="error"
@@ -120,6 +121,7 @@
       <v-icon left small>mdi-exit-run</v-icon>
       EXIT
     </v-btn>
+    -->
 
     <!-- Exit dialog: ask to export workspace snapshot before leaving -->
     <v-dialog

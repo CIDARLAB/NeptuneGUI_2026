@@ -39,7 +39,17 @@
       src () {
         return this.srcs[this.$route.path]
       },
+      isLandingRoute () {
+        return ['/', '/login', '/register'].includes(this.$route.path)
+      },
       styles () {
+        if (this.isLandingRoute) {
+          return {
+            height: '100vh',
+            boxSizing: 'border-box',
+            padding: '0',
+          }
+        }
         const paddingBottom = this.$vuetify.breakpoint.mdAndUp ? 80 : 60
         return {
           height: '100vh',

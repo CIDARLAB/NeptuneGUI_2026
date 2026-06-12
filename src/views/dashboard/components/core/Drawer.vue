@@ -130,8 +130,8 @@
         },
         {
           icon: 'mdi-file-multiple-outline',
-          title: 'Solutions',
-          to: '/solutions',
+          title: 'Jobs',
+          to: '/jobs',
         },
         {
           icon: 'mdi-database',

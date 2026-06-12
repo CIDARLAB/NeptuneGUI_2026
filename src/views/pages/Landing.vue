@@ -1,107 +1,134 @@
 <template>
-  <v-container id="landing" fluid class="fill-height landing-shell" tag="section">
-    <v-slide-y-transition appear>
-      <v-img
-        :src="require('@/assets/Neptune2026_logo_white_text.png')"
-        contain
-        class="landing-top-right-logo"
-      />
-    </v-slide-y-transition>
-
-    <v-row justify="center" align="center" class="fill-height landing-content-row">
-      <v-col cols="12" md="9" lg="8" class="text-center">
-        <p class="mt-2 landing-guest-text landing-main-disclaimer">
-          Neptune runs in <strong>online guest mode only</strong>—there is no sign-up. We do not store your work for you: use <strong>Export</strong> to save workspaces and component library state you care about. <strong>Refreshing or opening this site again removes everything except the built-in examples and default component library.</strong> If you do not export, data loss is not our responsibility.
-        </p>
+  <v-container id="landing" fluid class="fill-height landing-shell pa-0" tag="section">
+    <v-img
+      :src="require('@/assets/Neptune2026_logo_white_text.png')"
+      contain
+      class="landing-logo"
+    />
+    <v-row class="fill-height ma-0 landing-main-row" align="start" justify="end" no-gutters>
+      <v-col cols="12" md="7" lg="6" class="landing-right-panel d-flex align-start">
+        <v-card class="landing-notice-card pa-4 pa-sm-6" outlined>
+          <v-card-title class="landing-notice-title px-0 pt-0 pb-0">
+            User Notice
+          </v-card-title>
+          <v-card-text class="landing-notice-text px-0 pt-0 pb-0">
+            <p>
+              Neptune runs in <strong>online guest mode only</strong>; there is no sign-up.
+              <strong>To protect data privacy, we do not provide online data storage.</strong>
+              Please save your data to your local computer to avoid loss.
+            </p>
+            <p>
+              Use <strong>Export</strong> to save workspaces and component library state you care about.
+              <strong>Refreshing or opening this site again removes everything except the built-in examples and default component library.</strong>
+              If you do not export, data loss is not our responsibility.
+            </p>
+            <p class="mb-0">
+              When you close this tab, refresh, or leave the site, your browser will ask you to confirm leaving.
+              If you leave, the next time you open Neptune you only get the default files again unless you exported.
+            </p>
+          </v-card-text>
+          <v-checkbox
+            v-model="hasAcknowledgedNoOnlineStorage"
+            class="landing-ack-checkbox mt-3 mb-0"
+            color="success"
+            hide-details
+            label="I understand that Neptune does not save my data online."
+          />
+          <v-card-actions class="px-0 pt-4 pb-0">
+            <v-spacer />
+            <v-btn color="success" large :disabled="!hasAcknowledgedNoOnlineStorage" @click="continueAsGuest">
+              Enter Dashboard
+            </v-btn>
+          </v-card-actions>
+        </v-card>
       </v-col>
     </v-row>
-
-    <div class="landing-bottom-cta d-flex justify-center align-center">
-      <div class="landing-cta-stack text-center">
-        <v-btn class="ma-2 landing-start-btn" color="success" large @click="continueAsGuest">
-          <span class="landing-btn-text">Start now!</span>
-        </v-btn>
-        <p class="landing-guest-text landing-guest-text-secondary landing-cta-footnote">
-          When you close this tab, refresh, or leave the site, your browser will ask you to confirm leaving—if you leave, the next time you open Neptune you only get the default files again unless you exported.
-        </p>
-      </div>
-    </div>
   </v-container>
 </template>
 
 <style scoped>
 .landing-shell {
   position: relative;
+  min-height: 100%;
 }
 
-.landing-top-right-logo {
+.landing-main-row {
+  min-height: 100%;
+}
+
+.landing-right-panel {
+  min-height: 100%;
+  justify-content: flex-end;
+  padding-right: 30pt;
+}
+
+.landing-logo {
   position: absolute;
-  top: -100pt;
-  left: 16px;
+  top: 10pt;
+  left: 10pt;
+  z-index: 3;
   width: 260px;
   max-width: 38vw;
-  z-index: 2;
 }
 
-.landing-content-row {
-  transform: translateY(-50pt);
-}
-
-.landing-bottom-cta {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  /* CTA block; +40pt term: 10pt lower than previous +50pt */
-  bottom: calc(28px - 500pt + 20pt + 40pt);
-  z-index: 3;
+.landing-notice-card {
   width: 100%;
-  max-width: 960px;
-  padding: 0 16px;
-  box-sizing: border-box;
-}
-
-.landing-cta-stack {
+  max-width: 29.5rem;
+  min-height: 40rem;
+  margin-top: 30pt;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  width: 100%;
+  border-color: rgba(255, 255, 255, 0.22) !important;
+  background: linear-gradient(
+    140deg,
+    rgba(6, 30, 39, 0.95) 0%,
+    rgba(11, 49, 63, 0.9) 45%,
+    rgba(14, 28, 45, 0.95) 100%
+  );
+  color: #fff;
+  box-shadow: 0 14px 38px rgba(0, 0, 0, 0.32);
 }
 
-.landing-cta-footnote {
-  margin-top: 12px;
-  margin-bottom: 0;
-  max-width: 52rem;
+.landing-notice-title {
+  justify-content: center;
+  text-align: center;
+  margin-bottom: 10pt;
+  font-size: 1.55rem;
+  font-weight: 700;
+  color: #fff;
 }
 
-.landing-guest-text,
-.landing-btn-text {
-  font-size: 19pt;
+.landing-notice-text {
+  flex: 1 1 auto;
+  font-size: 1.02rem;
+  line-height: 1.6;
+  color: #fff;
 }
 
-.landing-btn-text {
-  font-weight: 600;
+.landing-ack-checkbox {
+  color: #fff;
 }
 
-.landing-bottom-cta .landing-start-btn {
-  min-width: calc(12rem + 20pt);
-  padding-left: calc(16px + 10pt) !important;
-  padding-right: calc(16px + 10pt) !important;
-}
-.landing-guest-text-secondary {
-  font-size: 15pt;
-  opacity: 0.92;
-}
-.landing-main-disclaimer {
-  transform: translateY(-20pt);
+.landing-ack-checkbox ::v-deep .v-label {
+  color: #fff !important;
 }
 
-.landing-guest-text {
-  max-width: 1280px;
-  margin-left: auto;
-  margin-right: auto;
-  line-height: 1.45;
-  white-space: normal;
-  color: rgba(255, 255, 255, 0.95);
+@media (max-width: 960px) {
+  .landing-right-panel {
+    min-height: auto;
+    padding-right: 30pt;
+    padding-left: 10pt;
+  }
+
+  .landing-logo {
+    width: 230px;
+    max-width: 62vw;
+  }
+
+  .landing-notice-card {
+    margin-top: 30pt;
+    min-height: 34rem;
+  }
 }
 </style>
 
@@ -110,15 +137,9 @@
 
   export default {
     name: 'Landing',
-
     data: () => ({
-      socials: [
-        { href: '#', icon: 'mdi-facebook-box' },
-        { href: '#', icon: 'mdi-twitter' },
-        { href: '#', icon: 'mdi-github-box' },
-      ],
+      hasAcknowledgedNoOnlineStorage: false,
     }),
-
     methods: {
       continueAsGuest () {
         this.$store.commit('setGuest')

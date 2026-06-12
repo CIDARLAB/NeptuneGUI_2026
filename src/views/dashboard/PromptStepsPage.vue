@@ -43,8 +43,8 @@
 
 <script>
   import { marked } from 'marked'
-  /* Bundled at compile time — avoids dev-server SPA fallback serving index.html for /prompt/Steps.md */
-  import stepsMarkdownRaw from '!!raw-loader!../../Prompt/Steps.md'
+  /* Bundled at compile time — avoids dev-server SPA fallback serving index.html for /prompt/USER_GUIDE.md */
+  import guideMarkdownRaw from '!!raw-loader!../../Prompt/USER_GUIDE.md'
 
   export default {
     name: 'PromptStepsPage',
@@ -62,8 +62,8 @@
     },
 
     methods: {
-      stepsMarkdownString () {
-        const r = stepsMarkdownRaw
+      guideMarkdownString () {
+        const r = guideMarkdownRaw
         if (typeof r === 'string') return r
         return (r && r.default) ? r.default : ''
       },
@@ -71,9 +71,9 @@
         this.loading = true
         this.loadError = ''
         try {
-          const md = this.stepsMarkdownString()
+          const md = this.guideMarkdownString()
           if (!md || !String(md).trim()) {
-            throw new Error('Steps.md is empty.')
+            throw new Error('USER_GUIDE.md is empty.')
           }
           this.html = marked.parse(String(md))
         } catch (e) {

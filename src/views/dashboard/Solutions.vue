@@ -5,95 +5,167 @@
         cols="12"
         lg="12"
       >
+      <div class="solutions-formula-panel mb-4">
+        <div class="solutions-formula-line mb-2">
+          <strong>Evaluation Formula:</strong>
+          <span class="ml-2">
+            Evaluation Score = ({{ formatWeightDisplay(evaluationWeights.area) }} x Area Score) +
+            ({{ formatWeightDisplay(evaluationWeights.connectionLength) }} x Connection Length Score) +
+            ({{ formatWeightDisplay(evaluationWeights.position) }} x Position Score) +
+            ({{ formatWeightDisplay(evaluationWeights.symmetry) }} x Symmetry Score) +
+            ({{ formatWeightDisplay(evaluationWeights.bend) }} x Bend Score)
+          </span>
+        </div>
+        <div class="solutions-formula-line solutions-formula-inputs">
+          <v-text-field
+            v-model="evaluationWeightInputs.area"
+            label="w_area"
+            dense
+            outlined
+            hide-details
+            class="solutions-weight-input"
+          />
+          <v-text-field
+            v-model="evaluationWeightInputs.connectionLength"
+            label="w_conn"
+            dense
+            outlined
+            hide-details
+            class="solutions-weight-input"
+          />
+          <v-text-field
+            v-model="evaluationWeightInputs.position"
+            label="w_pos"
+            dense
+            outlined
+            hide-details
+            class="solutions-weight-input"
+          />
+          <v-text-field
+            v-model="evaluationWeightInputs.symmetry"
+            label="w_sym"
+            dense
+            outlined
+            hide-details
+            class="solutions-weight-input"
+          />
+          <v-text-field
+            v-model="evaluationWeightInputs.bend"
+            label="w_bend"
+            dense
+            outlined
+            hide-details
+            class="solutions-weight-input"
+          />
+          <v-btn
+            color="success"
+            class="solutions-apply-btn"
+            @click="applyEvaluationWeights"
+          >
+            Apply
+          </v-btn>
+        </div>
+        <div class="solutions-formula-line mt-2">
+          Current input weight sum: {{ formatWeightDisplay(currentInputWeightSum) }}
+          <span v-if="!isCurrentInputWeightSumOne" class="warning--text">
+            (recommended: 1.000)
+          </span>
+        </div>
+      </div>
 
     <base-material-card
       color="success"
       icon="mdi-clipboard-text"
       inline
-      title="Jobs"
+      title="Results"
       class="solutions-jobs-card px-5 py-3 mb-5"
     >
+      <div class="d-flex justify-end mb-3">
+        <v-btn
+          color="success"
+          small
+          outlined
+          @click="refreshResults"
+        >
+          <v-icon left small>
+            mdi-refresh
+          </v-icon>
+          Refresh
+        </v-btn>
+      </div>
       <v-simple-table
         class="solutions-jobs-table"
         height="300px"
       >
         <thead>
           <tr>
-            <th>Name</th>
-            <th>Last Updated</th>
-            <th># Files</th>
-            <th class="text-right">
-              Actions
+            <th rowspan="2">Input File</th>
+            <th rowspan="2">Last Updated</th>
+            <th rowspan="2">Output File</th>
+            <th colspan="6" class="text-center">Evaluation Score</th>
+            <th rowspan="2" class="text-right">
+              Action
             </th>
+          </tr>
+          <tr>
+            <th>Area</th>
+            <th>Conn Length</th>
+            <th>Position</th>
+            <th>Symmetry</th>
+            <th>Bend</th>
+            <th>Total</th>
           </tr>
         </thead>
 
         <tbody>
+          <tr
+            v-for="exampleResult in exampleResults"
+            :key="exampleResult.outputFile"
+            class="results-example-row"
+          >
+            <td>{{ exampleResult.inputFile }}</td>
+            <td>{{ exampleResult.lastUpdated || '—' }}</td>
+            <td>{{ exampleResult.outputFile }}</td>
+            <td>{{ toPercentDisplay(exampleResult.areaScore) }}</td>
+            <td>{{ toPercentDisplay(exampleResult.connectionLengthScore) }}</td>
+            <td>{{ toPercentDisplay(exampleResult.positionScore) }}</td>
+            <td>{{ toPercentDisplay(exampleResult.symmetryScore) }}</td>
+            <td>{{ toPercentDisplay(exampleResult.bendScore) }}</td>
+            <td>{{ toPercentDisplay(exampleResult.overallScore) }}</td>
+            <td class="text-right">Done</td>
+          </tr>
 
 
           <tr
             v-for="(job, ijk) in jobs" 
             :key="ijk"
           >
-            <td>{{ job.name }}</td>
+            <td>{{ getInputFileDisplay(job) }}</td>
             <td>{{ formattimestamp(job.created_at) }}</td>
-            <td>{{ job.files.length }}</td>
+            <td>{{ getOutputFileDisplay(job) }}</td>
+            <td>{{ getEvaluationScoreBreakdownValue(job, 'areaScore') }}</td>
+            <td>{{ getEvaluationScoreBreakdownValue(job, 'connectionLengthScore') }}</td>
+            <td>{{ getEvaluationScoreBreakdownValue(job, 'positionScore') }}</td>
+            <td>{{ getEvaluationScoreBreakdownValue(job, 'symmetryScore') }}</td>
+            <td>{{ getEvaluationScoreBreakdownValue(job, 'bendScore') }}</td>
+            <td>
+              <v-tooltip bottom>
+                <template v-slot:activator="{ on, attrs }">
+                  <span
+                    class="solutions-metric-value"
+                    v-bind="attrs"
+                    v-on="on"
+                  >
+                    {{ getEvaluationScoreBreakdownValue(job, 'overallScore') }}
+                  </span>
+                </template>
+                <span>{{ getEvaluationScoreTooltip(job) }}</span>
+              </v-tooltip>
+            </td>
             <td class="text-right">
-              <v-btn
-                color="green"
-                class="ml-1"
-                fab
-                icon
-                x-small
-                @click="downloadjobfiles(job.id)"
-              >
-                <v-icon
-                  small
-                >
-                mdi-download
-              </v-icon>
-              </v-btn>
-              <v-btn
-                color="purple"
-                class="ml-1"
-                fab
-                icon
-                x-small
-                @click="openWorkspace(job)"
-              >
-                <v-icon small>
-                  mdi-folder-open
-                </v-icon>
-              </v-btn>
-              <v-btn
-                color="blue"
-                class="ml-1"
-                fab
-                icon
-                x-small
-                @click="viewjobfiles(job.id)"
-              >
-                <v-icon
-                  small
-                >
-                mdi-view-split-vertical
-                </v-icon>
-              </v-btn>
-              <v-btn
-                color="red"
-                class="ml-1"
-                fab
-                icon
-                x-small
-                @click="deletejob(job.id)"
-              >
-                <v-icon
-                  small
-                >
-                mdi-delete
-                </v-icon>
-              </v-btn>
-
+              <span :class="['results-status', `results-status--${getJobActionStatus(job)}`]">
+                {{ getJobActionStatus(job) }}
+              </span>
             </td>
           </tr>
 
@@ -175,12 +247,563 @@
         jobs : [],
         files:[],
         jobobjects: {},
+        fileNameById: {},
+        fileDataById: {},
+        computedMetricsByFileId: {},
+        evaluationFetchStateByFileId: {},
+        staticExampleRows: [
+          {
+            inputFile: 'dx2.lfr',
+            outputFile: 'dx2_PRfromLFR.json',
+            areaScore: 0.12211717212836692,
+            connectionLengthScore: 0.8329158481882728,
+            positionScore: 1,
+            symmetryScore: 0.8528106508875739,
+            bendScore: 0.4074074074074074,
+          },
+          {
+            inputFile: 'dx3.lfr',
+            outputFile: 'dx3_PRfromLFR.json',
+            areaScore: 0.07827382432499638,
+            connectionLengthScore: 0.8755375387352308,
+            positionScore: 1,
+            symmetryScore: 0.9810924369747899,
+            bendScore: 0.5555555555555556,
+          },
+        ],
+        exampleResults: [],
+        evaluationWeights: {
+          area: 0.2,
+          connectionLength: 0.2,
+          position: 0.2,
+          symmetry: 0.2,
+          bend: 0.2,
+        },
+        evaluationWeightInputs: {
+          area: '0.2',
+          connectionLength: '0.2',
+          position: '0.2',
+          symmetry: '0.2',
+          bend: '0.2',
+        },
       }
     },
+    computed: {
+      currentInputWeightSum () {
+        const keys = ['area', 'connectionLength', 'position', 'symmetry', 'bend']
+        return keys.reduce((acc, key) => {
+          const parsed = this.toFiniteNumber(this.evaluationWeightInputs[key])
+          return acc + (parsed == null ? 0 : parsed)
+        }, 0)
+      },
+      isCurrentInputWeightSumOne () {
+        return Math.abs(this.currentInputWeightSum - 1) < 1e-6
+      },
+    },
     mounted: function(){
-      this.getAllJobs()
+      this.refreshResults()
     },
     methods: {
+      toFiniteNumber (value) {
+        const n = Number(value)
+        return Number.isFinite(n) ? n : null
+      },
+      toPercentDisplay (value) {
+        const n = this.toFiniteNumber(value)
+        if (n == null) return '—'
+        return n.toFixed(3)
+      },
+      formatWeightDisplay (value) {
+        const n = this.toFiniteNumber(value)
+        if (n == null) return '—'
+        return n.toFixed(3)
+      },
+      applyEvaluationWeights () {
+        const nextWeights = {
+          area: this.toFiniteNumber(this.evaluationWeightInputs.area),
+          connectionLength: this.toFiniteNumber(this.evaluationWeightInputs.connectionLength),
+          position: this.toFiniteNumber(this.evaluationWeightInputs.position),
+          symmetry: this.toFiniteNumber(this.evaluationWeightInputs.symmetry),
+          bend: this.toFiniteNumber(this.evaluationWeightInputs.bend),
+        }
+        const hasInvalid = Object.values(nextWeights).some(v => v == null)
+        if (hasInvalid) return
+        const sum = Object.values(nextWeights).reduce((acc, value) => acc + value, 0)
+        if (Math.abs(sum - 1) >= 1e-6) {
+          const shouldContinue = window.confirm(
+            `Current weight sum is ${sum.toFixed(3)} (recommended 1.000). Continue applying anyway?`
+          )
+          if (!shouldContinue) return
+        }
+        this.evaluationWeights = nextWeights
+        // Keep metric components; only recompute weighted totals in UI.
+        this.refreshExampleResults()
+      },
+      async refreshResults () {
+        this.jobs = []
+        this.jobobjects = {}
+        this.fileNameById = {}
+        this.fileDataById = {}
+        this.computedMetricsByFileId = {}
+        this.evaluationFetchStateByFileId = {}
+        await this.getAllJobs()
+        await this.computeAllEvaluationMetrics()
+        await this.refreshExampleResults()
+      },
+      async computeAllEvaluationMetrics () {
+        const fileIds = Object.keys(this.fileDataById || {})
+        if (!fileIds.length) return
+        await Promise.all(fileIds.map((fid) => this.ensureEvaluationMetricForFile(fid)))
+      },
+      async prefetchFileData (fileIds) {
+        if (!Array.isArray(fileIds)) return
+        const tasks = fileIds.map((fid) => {
+          if (!fid) return
+          if (this.fileNameById[fid]) return
+          return axios.get('/api/v1/file', {
+            params: { id: fid }
+          })
+            .then((response) => {
+              const fileData = response.data || {}
+              const resolvedName = fileData.name || fileData.filename || String(fid)
+              this.$set(this.fileNameById, fid, resolvedName)
+              this.$set(this.fileDataById, fid, fileData)
+              this.ensureEvaluationMetricForFile(fid)
+            })
+            .catch(() => {})
+        })
+        await Promise.all(tasks)
+      },
+      normalizeEvaluationMetrics (metrics) {
+        if (!metrics || typeof metrics !== 'object') return null
+        const areaScore = this.toFiniteNumber(metrics.area_score ?? metrics.areaScore)
+        const connectionLengthScore = this.toFiniteNumber(metrics.connection_length_score ?? metrics.connectionLengthScore)
+        const positionScore = this.toFiniteNumber(metrics.position_score ?? metrics.positionScore)
+        const symmetryScore = this.toFiniteNumber(metrics.symmetry_score ?? metrics.symmetryScore)
+        const bendScore = this.toFiniteNumber(metrics.bend_score ?? metrics.bendScore)
+        const overallScore = this.toFiniteNumber(metrics.overall_score ?? metrics.overallScore)
+        const values = [areaScore, connectionLengthScore, positionScore, symmetryScore, bendScore, overallScore]
+        if (values.some(v => v == null)) return null
+        return {
+          areaScore,
+          connectionLengthScore,
+          positionScore,
+          symmetryScore,
+          bendScore,
+          overallScore,
+          explanation: 'Computed by Neptune_2026 evaluation metric (backend) and displayed with current decimal scores.',
+        }
+      },
+      async ensureEvaluationMetricForFile (fid) {
+        if (!fid) return
+        if (this.computedMetricsByFileId[fid]) return
+        const currentState = this.evaluationFetchStateByFileId[fid]
+        if (currentState === 'pending' || currentState === 'done') return
+
+        const fileData = this.fileDataById[fid]
+        const design = this.extractDesignJson(fileData)
+        if (!design) return
+
+        this.$set(this.evaluationFetchStateByFileId, fid, 'pending')
+        try {
+          const response = await axios.post('/api/v1/evaluationMetric', { design }, {
+            withCredentials: true,
+            headers: { 'Content-Type': 'application/json' },
+          })
+          const normalized = this.normalizeEvaluationMetrics(response && response.data && response.data.metrics)
+          if (normalized) {
+            this.$set(this.computedMetricsByFileId, fid, normalized)
+            this.$set(this.evaluationFetchStateByFileId, fid, 'done')
+            this.refreshExampleResults()
+            return
+          }
+          this.$set(this.evaluationFetchStateByFileId, fid, 'failed')
+        } catch (_) {
+          this.$set(this.evaluationFetchStateByFileId, fid, 'failed')
+        }
+      },
+      mapOutputToInputFile (outputFileName) {
+        if (!outputFileName) return '—'
+        const knownReplacements = [
+          { suffix: '_PRfromLFR.json', replacement: '.lfr' },
+          { suffix: '_PR.json', replacement: '.lfr' },
+          { suffix: '_fromLFR.json', replacement: '.lfr' },
+          { suffix: '.json', replacement: '.lfr' },
+        ]
+        for (const item of knownReplacements) {
+          if (outputFileName.endsWith(item.suffix)) {
+            return outputFileName.replace(item.suffix, item.replacement)
+          }
+        }
+        return outputFileName
+      },
+      getInputFileDisplay (job) {
+        const output = this.getOutputFileDisplay(job)
+        if (!output || output === '—' || output.includes('(+')) return '—'
+        return this.mapOutputToInputFile(output)
+      },
+      getOutputFileDisplay (job) {
+        if (!job || !Array.isArray(job.files) || job.files.length === 0) return '—'
+        const labels = job.files.map((fid) => this.fileNameById[fid] || fid).filter(Boolean)
+        if (!labels.length) return '—'
+        if (labels.length === 1) return labels[0]
+        return `${labels[0]} (+${labels.length - 1})`
+      },
+      extractDesignJson (fileData) {
+        if (!fileData || typeof fileData !== 'object') return null
+        const candidates = [
+          fileData.content,
+          fileData.file_content,
+          fileData.fileContent,
+          fileData.text,
+          fileData.data,
+        ]
+        for (const candidate of candidates) {
+          if (!candidate) continue
+          if (typeof candidate === 'object') {
+            if (candidate.components || candidate.connections || candidate.params) return candidate
+            continue
+          }
+          if (typeof candidate === 'string') {
+            try {
+              const parsed = JSON.parse(candidate)
+              if (parsed && typeof parsed === 'object') return parsed
+            } catch (_) {}
+          }
+        }
+        return null
+      },
+      computeDesignSymmetryScore (design) {
+        const components = Array.isArray(design.components) ? design.components : []
+        if (!components.length) return 1
+        const centers = components.map((component) => {
+          const params = component.params || {}
+          const pos = params.position || []
+          const x = this.toFiniteNumber(pos[0]) || 0
+          const y = this.toFiniteNumber(pos[1]) || 0
+          const xSpan = this.toFiniteNumber(component['x-span'] ?? component.xspan) || 0
+          const ySpan = this.toFiniteNumber(component['y-span'] ?? component.yspan) || 0
+          return { x: x + (xSpan / 2), y: y + (ySpan / 2) }
+        })
+        const xs = centers.map(c => c.x)
+        const ys = centers.map(c => c.y)
+        const minX = Math.min(...xs)
+        const maxX = Math.max(...xs)
+        const minY = Math.min(...ys)
+        const maxY = Math.max(...ys)
+        const cx = (minX + maxX) / 2
+        const cy = (minY + maxY) / 2
+        const tolerance = 1e-3
+
+        const hasMirror = (targetX, targetY) =>
+          centers.some(c => Math.abs(c.x - targetX) <= tolerance && Math.abs(c.y - targetY) <= tolerance)
+
+        let hMatch = 0
+        let vMatch = 0
+        centers.forEach((c) => {
+          if (hasMirror((2 * cx) - c.x, c.y)) hMatch += 1
+          if (hasMirror(c.x, (2 * cy) - c.y)) vMatch += 1
+        })
+        return ((hMatch / centers.length) + (vMatch / centers.length)) / 2
+      },
+      computeEvaluationFromDesign (design) {
+        if (!design || typeof design !== 'object') return null
+        const components = Array.isArray(design.components) ? design.components : []
+        const connections = Array.isArray(design.connections) ? design.connections : []
+
+        const compArea = () => {
+          let xmax = 0
+          let ymax = 0
+          let xmin = Number.POSITIVE_INFINITY
+          let ymin = Number.POSITIVE_INFINITY
+          components.forEach((component) => {
+            const params = component.params || {}
+            const pos = params.position || []
+            const x = this.toFiniteNumber(pos[0]) || 0
+            const y = this.toFiniteNumber(pos[1]) || 0
+            const xSpan = this.toFiniteNumber(component['x-span'] ?? component.xspan) || 0
+            const ySpan = this.toFiniteNumber(component['y-span'] ?? component.yspan) || 0
+            xmax = Math.max(xmax, x + xSpan)
+            ymax = Math.max(ymax, y + ySpan)
+            xmin = Math.min(xmin, x)
+            ymin = Math.min(ymin, y)
+          })
+          if (!Number.isFinite(xmin) || !Number.isFinite(ymin)) return 0
+          return Math.max(0, xmax - xmin) * Math.max(0, ymax - ymin)
+        }
+
+        const deviceArea = () => {
+          const params = design.params || {}
+          const width = this.toFiniteNumber(params.width ?? params['x-span']) || 0
+          const length = this.toFiniteNumber(params.length ?? params['y-span']) || 0
+          return width * length
+        }
+
+        const sumConnectionLength = () => {
+          let total = 0
+          connections.forEach((connection) => {
+            const paths = Array.isArray(connection.paths) ? connection.paths : []
+            paths.forEach((path) => {
+              const wayPoints = Array.isArray(path.wayPoints) ? path.wayPoints : []
+              let prev = null
+              wayPoints.forEach((point) => {
+                if (!Array.isArray(point) || point.length < 2) return
+                const x = this.toFiniteNumber(point[0]) || 0
+                const y = this.toFiniteNumber(point[1]) || 0
+                if (prev) {
+                  total += Math.hypot(x - prev.x, y - prev.y)
+                }
+                prev = { x, y }
+              })
+            })
+          })
+          return total
+        }
+
+        const sumShortestDistance = () => {
+          let total = 0
+          connections.forEach((connection) => {
+            const paths = Array.isArray(connection.paths) ? connection.paths : []
+            if (!paths.length) return
+            const wayPoints = Array.isArray(paths[0].wayPoints) ? paths[0].wayPoints : []
+            if (wayPoints.length < 2) return
+            const start = wayPoints[0]
+            const end = wayPoints[wayPoints.length - 1]
+            if (!Array.isArray(start) || !Array.isArray(end)) return
+            total += Math.hypot((this.toFiniteNumber(start[0]) || 0) - (this.toFiniteNumber(end[0]) || 0), (this.toFiniteNumber(start[1]) || 0) - (this.toFiniteNumber(end[1]) || 0))
+          })
+          return total
+        }
+
+        const countSegments = () => {
+          let segments = 0
+          connections.forEach((connection) => {
+            const paths = Array.isArray(connection.paths) ? connection.paths : []
+            if (!paths.length) {
+              segments += 1
+              return
+            }
+            paths.forEach((path) => {
+              const wayPoints = Array.isArray(path.wayPoints) ? path.wayPoints : []
+              if (wayPoints.length < 2) return
+              let prevSlope = null
+              for (let i = 0; i < wayPoints.length - 1; i += 1) {
+                const p1 = wayPoints[i]
+                const p2 = wayPoints[i + 1]
+                if (!Array.isArray(p1) || !Array.isArray(p2)) continue
+                const dx = (this.toFiniteNumber(p2[0]) || 0) - (this.toFiniteNumber(p1[0]) || 0)
+                const dy = (this.toFiniteNumber(p2[1]) || 0) - (this.toFiniteNumber(p1[1]) || 0)
+                let slope = 0
+                if (dx === 0) slope = 'vertical'
+                else if (dy === 0) slope = 'horizontal'
+                else slope = dy / dx
+                if (slope !== prevSlope) segments += 1
+                prevSlope = slope
+              }
+            })
+          })
+          return segments
+        }
+
+        const componentArea = compArea()
+        const totalArea = deviceArea()
+        const connectionLength = sumConnectionLength()
+        const shortestLength = sumShortestDistance()
+        const numConnections = connections.length
+        const numSegments = countSegments()
+        const areaScore = totalArea > 0 ? componentArea / totalArea : 0
+        const connectionLengthScore = connectionLength > 0 ? shortestLength / connectionLength : 0
+        const positionScore = 1
+        const symmetryScore = this.computeDesignSymmetryScore(design)
+        const bendScore = numSegments > 0 ? numConnections / numSegments : 0
+        const overallScore =
+          areaScore * this.evaluationWeights.area +
+          connectionLengthScore * this.evaluationWeights.connectionLength +
+          positionScore * this.evaluationWeights.position +
+          symmetryScore * this.evaluationWeights.symmetry +
+          bendScore * this.evaluationWeights.bend
+        return {
+          areaScore,
+          connectionLengthScore,
+          positionScore,
+          symmetryScore,
+          bendScore,
+          overallScore,
+          explanation: 'Computed directly from output JSON in GUI using the applied Neptune_2026 formula.',
+        }
+      },
+      getPrimaryOutputFileId (job) {
+        if (!job || !Array.isArray(job.files) || !job.files.length) return null
+        const sorted = [...job.files].sort((a, b) => {
+          const an = this.fileNameById[a] || ''
+          const bn = this.fileNameById[b] || ''
+          const aPriority = an.includes('_PR') ? 0 : 1
+          const bPriority = bn.includes('_PR') ? 0 : 1
+          return aPriority - bPriority
+        })
+        return sorted[0]
+      },
+      getComputedMetricsFromJob (job) {
+        const fid = this.getPrimaryOutputFileId(job)
+        if (!fid) return null
+        if (this.computedMetricsByFileId[fid]) return this.computedMetricsByFileId[fid]
+        this.ensureEvaluationMetricForFile(fid)
+        return null
+      },
+      resolveMetricFromCandidates (sources, candidates) {
+        for (const source of sources) {
+          if (!source || typeof source !== 'object') continue
+          for (const candidate of candidates) {
+            const parsed = this.toFiniteNumber(source[candidate])
+            if (parsed != null) return parsed
+          }
+        }
+        return null
+      },
+      resolveEvaluationScoreBreakdown (job) {
+        if (!job || typeof job !== 'object') {
+          return {
+            areaScore: null,
+            connectionLengthScore: null,
+            positionScore: null,
+            symmetryScore: null,
+            bendScore: null,
+            overallScore: null,
+            explanation: 'No job data is available to compute this score.',
+          }
+        }
+
+        const primaryFileId = this.getPrimaryOutputFileId(job)
+        const computedFromJson = this.getComputedMetricsFromJob(job)
+        if (computedFromJson) {
+          const weightedOverall =
+            computedFromJson.areaScore * this.evaluationWeights.area +
+            computedFromJson.connectionLengthScore * this.evaluationWeights.connectionLength +
+            computedFromJson.positionScore * this.evaluationWeights.position +
+            computedFromJson.symmetryScore * this.evaluationWeights.symmetry +
+            computedFromJson.bendScore * this.evaluationWeights.bend
+          return {
+            ...computedFromJson,
+            overallScore: weightedOverall,
+            explanation: 'Computed by Neptune_2026 evaluation metric (backend). Total is recalculated in GUI using applied weights.',
+          }
+        }
+        if (primaryFileId) {
+          const state = this.evaluationFetchStateByFileId[primaryFileId]
+          if (!state || state === 'pending') {
+            this.ensureEvaluationMetricForFile(primaryFileId)
+            return {
+              areaScore: null,
+              connectionLengthScore: null,
+              positionScore: null,
+              symmetryScore: null,
+              bendScore: null,
+              overallScore: null,
+              explanation: 'Evaluation metric is being calculated by Neptune_2026 backend...',
+            }
+          }
+          if (state === 'failed') {
+            return {
+              areaScore: null,
+              connectionLengthScore: null,
+              positionScore: null,
+              symmetryScore: null,
+              bendScore: null,
+              overallScore: null,
+              explanation: 'Backend evaluation metric failed for this output JSON.',
+            }
+          }
+        }
+
+        const evaluationObj = (job.evaluation && typeof job.evaluation === 'object' && job.evaluation) || null
+        const metricsObj = (job.metrics && typeof job.metrics === 'object' && job.metrics) || null
+        const sources = [job, evaluationObj, metricsObj]
+
+        const areaScore = this.resolveMetricFromCandidates(sources, ['area_score', 'areaScore'])
+        const connectionLengthScore = this.resolveMetricFromCandidates(sources, ['connection_length_score', 'connectionLengthScore'])
+        const positionScore = this.resolveMetricFromCandidates(sources, ['position_score', 'positionScore'])
+        const symmetryScore = this.resolveMetricFromCandidates(sources, ['symmetry_score', 'symmetryScore'])
+        const bendScore = this.resolveMetricFromCandidates(sources, ['bend_score', 'bendScore'])
+        const components = [areaScore, connectionLengthScore, positionScore, symmetryScore, bendScore]
+        const hasAllComponents = components.every(v => v != null)
+
+        let overallScore = this.resolveMetricFromCandidates(sources, [
+          'overall_score',
+          'overallScore',
+          'evaluation_score',
+          'evaluationScore',
+          'evaluation_metric_value',
+          'evaluationMetricValue',
+          'metric_value',
+          'metricValue',
+          'score',
+        ])
+        let explanation = 'The total score comes directly from backend output.'
+
+        if (hasAllComponents) {
+          overallScore =
+            areaScore * this.evaluationWeights.area +
+            connectionLengthScore * this.evaluationWeights.connectionLength +
+            positionScore * this.evaluationWeights.position +
+            symmetryScore * this.evaluationWeights.symmetry +
+            bendScore * this.evaluationWeights.bend
+          explanation = 'The total score is computed from Neptune_2026 weighted formula using the applied weights.'
+        }
+
+        return {
+          areaScore,
+          connectionLengthScore,
+          positionScore,
+          symmetryScore,
+          bendScore,
+          overallScore,
+          explanation,
+        }
+      },
+      getJobActionStatus (job) {
+        const candidates = [
+          job && job.status,
+          job && job.state,
+          job && job.job_status,
+          job && job.result_status,
+          job && job.evaluation_status,
+          job && job.evaluation && job.evaluation.status,
+          job && job.metrics && job.metrics.status,
+        ].filter(Boolean)
+        const normalized = String(candidates[0] || '').toLowerCase()
+        if (/fail|error/.test(normalized)) return 'fail'
+        if (/ongoing|running|pending|progress/.test(normalized)) return 'ongoing'
+        if (/done|success|completed|complete/.test(normalized)) return 'done'
+        return this.getComputedMetricsFromJob(job) ? 'done' : 'ongoing'
+      },
+      async refreshExampleResults () {
+        this.exampleResults = this.staticExampleRows.map((row) => {
+          const weightedOverall =
+            row.areaScore * this.evaluationWeights.area +
+            row.connectionLengthScore * this.evaluationWeights.connectionLength +
+            row.positionScore * this.evaluationWeights.position +
+            row.symmetryScore * this.evaluationWeights.symmetry +
+            row.bendScore * this.evaluationWeights.bend
+          return {
+            inputFile: row.inputFile,
+            outputFile: row.outputFile,
+            lastUpdated: 'Static Example',
+            areaScore: row.areaScore,
+            connectionLengthScore: row.connectionLengthScore,
+            positionScore: row.positionScore,
+            symmetryScore: row.symmetryScore,
+            bendScore: row.bendScore,
+            overallScore: weightedOverall,
+          }
+        })
+      },
+      getEvaluationScoreBreakdownValue (job, key) {
+        const resolved = this.resolveEvaluationScoreBreakdown(job)
+        return this.toPercentDisplay(resolved[key])
+      },
+      getEvaluationScoreTooltip (job) {
+        return this.resolveEvaluationScoreBreakdown(job).explanation
+      },
       formattimestamp(datestring){
         return Utils.getprettytimestamp(datestring)
       },
@@ -264,7 +887,7 @@
       complete (index) {
         this.list[index] = !this.list[index]
       },
-      getAllJobs () {
+      async getAllJobs () {
             // $.get('/api/v1/jobs',function (response) {
             //     self.jobIDs.removeAll();
             //     self.jobs.removeAll();
@@ -286,31 +909,27 @@
           },
         }
 
-        let self = this
-        axios.get('/api/v1/jobs', config)
-          .then((response)=>{
-            console.log(response.data)
-            self.jobs = []
-            self.jobobjects = {}
-            for (let jobid of response.data){
-              axios.get('/api/v1/job', {
-                params: {
-                  job_id: jobid
-                }
-              })
-              .then((response)=>{
-                console.log(response.data)
-                self.jobs.push(response.data)
-                self.jobobjects[response.data.id] = response.data
-              })
+        try {
+          const jobsResponse = await axios.get('/api/v1/jobs', config)
+          const jobIds = Array.isArray(jobsResponse.data) ? jobsResponse.data : []
+          const jobRequests = jobIds.map((jobid) =>
+            axios.get('/api/v1/job', { params: { job_id: jobid } })
+              .then((response) => response.data)
               .catch((error) => {
                 console.log(error)
+                return null
               })
-            }
-          }).catch((error) => {
-            console.log(error)
+          )
+          const allJobs = (await Promise.all(jobRequests)).filter(Boolean)
+          this.jobs = allJobs
+          this.jobobjects = {}
+          allJobs.forEach((job) => {
+            this.jobobjects[job.id] = job
           })
-
+          await Promise.all(allJobs.map((job) => this.prefetchFileData(job.files)))
+        } catch (error) {
+          console.log(error)
+        }
       }
     },
   }
@@ -334,6 +953,53 @@
   /* File card “Actions” label — same scale as library table */
   .body-2
     font-size: 14pt !important
+
+  .solutions-formula-panel
+    background: rgba(76, 175, 80, 0.08)
+    border-radius: 8px
+    padding: 12px
+
+  .solutions-formula-line
+    font-size: 11pt
+
+  .solutions-formula-inputs
+    display: flex
+    flex-wrap: wrap
+    gap: 8px
+
+  .solutions-weight-input
+    max-width: 120px
+
+  .solutions-apply-btn
+    align-self: center
+
+  .results-example-row
+    td
+      background: rgba(76, 175, 80, 0.18)
+      color: #1b5e20
+      font-style: italic
+      font-weight: 600
+
+  .results-status
+    display: inline-block
+    min-width: 84px
+    text-align: center
+    border-radius: 999px
+    padding: 2px 10px
+    font-weight: 600
+    text-transform: lowercase
+
+  .results-status--done
+    background: rgba(76, 175, 80, 0.22)
+    color: #1b5e20
+
+  .results-status--fail
+    background: rgba(244, 67, 54, 0.18)
+    color: #b71c1c
+
+  .results-status--ongoing
+    background: rgba(255, 193, 7, 0.22)
+    color: #795548
 </style>
 <style lang="sass">
   #coloured-line

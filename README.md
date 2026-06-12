@@ -23,7 +23,7 @@ This section summarizes the **bring-your-own-key** path from **English descripti
 | Step | What to do |
 |------|------------|
 | Prompts | **Editor** → sidebar **LLM prompts** → choose model → **Export prompt package (.zip)** (`src/Prompt` templates); optionally **Open … chat** for your provider. |
-| Guide | In-app page **`/prompt/steps`** (route `PromptSteps`) renders **[src/Prompt/Steps.md](./src/Prompt/Steps.md)**. |
+| Guide | In-app page **`/prompt/steps`** (route `PromptSteps`) renders **[src/Prompt/USER_GUIDE.md](./src/Prompt/USER_GUIDE.md)**. |
 | Write LFR | Paste into **Editor**, set **Script language** to **LFR**, **Save** / **Compile** per **[RUN_LFR.md](./RUN_LFR.md)**. |
 | Workspace backup | **Dashboard** → **Export workspaces** / **Import workspaces** (.zip restores workspaces and component-library cache). Same ZIP export is available from the sidebar **Export** button and when confirming exit (guest). |
 
@@ -33,7 +33,7 @@ These routes are what the **guest UI** exposes today:
 
 - **Dashboard** — Workspaces and files; **3DuF** on JSON rows; **Export workspaces** / **Import workspaces** (.zip).
 - **Editor** — Monaco editor; **Save**, **Compile**, per-file **Import** / **Export**; integrated **terminal** (talks to the local API / Neptune stack via Socket.IO per your setup); **LLM prompts** sidebar **only** on this route.
-- **Solutions** — **Jobs** table for compile runs: download outputs, open a job as a workspace, inspect files, delete jobs.
+- **Jobs** — Jobs table for compile runs: download outputs, open a job as a workspace, inspect files, delete jobs.
 - **Component Library** — Component table (syntax is **case-sensitive** in-app); **Import JSON component**; **DIY** overrides; **Go to 3DuF** per row.
 
 Legacy Material Dashboard demo routes (charts, maps, etc.) still exist under `src/router.js` but are **not** linked from the main drawer.

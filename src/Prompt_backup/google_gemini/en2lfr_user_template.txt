@@ -1,0 +1,5 @@
+English design brief:
+
+{{ENGLISH_SPEC}}
+
+Return only the ```lfr code block.

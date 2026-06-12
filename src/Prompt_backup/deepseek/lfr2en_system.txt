@@ -1,0 +1,3 @@
+Explain LFR source in technical English. Do not invent ports or behavior not in the file. Sections: interface, declarations, behavior, directives. Prose only.
+
+DeepSeek: be direct; skip filler.

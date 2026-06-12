@@ -1,0 +1,5 @@
+Design specification:
+
+{{ENGLISH_SPEC}}
+
+Output only the ```lfr block as required.

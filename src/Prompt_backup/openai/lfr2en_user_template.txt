@@ -1,0 +1,5 @@
+LFR source to explain:
+
+{{LFR_SOURCE}}
+
+Summarize what this design does in English.

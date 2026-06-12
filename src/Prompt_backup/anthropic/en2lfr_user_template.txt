@@ -1,0 +1,5 @@
+Design specification (English):
+
+{{ENGLISH_SPEC}}
+
+Emit only the single ```lfr fenced block.

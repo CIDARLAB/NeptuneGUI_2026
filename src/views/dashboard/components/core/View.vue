@@ -142,6 +142,19 @@
         const base = (process.env.BASE_URL || '/').replace(/\/?$/, '/')
         return `${base}prompt`
       },
+      async fetchGuideForZip (root) {
+        const guideCandidates = ['USER_GUIDE.md', 'Steps.md']
+        for (const name of guideCandidates) {
+          const res = await fetch(`${root}/${name}`)
+          if (res.ok) {
+            return {
+              name: 'USER_GUIDE.md',
+              text: await res.text(),
+            }
+          }
+        }
+        return null
+      },
       async exportPromptZip () {
         const folder = this.selectedModel && this.selectedModel.folder
         if (!folder || this.zipDownloading) return
@@ -158,9 +171,9 @@
             const text = await res.text()
             zip.file(`${folder}/${name}`, text)
           }
-          const stepsRes = await fetch(`${root}/Steps.md`)
-          if (stepsRes.ok) {
-            zip.file('Steps.md', await stepsRes.text())
+          const guideFile = await this.fetchGuideForZip(root)
+          if (guideFile) {
+            zip.file(guideFile.name, guideFile.text)
           }
           const blob = await zip.generateAsync({ type: 'blob' })
           objectUrl = URL.createObjectURL(blob)

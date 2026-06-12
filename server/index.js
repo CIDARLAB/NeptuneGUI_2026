@@ -7,6 +7,8 @@ const express = require('express')
 const cookieParser = require('cookie-parser')
 const path = require('path')
 const fs = require('fs')
+const os = require('os')
+const { execFile } = require('child_process')
 const { v4: uuidv4 } = require('uuid')
 const axios = require('axios')
 const JSZip = require('jszip')
@@ -17,6 +19,7 @@ const NEPTUNE_COMPILE_URL = process.env.NEPTUNE_COMPILE_URL || ''
 
 const app = express()
 const PORT = process.env.PORT || 8080
+const NEPTUNE_2026_ROOT = process.env.NEPTUNE_2026_ROOT || path.resolve(__dirname, '..', '..', 'Neptune_2026')
 
 app.use(cookieParser())
 app.use(express.json({ limit: '10mb' }))
@@ -510,6 +513,92 @@ app.get('/api/v1/job', requireAuth, (req, res) => {
   axios.get(base + '/api/v1/job', { params: req.query, timeout: 10000, validateStatus: () => true })
     .then((axRes) => res.json(axRes.data || { status: 'unknown' }))
     .catch(() => res.json({ status: 'unknown' }))
+})
+
+function runCmd (cmd, args, options = {}) {
+  return new Promise((resolve, reject) => {
+    execFile(cmd, args, options, (error, stdout, stderr) => {
+      if (error) {
+        const err = new Error(stderr || error.message || 'Command failed')
+        err.cause = error
+        err.stdout = stdout
+        err.stderr = stderr
+        reject(err)
+        return
+      }
+      resolve({ stdout, stderr })
+    })
+  })
+}
+
+function parseJsonFromStdout (stdout) {
+  const text = String(stdout || '').trim()
+  if (!text) return null
+  const lines = text.split(/\r?\n/).map(s => s.trim()).filter(Boolean)
+  if (!lines.length) return null
+  for (let i = lines.length - 1; i >= 0; i -= 1) {
+    try {
+      const parsed = JSON.parse(lines[i])
+      if (parsed && typeof parsed === 'object') return parsed
+    } catch (_) {}
+  }
+  return null
+}
+
+async function computeEvaluationMetricWithNeptune (designJson) {
+  const pythonSnippet = [
+    'import json, sys',
+    'from fluigi.evaluation_metric import compute_layout_evaluation_scores',
+    'metrics = compute_layout_evaluation_scores(sys.argv[1])',
+    'if metrics is None:',
+    '    raise SystemExit(2)',
+    'print(json.dumps(metrics))',
+  ].join('\n')
+
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'neptune-eval-'))
+  const tmpJsonPath = path.join(tmpDir, 'design.json')
+  fs.writeFileSync(tmpJsonPath, JSON.stringify(designJson), 'utf8')
+
+  try {
+    const poetryToml = path.join(NEPTUNE_2026_ROOT, 'pyproject.toml')
+    const hasPoetry = fs.existsSync(poetryToml)
+    let result
+    if (hasPoetry) {
+      result = await runCmd('poetry', ['run', 'python', '-c', pythonSnippet, tmpJsonPath], {
+        cwd: NEPTUNE_2026_ROOT,
+        timeout: 60000,
+      })
+    } else {
+      result = await runCmd('python3', ['-c', pythonSnippet, tmpJsonPath], {
+        cwd: NEPTUNE_2026_ROOT,
+        timeout: 60000,
+        env: {
+          ...process.env,
+          PYTHONPATH: `${NEPTUNE_2026_ROOT}${process.env.PYTHONPATH ? `:${process.env.PYTHONPATH}` : ''}`,
+        },
+      })
+    }
+    const parsed = parseJsonFromStdout(result.stdout)
+    if (!parsed) throw new Error('No JSON metrics returned from Neptune_2026 evaluation metric.')
+    return parsed
+  } finally {
+    try { fs.unlinkSync(tmpJsonPath) } catch (_) {}
+    try { fs.rmdirSync(tmpDir) } catch (_) {}
+  }
+}
+
+app.post('/api/v1/evaluationMetric', requireAuth, async (req, res) => {
+  const design = req.body && req.body.design
+  if (!design || typeof design !== 'object') {
+    return res.status(400).json({ error: 'design object required' })
+  }
+  try {
+    const metrics = await computeEvaluationMetricWithNeptune(design)
+    return res.json({ metrics })
+  } catch (error) {
+    const message = error && error.message ? error.message : 'Failed to compute evaluation metric'
+    return res.status(500).json({ error: message })
+  }
 })
 
 // ---------- Component Library ----------

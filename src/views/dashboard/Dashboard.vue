@@ -556,7 +556,7 @@
             id: '',
         },          
         files: [],
-        fileViewMode: 'grid',
+        fileViewMode: 'list',
         fileListSortBy: 'name',
         fileListSortDesc: false,
         workspaces:[],
