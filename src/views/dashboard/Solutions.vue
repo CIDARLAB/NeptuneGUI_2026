@@ -8,10 +8,12 @@
       <div class="solutions-formula-panel mb-4">
         <div class="solutions-formula-line mb-2">
           <strong>Evaluation Formula:</strong>
-          <span class="ml-2">
-            Evaluation Score = ({{ formatWeightDisplay(evaluationWeights.area) }} x Area Score) +
+        </div>
+        <div class="solutions-formula-line mb-2">
+          <span>
+            Evaluation Score = ({{ formatWeightDisplay(evaluationWeights.area) }} x Global Utilization Score) +
+            ({{ formatWeightDisplay(evaluationWeights.compact) }} x Local Compactness Score) +
             ({{ formatWeightDisplay(evaluationWeights.connectionLength) }} x Connection Length Score) +
-            ({{ formatWeightDisplay(evaluationWeights.position) }} x Position Score) +
             ({{ formatWeightDisplay(evaluationWeights.symmetry) }} x Symmetry Score) +
             ({{ formatWeightDisplay(evaluationWeights.bend) }} x Bend Score)
           </span>
@@ -26,16 +28,16 @@
             class="solutions-weight-input"
           />
           <v-text-field
-            v-model="evaluationWeightInputs.connectionLength"
-            label="w_conn"
+            v-model="evaluationWeightInputs.compact"
+            label="w_cmpt"
             dense
             outlined
             hide-details
             class="solutions-weight-input"
           />
           <v-text-field
-            v-model="evaluationWeightInputs.position"
-            label="w_pos"
+            v-model="evaluationWeightInputs.connectionLength"
+            label="w_conn"
             dense
             outlined
             hide-details
@@ -71,6 +73,33 @@
             (recommended: 1.000)
           </span>
         </div>
+        <v-alert
+          dense
+          outlined
+          color="primary"
+          icon="mdi-information-outline"
+          class="mt-3 mb-0 solutions-parameter-alert"
+        >
+          <div class="solutions-parameter-hint-row">
+            <div class="solutions-parameter-hint-text">
+              <strong>Evaluation parameter definitions and formulas are documented in GitHub.</strong>
+              Use the spec to review exact computation steps for Global Utilization,
+              Local Compactness, Connection Length, Symmetry, Bend, and weighted total.
+            </div>
+            <v-btn
+              small
+              outlined
+              color="primary"
+              class="solutions-parameter-spec-btn ml-3"
+              :href="evaluationMetricSpecUrl"
+              target="_blank"
+              rel="noopener"
+            >
+              <v-icon left small>mdi-github</v-icon>
+              View full spec
+            </v-btn>
+          </div>
+        </v-alert>
       </div>
 
     <base-material-card
@@ -108,9 +137,9 @@
             </th>
           </tr>
           <tr>
-            <th>Area</th>
+            <th>Global Util.</th>
+            <th>Local Compact.</th>
             <th>Conn Length</th>
-            <th>Position</th>
             <th>Symmetry</th>
             <th>Bend</th>
             <th>Total</th>
@@ -127,8 +156,8 @@
             <td>{{ exampleResult.lastUpdated || '—' }}</td>
             <td>{{ exampleResult.outputFile }}</td>
             <td>{{ toPercentDisplay(exampleResult.areaScore) }}</td>
+            <td>{{ toPercentDisplay(exampleResult.compactScore) }}</td>
             <td>{{ toPercentDisplay(exampleResult.connectionLengthScore) }}</td>
-            <td>{{ toPercentDisplay(exampleResult.positionScore) }}</td>
             <td>{{ toPercentDisplay(exampleResult.symmetryScore) }}</td>
             <td>{{ toPercentDisplay(exampleResult.bendScore) }}</td>
             <td>{{ toPercentDisplay(exampleResult.overallScore) }}</td>
@@ -144,8 +173,8 @@
             <td>{{ formattimestamp(job.created_at) }}</td>
             <td>{{ getOutputFileDisplay(job) }}</td>
             <td>{{ getEvaluationScoreBreakdownValue(job, 'areaScore') }}</td>
+            <td>{{ getEvaluationScoreBreakdownValue(job, 'compactScore') }}</td>
             <td>{{ getEvaluationScoreBreakdownValue(job, 'connectionLengthScore') }}</td>
-            <td>{{ getEvaluationScoreBreakdownValue(job, 'positionScore') }}</td>
             <td>{{ getEvaluationScoreBreakdownValue(job, 'symmetryScore') }}</td>
             <td>{{ getEvaluationScoreBreakdownValue(job, 'bendScore') }}</td>
             <td>
@@ -166,6 +195,11 @@
               <span :class="['results-status', `results-status--${getJobActionStatus(job)}`]">
                 {{ getJobActionStatus(job) }}
               </span>
+            </td>
+          </tr>
+          <tr v-if="jobs.length === 0 && exampleResults.length === 0">
+            <td colspan="10" class="text-center grey--text text--darken-1 py-4">
+              No jobs found for current session.
             </td>
           </tr>
 
@@ -239,6 +273,9 @@
 <script>
   import axios from 'axios'
   import * as Utils from '../../utils'
+  import dx2JsonText from '!!raw-loader!../../../Data/example/dx/dx2_PRfromLFR.json'
+  import dx3JsonText from '!!raw-loader!../../../Data/example/dx/dx3_PRfromLFR.json'
+  import { EVALUATION_METRIC_SPEC_URL } from '@/lib/evaluationMetricSpec'
   
   export default {
     data () {
@@ -255,42 +292,35 @@
           {
             inputFile: 'dx2.lfr',
             outputFile: 'dx2_PRfromLFR.json',
-            areaScore: 0.12211717212836692,
-            connectionLengthScore: 0.8329158481882728,
-            positionScore: 1,
-            symmetryScore: 0.8528106508875739,
-            bendScore: 0.4074074074074074,
+            jsonText: dx2JsonText,
           },
           {
             inputFile: 'dx3.lfr',
             outputFile: 'dx3_PRfromLFR.json',
-            areaScore: 0.07827382432499638,
-            connectionLengthScore: 0.8755375387352308,
-            positionScore: 1,
-            symmetryScore: 0.9810924369747899,
-            bendScore: 0.5555555555555556,
+            jsonText: dx3JsonText,
           },
         ],
         exampleResults: [],
         evaluationWeights: {
           area: 0.2,
           connectionLength: 0.2,
-          position: 0.2,
+          compact: 0.2,
           symmetry: 0.2,
           bend: 0.2,
         },
         evaluationWeightInputs: {
           area: '0.2',
           connectionLength: '0.2',
-          position: '0.2',
+          compact: '0.2',
           symmetry: '0.2',
           bend: '0.2',
         },
+        evaluationMetricSpecUrl: EVALUATION_METRIC_SPEC_URL,
       }
     },
     computed: {
       currentInputWeightSum () {
-        const keys = ['area', 'connectionLength', 'position', 'symmetry', 'bend']
+        const keys = ['area', 'compact', 'connectionLength', 'symmetry', 'bend']
         return keys.reduce((acc, key) => {
           const parsed = this.toFiniteNumber(this.evaluationWeightInputs[key])
           return acc + (parsed == null ? 0 : parsed)
@@ -321,8 +351,8 @@
       applyEvaluationWeights () {
         const nextWeights = {
           area: this.toFiniteNumber(this.evaluationWeightInputs.area),
+          compact: this.toFiniteNumber(this.evaluationWeightInputs.compact),
           connectionLength: this.toFiniteNumber(this.evaluationWeightInputs.connectionLength),
-          position: this.toFiniteNumber(this.evaluationWeightInputs.position),
           symmetry: this.toFiniteNumber(this.evaluationWeightInputs.symmetry),
           bend: this.toFiniteNumber(this.evaluationWeightInputs.bend),
         }
@@ -374,24 +404,33 @@
         })
         await Promise.all(tasks)
       },
-      normalizeEvaluationMetrics (metrics) {
+      normalizeEvaluationMetrics (metrics, design = null) {
         if (!metrics || typeof metrics !== 'object') return null
-        const areaScore = this.toFiniteNumber(metrics.area_score ?? metrics.areaScore)
+        const backendAreaScore = this.toFiniteNumber(metrics.area_score ?? metrics.areaScore)
+        const backendCompactScore = this.toFiniteNumber(metrics.compact_score ?? metrics.compactScore)
         const connectionLengthScore = this.toFiniteNumber(metrics.connection_length_score ?? metrics.connectionLengthScore)
-        const positionScore = this.toFiniteNumber(metrics.position_score ?? metrics.positionScore)
         const symmetryScore = this.toFiniteNumber(metrics.symmetry_score ?? metrics.symmetryScore)
         const bendScore = this.toFiniteNumber(metrics.bend_score ?? metrics.bendScore)
-        const overallScore = this.toFiniteNumber(metrics.overall_score ?? metrics.overallScore)
-        const values = [areaScore, connectionLengthScore, positionScore, symmetryScore, bendScore, overallScore]
+        const overriddenAreaScore = this.computeGlobalUtilizationRatio(design)
+        const overriddenCompactScore = this.computeLocalCompactnessRatio(design)
+        const areaScore = overriddenAreaScore != null ? overriddenAreaScore : (backendAreaScore != null ? backendAreaScore : 0)
+        const compactScore = overriddenCompactScore != null ? overriddenCompactScore : (backendCompactScore != null ? backendCompactScore : 0)
+        const values = [areaScore, connectionLengthScore, symmetryScore, bendScore]
         if (values.some(v => v == null)) return null
+        const overallScore =
+          areaScore * this.evaluationWeights.area +
+          compactScore * this.evaluationWeights.compact +
+          connectionLengthScore * this.evaluationWeights.connectionLength +
+          symmetryScore * this.evaluationWeights.symmetry +
+          bendScore * this.evaluationWeights.bend
         return {
           areaScore,
+          compactScore,
           connectionLengthScore,
-          positionScore,
           symmetryScore,
           bendScore,
           overallScore,
-          explanation: 'Computed by Neptune_2026 evaluation metric (backend) and displayed with current decimal scores.',
+          explanation: 'Backend metrics with GUI overrides: Area=global utilization and Compact=component-footprint/hull-area. Total is recomputed using applied weights.',
         }
       },
       async ensureEvaluationMetricForFile (fid) {
@@ -410,7 +449,7 @@
             withCredentials: true,
             headers: { 'Content-Type': 'application/json' },
           })
-          const normalized = this.normalizeEvaluationMetrics(response && response.data && response.data.metrics)
+          const normalized = this.normalizeEvaluationMetrics(response && response.data && response.data.metrics, design)
           if (normalized) {
             this.$set(this.computedMetricsByFileId, fid, normalized)
             this.$set(this.evaluationFetchStateByFileId, fid, 'done')
@@ -450,28 +489,204 @@
         return `${labels[0]} (+${labels.length - 1})`
       },
       extractDesignJson (fileData) {
+        const normalizeParsedDesign = (parsed) => {
+          if (!parsed || typeof parsed !== 'object') return null
+          if (parsed.components || parsed.connections || parsed.params) return parsed
+          const nestedCandidates = [
+            parsed.default,
+            parsed.design,
+            parsed.layout,
+            parsed.payload,
+            parsed.data,
+            parsed.content,
+            parsed.file_content,
+            parsed.fileContent,
+          ]
+          for (const nested of nestedCandidates) {
+            if (nested && typeof nested === 'object' && (nested.components || nested.connections || nested.params)) {
+              return nested
+            }
+          }
+          return null
+        }
+        const parseJsonLikeString = (raw) => {
+          if (typeof raw !== 'string') return null
+          let text = raw
+          if (text.charCodeAt(0) === 65279) text = text.slice(1)
+          text = text.trim()
+          if (!text) return null
+          const tryParse = (value) => {
+            try {
+              const parsed = JSON.parse(value)
+              if (typeof parsed === 'string') {
+                try { return JSON.parse(parsed) } catch (_) { return null }
+              }
+              return parsed
+            } catch (_) {
+              return null
+            }
+          }
+          const direct = tryParse(text)
+          if (direct) return direct
+
+          const noLineComments = text
+            .split('\n')
+            .filter(line => !line.trim().startsWith('//'))
+            .join('\n')
+            .trim()
+          const commented = tryParse(noLineComments)
+          if (commented) return commented
+
+          const firstBrace = noLineComments.indexOf('{')
+          const lastBrace = noLineComments.lastIndexOf('}')
+          if (firstBrace >= 0 && lastBrace > firstBrace) {
+            const sliced = tryParse(noLineComments.slice(firstBrace, lastBrace + 1))
+            if (sliced) return sliced
+          }
+          return null
+        }
         if (!fileData || typeof fileData !== 'object') return null
         const candidates = [
           fileData.content,
           fileData.file_content,
           fileData.fileContent,
+          fileData.json,
+          fileData.jsonScript,
+          fileData.design,
+          fileData.layout,
+          fileData.payload,
           fileData.text,
           fileData.data,
         ]
         for (const candidate of candidates) {
           if (!candidate) continue
           if (typeof candidate === 'object') {
-            if (candidate.components || candidate.connections || candidate.params) return candidate
+            const normalizedObject = normalizeParsedDesign(candidate)
+            if (normalizedObject) return normalizedObject
             continue
           }
           if (typeof candidate === 'string') {
-            try {
-              const parsed = JSON.parse(candidate)
-              if (parsed && typeof parsed === 'object') return parsed
-            } catch (_) {}
+            const parsed = parseJsonLikeString(candidate)
+            const normalizedParsed = normalizeParsedDesign(parsed)
+            if (normalizedParsed) return normalizedParsed
           }
         }
         return null
+      },
+      computeCanvasArea (design) {
+        const params = (design && design.params) || {}
+        const width = this.toFiniteNumber(params.width ?? params['x-span'])
+        const length = this.toFiniteNumber(params.length ?? params['y-span'])
+        if (width == null || length == null) return null
+        return Math.max(0, width) * Math.max(0, length)
+      },
+      collectConnectionWaypoints (connections) {
+        const points = []
+        connections.forEach((connection) => {
+          const paths = Array.isArray(connection.paths) ? connection.paths : []
+          paths.forEach((path) => {
+            const wayPoints = Array.isArray(path.wayPoints) ? path.wayPoints : []
+            wayPoints.forEach((point) => {
+              if (!Array.isArray(point) || point.length < 2) return
+              const x = this.toFiniteNumber(point[0])
+              const y = this.toFiniteNumber(point[1])
+              if (x == null || y == null) return
+              points.push({ x, y })
+            })
+          })
+        })
+        return points
+      },
+      computeTotalComponentFootprintArea (components) {
+        let total = 0
+        components.forEach((component) => {
+          if (!component || typeof component !== 'object') return
+          const params = component.params || {}
+          const xSpan = this.toFiniteNumber(component['x-span'] ?? component.xspan ?? params['x-span'] ?? params.xspan) || 0
+          const ySpan = this.toFiniteNumber(component['y-span'] ?? component.yspan ?? params['y-span'] ?? params.yspan) || 0
+          total += Math.max(0, xSpan) * Math.max(0, ySpan)
+        })
+        return total
+      },
+      collectComponentFootprintPoints (components) {
+        const points = []
+        components.forEach((component) => {
+          if (!component || typeof component !== 'object') return
+          const params = component.params || {}
+          const pos = Array.isArray(params.position) ? params.position : []
+          const x = this.toFiniteNumber(pos[0])
+          const y = this.toFiniteNumber(pos[1])
+          if (x == null || y == null) return
+          const xSpan = this.toFiniteNumber(component['x-span'] ?? component.xspan ?? params['x-span'] ?? params.xspan) || 0
+          const ySpan = this.toFiniteNumber(component['y-span'] ?? component.yspan ?? params['y-span'] ?? params.yspan) || 0
+          // Use the rectangle footprint corners so the enclosing polygon fully contains components.
+          points.push({ x, y })
+          points.push({ x: x + xSpan, y })
+          points.push({ x, y: y + ySpan })
+          points.push({ x: x + xSpan, y: y + ySpan })
+        })
+        return points
+      },
+      computeConvexHull (points) {
+        if (!Array.isArray(points) || points.length < 3) return Array.isArray(points) ? points.slice() : []
+        const sorted = [...points].sort((a, b) => (a.x - b.x) || (a.y - b.y))
+        const cross = (o, a, b) => ((a.x - o.x) * (b.y - o.y)) - ((a.y - o.y) * (b.x - o.x))
+        const lower = []
+        sorted.forEach((p) => {
+          while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) lower.pop()
+          lower.push(p)
+        })
+        const upper = []
+        for (let i = sorted.length - 1; i >= 0; i -= 1) {
+          const p = sorted[i]
+          while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) upper.pop()
+          upper.push(p)
+        }
+        lower.pop()
+        upper.pop()
+        return [...lower, ...upper]
+      },
+      computePolygonArea (polygon) {
+        if (!Array.isArray(polygon) || polygon.length < 3) return 0
+        let sum = 0
+        for (let i = 0; i < polygon.length; i += 1) {
+          const a = polygon[i]
+          const b = polygon[(i + 1) % polygon.length]
+          sum += (a.x * b.y) - (a.y * b.x)
+        }
+        return Math.abs(sum) / 2
+      },
+      computeEnclosingHullArea (design) {
+        if (!design || typeof design !== 'object') return null
+        const components = Array.isArray(design.components) ? design.components : []
+        const connections = Array.isArray(design.connections) ? design.connections : []
+        const points = [
+          ...this.collectComponentFootprintPoints(components),
+          ...this.collectConnectionWaypoints(connections),
+        ]
+        if (points.length < 3) return 0
+        const hull = this.computeConvexHull(points)
+        const hullArea = this.computePolygonArea(hull)
+        if (!Number.isFinite(hullArea)) return 0
+        return Math.max(0, hullArea)
+      },
+      computeGlobalUtilizationRatio (design) {
+        if (!design || typeof design !== 'object') return null
+        const canvasArea = this.computeCanvasArea(design)
+        if (canvasArea == null || canvasArea <= 0) return null
+        const hullArea = this.computeEnclosingHullArea(design)
+        if (hullArea == null) return null
+        const ratio = hullArea / canvasArea
+        return Math.max(0, Math.min(1, ratio))
+      },
+      computeLocalCompactnessRatio (design) {
+        if (!design || typeof design !== 'object') return null
+        const components = Array.isArray(design.components) ? design.components : []
+        const componentArea = this.computeTotalComponentFootprintArea(components)
+        const hullArea = this.computeEnclosingHullArea(design)
+        if (hullArea == null || hullArea <= 0) return 0
+        const ratio = componentArea / hullArea
+        return Math.max(0, Math.min(1, ratio))
       },
       computeDesignSymmetryScore (design) {
         const components = Array.isArray(design.components) ? design.components : []
@@ -508,36 +723,7 @@
       },
       computeEvaluationFromDesign (design) {
         if (!design || typeof design !== 'object') return null
-        const components = Array.isArray(design.components) ? design.components : []
         const connections = Array.isArray(design.connections) ? design.connections : []
-
-        const compArea = () => {
-          let xmax = 0
-          let ymax = 0
-          let xmin = Number.POSITIVE_INFINITY
-          let ymin = Number.POSITIVE_INFINITY
-          components.forEach((component) => {
-            const params = component.params || {}
-            const pos = params.position || []
-            const x = this.toFiniteNumber(pos[0]) || 0
-            const y = this.toFiniteNumber(pos[1]) || 0
-            const xSpan = this.toFiniteNumber(component['x-span'] ?? component.xspan) || 0
-            const ySpan = this.toFiniteNumber(component['y-span'] ?? component.yspan) || 0
-            xmax = Math.max(xmax, x + xSpan)
-            ymax = Math.max(ymax, y + ySpan)
-            xmin = Math.min(xmin, x)
-            ymin = Math.min(ymin, y)
-          })
-          if (!Number.isFinite(xmin) || !Number.isFinite(ymin)) return 0
-          return Math.max(0, xmax - xmin) * Math.max(0, ymax - ymin)
-        }
-
-        const deviceArea = () => {
-          const params = design.params || {}
-          const width = this.toFiniteNumber(params.width ?? params['x-span']) || 0
-          const length = this.toFiniteNumber(params.length ?? params['y-span']) || 0
-          return width * length
-        }
 
         const sumConnectionLength = () => {
           let total = 0
@@ -605,27 +791,25 @@
           return segments
         }
 
-        const componentArea = compArea()
-        const totalArea = deviceArea()
         const connectionLength = sumConnectionLength()
         const shortestLength = sumShortestDistance()
         const numConnections = connections.length
         const numSegments = countSegments()
-        const areaScore = totalArea > 0 ? componentArea / totalArea : 0
+        const areaScore = this.computeGlobalUtilizationRatio(design) || 0
+        const compactScore = this.computeLocalCompactnessRatio(design) || 0
         const connectionLengthScore = connectionLength > 0 ? shortestLength / connectionLength : 0
-        const positionScore = 1
         const symmetryScore = this.computeDesignSymmetryScore(design)
         const bendScore = numSegments > 0 ? numConnections / numSegments : 0
         const overallScore =
           areaScore * this.evaluationWeights.area +
+          compactScore * this.evaluationWeights.compact +
           connectionLengthScore * this.evaluationWeights.connectionLength +
-          positionScore * this.evaluationWeights.position +
           symmetryScore * this.evaluationWeights.symmetry +
           bendScore * this.evaluationWeights.bend
         return {
           areaScore,
+          compactScore,
           connectionLengthScore,
-          positionScore,
           symmetryScore,
           bendScore,
           overallScore,
@@ -664,8 +848,8 @@
         if (!job || typeof job !== 'object') {
           return {
             areaScore: null,
+            compactScore: null,
             connectionLengthScore: null,
-            positionScore: null,
             symmetryScore: null,
             bendScore: null,
             overallScore: null,
@@ -674,18 +858,26 @@
         }
 
         const primaryFileId = this.getPrimaryOutputFileId(job)
+        const primaryFileData = primaryFileId ? this.fileDataById[primaryFileId] : null
+        const designForOverride = this.extractDesignJson(primaryFileData)
+        const localAreaOverride = this.computeGlobalUtilizationRatio(designForOverride)
+        const localCompactnessOverride = this.computeLocalCompactnessRatio(designForOverride)
         const computedFromJson = this.getComputedMetricsFromJob(job)
         if (computedFromJson) {
+          const effectiveAreaScore = localAreaOverride != null ? localAreaOverride : computedFromJson.areaScore
+          const effectiveCompactScore = localCompactnessOverride != null ? localCompactnessOverride : computedFromJson.compactScore
           const weightedOverall =
-            computedFromJson.areaScore * this.evaluationWeights.area +
+            effectiveAreaScore * this.evaluationWeights.area +
+            effectiveCompactScore * this.evaluationWeights.compact +
             computedFromJson.connectionLengthScore * this.evaluationWeights.connectionLength +
-            computedFromJson.positionScore * this.evaluationWeights.position +
             computedFromJson.symmetryScore * this.evaluationWeights.symmetry +
             computedFromJson.bendScore * this.evaluationWeights.bend
           return {
             ...computedFromJson,
+            areaScore: effectiveAreaScore,
+            compactScore: effectiveCompactScore,
             overallScore: weightedOverall,
-            explanation: 'Computed by Neptune_2026 evaluation metric (backend). Total is recalculated in GUI using applied weights.',
+            explanation: 'Computed by backend, with GUI geometry overrides for Global Utilization and Compact. Total is recalculated in GUI using applied weights.',
           }
         }
         if (primaryFileId) {
@@ -694,8 +886,8 @@
             this.ensureEvaluationMetricForFile(primaryFileId)
             return {
               areaScore: null,
+              compactScore: null,
               connectionLengthScore: null,
-              positionScore: null,
               symmetryScore: null,
               bendScore: null,
               overallScore: null,
@@ -705,8 +897,8 @@
           if (state === 'failed') {
             return {
               areaScore: null,
+              compactScore: null,
               connectionLengthScore: null,
-              positionScore: null,
               symmetryScore: null,
               bendScore: null,
               overallScore: null,
@@ -719,12 +911,15 @@
         const metricsObj = (job.metrics && typeof job.metrics === 'object' && job.metrics) || null
         const sources = [job, evaluationObj, metricsObj]
 
-        const areaScore = this.resolveMetricFromCandidates(sources, ['area_score', 'areaScore'])
+        let areaScore = this.resolveMetricFromCandidates(sources, ['area_score', 'areaScore'])
         const connectionLengthScore = this.resolveMetricFromCandidates(sources, ['connection_length_score', 'connectionLengthScore'])
-        const positionScore = this.resolveMetricFromCandidates(sources, ['position_score', 'positionScore'])
+        let compactScore = this.resolveMetricFromCandidates(sources, ['compact_score', 'compactScore'])
         const symmetryScore = this.resolveMetricFromCandidates(sources, ['symmetry_score', 'symmetryScore'])
         const bendScore = this.resolveMetricFromCandidates(sources, ['bend_score', 'bendScore'])
-        const components = [areaScore, connectionLengthScore, positionScore, symmetryScore, bendScore]
+        if (localAreaOverride != null) areaScore = localAreaOverride
+        if (localCompactnessOverride != null) compactScore = localCompactnessOverride
+        if (compactScore == null) compactScore = 0
+        const components = [areaScore, connectionLengthScore, compactScore, symmetryScore, bendScore]
         const hasAllComponents = components.every(v => v != null)
 
         let overallScore = this.resolveMetricFromCandidates(sources, [
@@ -743,17 +938,20 @@
         if (hasAllComponents) {
           overallScore =
             areaScore * this.evaluationWeights.area +
+            compactScore * this.evaluationWeights.compact +
             connectionLengthScore * this.evaluationWeights.connectionLength +
-            positionScore * this.evaluationWeights.position +
             symmetryScore * this.evaluationWeights.symmetry +
             bendScore * this.evaluationWeights.bend
           explanation = 'The total score is computed from Neptune_2026 weighted formula using the applied weights.'
+          if (localAreaOverride != null || localCompactnessOverride != null) {
+            explanation = 'The total score is computed in GUI with geometry overrides for Global Utilization and Local Compactness.'
+          }
         }
 
         return {
           areaScore,
+          compactScore,
           connectionLengthScore,
-          positionScore,
           symmetryScore,
           bendScore,
           overallScore,
@@ -778,21 +976,30 @@
       },
       async refreshExampleResults () {
         this.exampleResults = this.staticExampleRows.map((row) => {
+          const designFromJsonText = row.jsonText
+            ? this.extractDesignJson({ content: row.jsonText })
+            : null
+          const computed = designFromJsonText ? this.computeEvaluationFromDesign(designFromJsonText) : null
+          const areaScore = this.toFiniteNumber(computed && computed.areaScore) ?? this.toFiniteNumber(row.areaScore) ?? 0
+          const compactScore = this.toFiniteNumber(computed && computed.compactScore) ?? this.toFiniteNumber(row.compactScore) ?? 0
+          const connectionLengthScore = this.toFiniteNumber(computed && computed.connectionLengthScore) ?? this.toFiniteNumber(row.connectionLengthScore) ?? 0
+          const symmetryScore = this.toFiniteNumber(computed && computed.symmetryScore) ?? this.toFiniteNumber(row.symmetryScore) ?? 0
+          const bendScore = this.toFiniteNumber(computed && computed.bendScore) ?? this.toFiniteNumber(row.bendScore) ?? 0
           const weightedOverall =
-            row.areaScore * this.evaluationWeights.area +
-            row.connectionLengthScore * this.evaluationWeights.connectionLength +
-            row.positionScore * this.evaluationWeights.position +
-            row.symmetryScore * this.evaluationWeights.symmetry +
-            row.bendScore * this.evaluationWeights.bend
+            areaScore * this.evaluationWeights.area +
+            compactScore * this.evaluationWeights.compact +
+            connectionLengthScore * this.evaluationWeights.connectionLength +
+            symmetryScore * this.evaluationWeights.symmetry +
+            bendScore * this.evaluationWeights.bend
           return {
             inputFile: row.inputFile,
             outputFile: row.outputFile,
             lastUpdated: 'Static Example',
-            areaScore: row.areaScore,
-            connectionLengthScore: row.connectionLengthScore,
-            positionScore: row.positionScore,
-            symmetryScore: row.symmetryScore,
-            bendScore: row.bendScore,
+            areaScore,
+            compactScore,
+            connectionLengthScore,
+            symmetryScore,
+            bendScore,
             overallScore: weightedOverall,
           }
         })
@@ -950,6 +1157,17 @@
     tbody td
       font-size: 14pt !important
 
+  ::v-deep .solutions-jobs-table table
+    border-collapse: collapse !important
+    border: 1px solid rgba(0, 51, 73, 0.24) !important
+
+  ::v-deep .solutions-jobs-table thead th,
+  ::v-deep .solutions-jobs-table tbody td
+    border: 1px solid rgba(0, 51, 73, 0.18) !important
+
+  ::v-deep .solutions-jobs-table thead tr:first-child th
+    border-bottom: 1px solid rgba(0, 51, 73, 0.24) !important
+
   /* File card “Actions” label — same scale as library table */
   .body-2
     font-size: 14pt !important
@@ -960,7 +1178,61 @@
     padding: 12px
 
   .solutions-formula-line
-    font-size: 11pt
+    font-size: var(--neptune-fs-body, 14pt) !important
+    line-height: 1.55
+
+  .solutions-formula-panel ::v-deep .v-text-field input
+    font-size: var(--neptune-fs-body, 14pt) !important
+
+  .solutions-formula-panel ::v-deep .v-label
+    font-size: var(--neptune-fs-body, 14pt) !important
+
+  .solutions-formula-panel ::v-deep .v-btn,
+  .solutions-formula-panel ::v-deep .v-btn .v-btn__content
+    font-size: var(--neptune-fs-body, 14pt) !important
+    text-transform: none !important
+    letter-spacing: normal !important
+
+  .solutions-parameter-alert
+    font-size: inherit
+
+  .solutions-parameter-alert.v-alert--outlined
+    border-color: rgba(0, 105, 148, 0.45) !important
+    background: rgba(0, 105, 148, 0.04) !important
+
+  .solutions-parameter-alert ::v-deep .v-alert__icon
+    color: #006994 !important
+
+  .solutions-parameter-alert ::v-deep .v-alert__content
+    font-size: var(--neptune-fs-body, 14pt) !important
+    line-height: 1.55
+    color: rgba(0, 0, 0, 0.87) !important
+
+  .theme--dark .solutions-parameter-alert ::v-deep .v-alert__content
+    color: rgba(255, 255, 255, 0.9) !important
+
+  .solutions-parameter-hint-row
+    display: flex
+    align-items: center
+    gap: 12px
+    flex-wrap: wrap
+
+  .solutions-parameter-hint-text
+    flex: 1 1 320px
+    min-width: 0
+
+  .solutions-parameter-hint-text strong
+    color: #006994 !important
+    font-weight: 600
+
+  .solutions-parameter-spec-btn
+    text-transform: none !important
+    letter-spacing: normal !important
+    flex: 0 0 auto
+
+  .solutions-parameter-spec-btn ::v-deep .v-btn__content
+    text-transform: none !important
+    letter-spacing: normal !important
 
   .solutions-formula-inputs
     display: flex
@@ -969,6 +1241,9 @@
 
   .solutions-weight-input
     max-width: 120px
+
+  .solutions-weight-input ::v-deep .v-label
+    font-size: calc(var(--neptune-fs-body, 14pt) + 2pt) !important
 
   .solutions-apply-btn
     align-self: center

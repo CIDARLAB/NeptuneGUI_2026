@@ -726,21 +726,76 @@ function findDiySourceNode (syntax, jsonObj) {
   if (!jsonObj || typeof jsonObj !== 'object') return null
   const upper = data.sanitizeComponentSyntax(syntax).toUpperCase()
   const hasParams = (n) => n && typeof n === 'object' && n.params && typeof n.params === 'object'
-  const matchByEntity = (n) => {
-    if (!hasParams(n)) return false
-    const ent = String(n.entity || '').toUpperCase()
-    return upper.length > 0 && ent.startsWith(upper)
+  const nodeKind = (n) => data.sanitizeComponentSyntax(n && (n.entity || n.macro || n.name || '')).toUpperCase()
+  const matchRank = (n) => {
+    if (!hasParams(n) || upper.length === 0) return 0
+    const kind = nodeKind(n)
+    if (kind === upper) return 2
+    if (kind.startsWith(upper)) return 1
+    return 0
   }
-  if (Array.isArray(jsonObj.components)) {
-    const hit = jsonObj.components.find(matchByEntity)
-    if (hit) return hit
+  const findBestInList = (list) => {
+    if (!Array.isArray(list)) return null
+    let prefixHit = null
+    for (const node of list) {
+      const rank = matchRank(node)
+      if (rank === 2) return node
+      if (rank === 1 && !prefixHit) prefixHit = node
+    }
+    return prefixHit
   }
-  if (Array.isArray(jsonObj.connections)) {
-    const hit = jsonObj.connections.find(matchByEntity)
-    if (hit) return hit
+
+  // First pass: explicit structured arrays most built-ins use.
+  const componentsHit = findBestInList(jsonObj.components)
+  if (componentsHit) return componentsHit
+  const connectionsHit = findBestInList(jsonObj.connections)
+  if (connectionsHit) return connectionsHit
+  const valvesHit = findBestInList(jsonObj.valves)
+  if (valvesHit) return valvesHit
+  const featuresHit = findBestInList(jsonObj.features)
+  if (featuresHit) return featuresHit
+
+  // Second pass: recursive scan for structures like Valve3D that are only
+  // represented as feature nodes under layers/renderLayers.
+  const candidates = []
+  const visit = (node) => {
+    if (Array.isArray(node)) { node.forEach(visit); return }
+    if (!node || typeof node !== 'object') return
+    const rank = matchRank(node)
+    if (rank > 0) candidates.push({ node, rank })
+    Object.keys(node).forEach((k) => {
+      if (k === 'params') return
+      const v = node[k]
+      if (v && typeof v === 'object') visit(v)
+    })
   }
+  visit(jsonObj.renderLayers)
+  visit(jsonObj.layers)
+  visit(jsonObj.features)
+  visit(jsonObj.components)
+  visit(jsonObj.connections)
+  if (candidates.length) {
+    const exact = candidates.filter(c => c.rank === 2).map(c => c.node)
+    if (exact.length) {
+      const primaryExact = exact.find(n => !n.referenceID)
+      return primaryExact || exact[0]
+    }
+    const prefix = candidates.map(c => c.node)
+    // Prefer source-like nodes (not mirrors) when available.
+    const primaryPrefix = prefix.find(n => !n.referenceID)
+    return primaryPrefix || prefix[0]
+  }
+
   if (Array.isArray(jsonObj.components)) {
     const hit = jsonObj.components.find(hasParams)
+    if (hit) return hit
+  }
+  if (Array.isArray(jsonObj.valves)) {
+    const hit = jsonObj.valves.find(hasParams)
+    if (hit) return hit
+  }
+  if (Array.isArray(jsonObj.features)) {
+    const hit = jsonObj.features.find(hasParams)
     if (hit) return hit
   }
   if (Array.isArray(jsonObj.connections)) {
@@ -768,10 +823,17 @@ function pickEditableParams (syntax, jsonObj) {
 function collectDiyMirrorNodes (jsonObj, sourceId) {
   if (!sourceId) return []
   const mirrors = []
+  const seen = new Set()
   const visit = (node) => {
     if (Array.isArray(node)) { node.forEach(visit); return }
     if (!node || typeof node !== 'object') return
-    if (node.referenceID === sourceId && node.params && typeof node.params === 'object') {
+    if (
+      node.params &&
+      typeof node.params === 'object' &&
+      (node.referenceID === sourceId || node.id === sourceId)
+    ) {
+      if (seen.has(node)) return
+      seen.add(node)
       mirrors.push(node)
     }
     Object.keys(node).forEach((k) => {

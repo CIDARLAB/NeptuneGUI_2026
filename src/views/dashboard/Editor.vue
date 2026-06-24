@@ -56,7 +56,15 @@
               <span class="script-language-arrow" aria-hidden="true">▼</span>
             </template>
           </v-select>
-          <span class="script-language-hint">Switch to another language</span>
+          <v-btn
+            small
+            outlined
+            color="primary"
+            class="script-language-switch-btn"
+            @click="toggleScriptLanguage"
+          >
+            Switch to another language
+          </v-btn>
         </div>
       </v-col>
     </v-row>
@@ -507,14 +515,12 @@ export default {
       ].join('\n')
       return header + example
     },
+    toggleScriptLanguage () {
+      this.selectedScriptLanguage = this.selectedScriptLanguage === 'mint' ? 'lfr' : 'mint'
+    },
     handleScriptLanguageChange (newLang) {
       const targetExt = '.' + String(newLang || '').toLowerCase()
-      const currentExt = String((this.fileobject && this.fileobject.ext) || '').toLowerCase()
       const currentName = String((this.fileobject && this.fileobject.name) || '')
-      const currentExtFromName = (currentName.match(/\.[0-9a-z]+$/i) || [''])[0].toLowerCase()
-      const effectiveCurrentExt = currentExt || currentExtFromName
-
-      if (effectiveCurrentExt === targetExt) return
 
       // No file open / no workspace: fall back to the bundled example. This
       // is "new script from scratch", not a missing-sibling situation, so we
@@ -1361,6 +1367,14 @@ export default {
 }
 .theme--dark .script-language-hint {
   color: #00ACC1;
+}
+.script-language-switch-btn {
+  text-transform: none !important;
+  letter-spacing: normal !important;
+  font-size: var(--neptune-fs-body, 14pt) !important;
+}
+.script-language-switch-btn .v-btn__content {
+  font-size: var(--neptune-fs-body, 14pt) !important;
 }
 
 /* Programming area: double padding from border */
