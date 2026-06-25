@@ -14,8 +14,8 @@
             Evaluation Score = ({{ formatWeightDisplay(evaluationWeights.area) }} x Global Utilization Score) +
             ({{ formatWeightDisplay(evaluationWeights.compact) }} x Local Compactness Score) +
             ({{ formatWeightDisplay(evaluationWeights.connectionLength) }} x Connection Length Score) +
-            ({{ formatWeightDisplay(evaluationWeights.symmetry) }} x Symmetry Score) +
             ({{ formatWeightDisplay(evaluationWeights.bend) }} x Bend Score) +
+            ({{ formatWeightDisplay(evaluationWeights.symmetry) }} x Symmetry Score) +
             ({{ formatWeightDisplay(evaluationWeights.fragmentation) }} x Fragmentation Score)
           </span>
         </div>
@@ -45,16 +45,16 @@
             class="solutions-weight-input"
           />
           <v-text-field
-            v-model="evaluationWeightInputs.symmetry"
-            label="w_sym"
+            v-model="evaluationWeightInputs.bend"
+            label="w_bend"
             dense
             outlined
             hide-details
             class="solutions-weight-input"
           />
           <v-text-field
-            v-model="evaluationWeightInputs.bend"
-            label="w_bend"
+            v-model="evaluationWeightInputs.symmetry"
+            label="w_sym"
             dense
             outlined
             hide-details
@@ -93,7 +93,7 @@
             <div class="solutions-parameter-hint-text">
               <strong>Evaluation parameter definitions and formulas are documented in GitHub.</strong>
               Use the spec to review exact computation steps for Global Utilization,
-              Local Compactness, Connection Length, Symmetry, Bend, Fragmentation, and weighted total.
+              Local Compactness, Connection Length, Bend, Symmetry, Fragmentation, and weighted total.
             </div>
             <v-btn
               small
@@ -149,8 +149,8 @@
             <th>Global Util.</th>
             <th>Local Compact.</th>
             <th>Conn Length</th>
-            <th>Symmetry</th>
             <th>Bend</th>
+            <th>Symmetry</th>
             <th>Fragment.</th>
             <th>Total</th>
           </tr>
@@ -168,8 +168,8 @@
             <td>{{ toPercentDisplay(exampleResult.areaScore) }}</td>
             <td>{{ toPercentDisplay(exampleResult.compactScore) }}</td>
             <td>{{ toPercentDisplay(exampleResult.connectionLengthScore) }}</td>
-            <td>{{ toPercentDisplay(exampleResult.symmetryScore) }}</td>
             <td>{{ toPercentDisplay(exampleResult.bendScore) }}</td>
+            <td>{{ toPercentDisplay(exampleResult.symmetryScore) }}</td>
             <td>{{ toPercentDisplay(exampleResult.fragmentationScore) }}</td>
             <td>{{ toPercentDisplay(exampleResult.overallScore) }}</td>
             <td class="text-right">Done</td>
@@ -186,8 +186,8 @@
             <td>{{ getEvaluationScoreBreakdownValue(job, 'areaScore') }}</td>
             <td>{{ getEvaluationScoreBreakdownValue(job, 'compactScore') }}</td>
             <td>{{ getEvaluationScoreBreakdownValue(job, 'connectionLengthScore') }}</td>
-            <td>{{ getEvaluationScoreBreakdownValue(job, 'symmetryScore') }}</td>
             <td>{{ getEvaluationScoreBreakdownValue(job, 'bendScore') }}</td>
+            <td>{{ getEvaluationScoreBreakdownValue(job, 'symmetryScore') }}</td>
             <td>{{ getEvaluationScoreBreakdownValue(job, 'fragmentationScore') }}</td>
             <td>
               <v-tooltip bottom>
@@ -317,16 +317,16 @@
           area: 0.2,
           connectionLength: 0.2,
           compact: 0.2,
-          symmetry: 0.1,
           bend: 0.2,
+          symmetry: 0.1,
           fragmentation: 0.1,
         },
         evaluationWeightInputs: {
           area: '0.2',
           connectionLength: '0.2',
           compact: '0.2',
-          symmetry: '0.1',
           bend: '0.2',
+          symmetry: '0.1',
           fragmentation: '0.1',
         },
         evaluationMetricSpecUrl: EVALUATION_METRIC_SPEC_URL,
@@ -367,8 +367,8 @@
           area: this.toFiniteNumber(this.evaluationWeightInputs.area),
           compact: this.toFiniteNumber(this.evaluationWeightInputs.compact),
           connectionLength: this.toFiniteNumber(this.evaluationWeightInputs.connectionLength),
-          symmetry: this.toFiniteNumber(this.evaluationWeightInputs.symmetry),
           bend: this.toFiniteNumber(this.evaluationWeightInputs.bend),
+          symmetry: this.toFiniteNumber(this.evaluationWeightInputs.symmetry),
           fragmentation: this.toFiniteNumber(this.evaluationWeightInputs.fragmentation),
         }
         const hasInvalid = Object.values(nextWeights).some(v => v == null)
@@ -433,8 +433,8 @@
           areaScore * this.evaluationWeights.area +
           compactScore * this.evaluationWeights.compact +
           connectionLengthScore * this.evaluationWeights.connectionLength +
-          symmetryScore * this.evaluationWeights.symmetry +
           bendScore * this.evaluationWeights.bend +
+          symmetryScore * this.evaluationWeights.symmetry +
           fragmentationScore * this.evaluationWeights.fragmentation
         return {
           areaScore,
@@ -881,8 +881,8 @@
           areaScore * this.evaluationWeights.area +
           compactScore * this.evaluationWeights.compact +
           connectionLengthScore * this.evaluationWeights.connectionLength +
-          symmetryScore * this.evaluationWeights.symmetry +
           bendScore * this.evaluationWeights.bend +
+          symmetryScore * this.evaluationWeights.symmetry +
           fragmentationScore * this.evaluationWeights.fragmentation
         return {
           areaScore,
@@ -944,8 +944,8 @@
             computedFromJson.areaScore * this.evaluationWeights.area +
             computedFromJson.compactScore * this.evaluationWeights.compact +
             computedFromJson.connectionLengthScore * this.evaluationWeights.connectionLength +
-            computedFromJson.symmetryScore * this.evaluationWeights.symmetry +
             computedFromJson.bendScore * this.evaluationWeights.bend +
+            computedFromJson.symmetryScore * this.evaluationWeights.symmetry +
             computedFromJson.fragmentationScore * this.evaluationWeights.fragmentation
           return {
             ...computedFromJson,
@@ -1014,8 +1014,8 @@
             areaScore * this.evaluationWeights.area +
             compactScore * this.evaluationWeights.compact +
             connectionLengthScore * this.evaluationWeights.connectionLength +
-            symmetryScore * this.evaluationWeights.symmetry +
             bendScore * this.evaluationWeights.bend +
+            symmetryScore * this.evaluationWeights.symmetry +
             fragmentationScore * this.evaluationWeights.fragmentation
           explanation = 'The total score is computed from Neptune_2026 weighted formula using the applied weights.'
         }
@@ -1063,8 +1063,8 @@
             areaScore * this.evaluationWeights.area +
             compactScore * this.evaluationWeights.compact +
             connectionLengthScore * this.evaluationWeights.connectionLength +
-            symmetryScore * this.evaluationWeights.symmetry +
             bendScore * this.evaluationWeights.bend +
+            symmetryScore * this.evaluationWeights.symmetry +
             fragmentationScore * this.evaluationWeights.fragmentation
           return {
             inputFile: row.inputFile,

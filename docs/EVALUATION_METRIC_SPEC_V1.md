@@ -14,7 +14,7 @@ biological assay response, or fabrication defects.
 
 ## Formula
 
-`Evaluation Score = 0.2*GlobalUtilization + 0.2*LocalCompactness + 0.2*ConnectionLength + 0.1*Symmetry + 0.2*Bend + 0.1*Fragmentation`
+`Evaluation Score = 0.2*GlobalUtilization + 0.2*LocalCompactness + 0.2*ConnectionLength + 0.2*Bend + 0.1*Symmetry + 0.1*Fragmentation`
 
 Where:
 
@@ -22,8 +22,8 @@ Where:
   - `w_area = 0.2`
   - `w_cmpt = 0.2`
   - `w_conn = 0.2`
-  - `w_sym = 0.1`
   - `w_bend = 0.2`
+  - `w_sym = 0.1`
   - `w_frag = 0.1`
 - User-provided weights are still supported; the backend normalizes them if needed.
 
@@ -101,22 +101,7 @@ If `RoutedLength <= 0`, Connection Length is set to `0`.
 
 ---
 
-## 4) Symmetry
-
-Measures horizontal and vertical mirror consistency of component centers.
-
-1. Compute each component center from position and span.
-2. Compute design center `(cx, cy)` from min/max center extents.
-3. For each center point, check mirrored match across:
-   - vertical axis (`x -> 2*cx - x`)
-   - horizontal axis (`y -> 2*cy - y`)
-4. Compute:
-
-`Symmetry = (HorizontalMatchRatio + VerticalMatchRatio) / 2`
-
----
-
-## 5) Bend
+## 4) Bend
 
 Rewards fewer direction changes in routed channels.
 
@@ -130,6 +115,21 @@ Rewards fewer direction changes in routed channels.
 `Bend = NumConnections / NumSegments`
 
 If `NumSegments <= 0`, Bend is set to `0`.
+
+---
+
+## 5) Symmetry
+
+Measures horizontal and vertical mirror consistency of component centers.
+
+1. Compute each component center from position and span.
+2. Compute design center `(cx, cy)` from min/max center extents.
+3. For each center point, check mirrored match across:
+   - vertical axis (`x -> 2*cx - x`)
+   - horizontal axis (`y -> 2*cy - y`)
+4. Compute:
+
+`Symmetry = (HorizontalMatchRatio + VerticalMatchRatio) / 2`
 
 ---
 
@@ -196,32 +196,3 @@ If users want to customize the evaluation formula/logic:
 
 Because NeptuneGUI is open source, users are free to fork and maintain their own
 evaluation variant in local deployments.
-
-## Recommended Future Extensions
-
-To better reflect true device performance while preserving this layout-quality
-core, future versions can add optional terms such as:
-
-- Fluidic resistance / pressure-drop proxy
-- Alternative fragmentation formulations
-- Control-layer complexity (valve density / control-routing burden)
-
-### Concrete Upgrade Candidates (Layout-Quality Focus)
-
-The following options keep the metric layout-centric and can be adopted
-independently:
-
-1. **Alternative Fragmentation formulations**
-   - Build connected occupied regions; let `N_islands` be count.
-   - `FragmentPenalty = 1 / N_islands` (or normalized variant)
-   - Benefit: discourages scattered layouts with many disconnected occupied zones.
-
-2. **Control-complexity term (for valve-rich designs)**
-   - Use valve density, control-port congestion, or control-line length proxy.
-   - Add term: `w_ctrl * ControlComplexityScore`
-   - Benefit: captures practical cost not visible in flow-only geometry.
-
-3. **Layer-balance term (multilayer layouts)**
-   - Compare occupied-area distribution across FLOW/CONTROL layers.
-   - Add term: `w_layer * LayerBalanceScore`
-   - Benefit: avoids pathological concentration on one layer.
