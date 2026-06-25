@@ -15,7 +15,8 @@
             ({{ formatWeightDisplay(evaluationWeights.compact) }} x Local Compactness Score) +
             ({{ formatWeightDisplay(evaluationWeights.connectionLength) }} x Connection Length Score) +
             ({{ formatWeightDisplay(evaluationWeights.symmetry) }} x Symmetry Score) +
-            ({{ formatWeightDisplay(evaluationWeights.bend) }} x Bend Score)
+            ({{ formatWeightDisplay(evaluationWeights.bend) }} x Bend Score) +
+            ({{ formatWeightDisplay(evaluationWeights.fragmentation) }} x Fragmentation Score)
           </span>
         </div>
         <div class="solutions-formula-line solutions-formula-inputs">
@@ -59,6 +60,14 @@
             hide-details
             class="solutions-weight-input"
           />
+          <v-text-field
+            v-model="evaluationWeightInputs.fragmentation"
+            label="w_frag"
+            dense
+            outlined
+            hide-details
+            class="solutions-weight-input"
+          />
           <v-btn
             color="success"
             class="solutions-apply-btn"
@@ -84,7 +93,7 @@
             <div class="solutions-parameter-hint-text">
               <strong>Evaluation parameter definitions and formulas are documented in GitHub.</strong>
               Use the spec to review exact computation steps for Global Utilization,
-              Local Compactness, Connection Length, Symmetry, Bend, and weighted total.
+              Local Compactness, Connection Length, Symmetry, Bend, Fragmentation, and weighted total.
             </div>
             <v-btn
               small
@@ -131,7 +140,7 @@
             <th rowspan="2">Input File</th>
             <th rowspan="2">Last Updated</th>
             <th rowspan="2">Output File</th>
-            <th colspan="6" class="text-center">Evaluation Score</th>
+            <th colspan="7" class="text-center">Evaluation Score</th>
             <th rowspan="2" class="text-right">
               Action
             </th>
@@ -142,6 +151,7 @@
             <th>Conn Length</th>
             <th>Symmetry</th>
             <th>Bend</th>
+            <th>Fragment.</th>
             <th>Total</th>
           </tr>
         </thead>
@@ -160,6 +170,7 @@
             <td>{{ toPercentDisplay(exampleResult.connectionLengthScore) }}</td>
             <td>{{ toPercentDisplay(exampleResult.symmetryScore) }}</td>
             <td>{{ toPercentDisplay(exampleResult.bendScore) }}</td>
+            <td>{{ toPercentDisplay(exampleResult.fragmentationScore) }}</td>
             <td>{{ toPercentDisplay(exampleResult.overallScore) }}</td>
             <td class="text-right">Done</td>
           </tr>
@@ -177,6 +188,7 @@
             <td>{{ getEvaluationScoreBreakdownValue(job, 'connectionLengthScore') }}</td>
             <td>{{ getEvaluationScoreBreakdownValue(job, 'symmetryScore') }}</td>
             <td>{{ getEvaluationScoreBreakdownValue(job, 'bendScore') }}</td>
+            <td>{{ getEvaluationScoreBreakdownValue(job, 'fragmentationScore') }}</td>
             <td>
               <v-tooltip bottom>
                 <template v-slot:activator="{ on, attrs }">
@@ -198,7 +210,7 @@
             </td>
           </tr>
           <tr v-if="jobs.length === 0 && exampleResults.length === 0">
-            <td colspan="10" class="text-center grey--text text--darken-1 py-4">
+            <td colspan="11" class="text-center grey--text text--darken-1 py-4">
               No jobs found for current session.
             </td>
           </tr>
@@ -305,22 +317,24 @@
           area: 0.2,
           connectionLength: 0.2,
           compact: 0.2,
-          symmetry: 0.2,
+          symmetry: 0.1,
           bend: 0.2,
+          fragmentation: 0.1,
         },
         evaluationWeightInputs: {
           area: '0.2',
           connectionLength: '0.2',
           compact: '0.2',
-          symmetry: '0.2',
+          symmetry: '0.1',
           bend: '0.2',
+          fragmentation: '0.1',
         },
         evaluationMetricSpecUrl: EVALUATION_METRIC_SPEC_URL,
       }
     },
     computed: {
       currentInputWeightSum () {
-        const keys = ['area', 'compact', 'connectionLength', 'symmetry', 'bend']
+        const keys = ['area', 'compact', 'connectionLength', 'symmetry', 'bend', 'fragmentation']
         return keys.reduce((acc, key) => {
           const parsed = this.toFiniteNumber(this.evaluationWeightInputs[key])
           return acc + (parsed == null ? 0 : parsed)
@@ -355,6 +369,7 @@
           connectionLength: this.toFiniteNumber(this.evaluationWeightInputs.connectionLength),
           symmetry: this.toFiniteNumber(this.evaluationWeightInputs.symmetry),
           bend: this.toFiniteNumber(this.evaluationWeightInputs.bend),
+          fragmentation: this.toFiniteNumber(this.evaluationWeightInputs.fragmentation),
         }
         const hasInvalid = Object.values(nextWeights).some(v => v == null)
         if (hasInvalid) return
@@ -406,31 +421,30 @@
       },
       normalizeEvaluationMetrics (metrics, design = null) {
         if (!metrics || typeof metrics !== 'object') return null
-        const backendAreaScore = this.toFiniteNumber(metrics.area_score ?? metrics.areaScore)
-        const backendCompactScore = this.toFiniteNumber(metrics.compact_score ?? metrics.compactScore)
+        const areaScore = this.toFiniteNumber(metrics.area_score ?? metrics.areaScore)
+        const compactScore = this.toFiniteNumber(metrics.compact_score ?? metrics.compactScore)
         const connectionLengthScore = this.toFiniteNumber(metrics.connection_length_score ?? metrics.connectionLengthScore)
         const symmetryScore = this.toFiniteNumber(metrics.symmetry_score ?? metrics.symmetryScore)
         const bendScore = this.toFiniteNumber(metrics.bend_score ?? metrics.bendScore)
-        const overriddenAreaScore = this.computeGlobalUtilizationRatio(design)
-        const overriddenCompactScore = this.computeLocalCompactnessRatio(design)
-        const areaScore = overriddenAreaScore != null ? overriddenAreaScore : (backendAreaScore != null ? backendAreaScore : 0)
-        const compactScore = overriddenCompactScore != null ? overriddenCompactScore : (backendCompactScore != null ? backendCompactScore : 0)
-        const values = [areaScore, connectionLengthScore, symmetryScore, bendScore]
+        const fragmentationScore = this.toFiniteNumber(metrics.fragmentation_score ?? metrics.fragmentationScore)
+        const values = [areaScore, compactScore, connectionLengthScore, symmetryScore, bendScore, fragmentationScore]
         if (values.some(v => v == null)) return null
         const overallScore =
           areaScore * this.evaluationWeights.area +
           compactScore * this.evaluationWeights.compact +
           connectionLengthScore * this.evaluationWeights.connectionLength +
           symmetryScore * this.evaluationWeights.symmetry +
-          bendScore * this.evaluationWeights.bend
+          bendScore * this.evaluationWeights.bend +
+          fragmentationScore * this.evaluationWeights.fragmentation
         return {
           areaScore,
           compactScore,
           connectionLengthScore,
           symmetryScore,
           bendScore,
+          fragmentationScore,
           overallScore,
-          explanation: 'Backend metrics with GUI overrides: Area=global utilization and Compact=component-footprint/hull-area. Total is recomputed using applied weights.',
+          explanation: 'Backend metrics computed with Neptune_2026 definition. Total is recomputed using applied weights.',
         }
       },
       async ensureEvaluationMetricForFile (fid) {
@@ -608,6 +622,28 @@
         })
         return total
       },
+      computeChannelArea (connections) {
+        let total = 0
+        connections.forEach((connection) => {
+          if (!connection || typeof connection !== 'object') return
+          const params = connection.params || {}
+          const channelWidth = this.toFiniteNumber(params.channelWidth ?? params.width ?? params.diameter) || 0
+          const paths = Array.isArray(connection.paths) ? connection.paths : []
+          paths.forEach((path) => {
+            const wayPoints = Array.isArray(path.wayPoints) ? path.wayPoints : []
+            let prev = null
+            wayPoints.forEach((point) => {
+              if (!Array.isArray(point) || point.length < 2) return
+              const x = this.toFiniteNumber(point[0])
+              const y = this.toFiniteNumber(point[1])
+              if (x == null || y == null) return
+              if (prev && channelWidth > 0) total += Math.hypot(x - prev.x, y - prev.y) * channelWidth
+              prev = { x, y }
+            })
+          })
+        })
+        return total
+      },
       collectComponentFootprintPoints (components) {
         const points = []
         components.forEach((component) => {
@@ -682,11 +718,51 @@
       computeLocalCompactnessRatio (design) {
         if (!design || typeof design !== 'object') return null
         const components = Array.isArray(design.components) ? design.components : []
+        const connections = Array.isArray(design.connections) ? design.connections : []
         const componentArea = this.computeTotalComponentFootprintArea(components)
+        const channelArea = this.computeChannelArea(connections)
+        const occupiedArea = componentArea + channelArea
         const hullArea = this.computeEnclosingHullArea(design)
         if (hullArea == null || hullArea <= 0) return 0
-        const ratio = componentArea / hullArea
+        const ratio = occupiedArea / hullArea
         return Math.max(0, Math.min(1, ratio))
+      },
+      computeFragmentationScore (design) {
+        const components = Array.isArray(design.components) ? design.components : []
+        const connections = Array.isArray(design.connections) ? design.connections : []
+        const ids = components.map(c => c && c.id).filter(Boolean)
+        if (!ids.length) return 1
+        const graph = {}
+        ids.forEach((id) => { graph[id] = new Set() })
+        connections.forEach((connection) => {
+          const source = connection && connection.source && connection.source.component
+          const sinks = Array.isArray(connection && connection.sinks) ? connection.sinks : []
+          if (!source || !graph[source]) return
+          sinks.forEach((sink) => {
+            const target = sink && sink.component
+            if (!target || !graph[target]) return
+            graph[source].add(target)
+            graph[target].add(source)
+          })
+        })
+        let islands = 0
+        const visited = new Set()
+        ids.forEach((id) => {
+          if (visited.has(id)) return
+          islands += 1
+          const stack = [id]
+          visited.add(id)
+          while (stack.length) {
+            const cur = stack.pop()
+            graph[cur].forEach((nxt) => {
+              if (!visited.has(nxt)) {
+                visited.add(nxt)
+                stack.push(nxt)
+              }
+            })
+          }
+        })
+        return islands > 0 ? (1 / islands) : 0
       },
       computeDesignSymmetryScore (design) {
         const components = Array.isArray(design.components) ? design.components : []
@@ -800,18 +876,21 @@
         const connectionLengthScore = connectionLength > 0 ? shortestLength / connectionLength : 0
         const symmetryScore = this.computeDesignSymmetryScore(design)
         const bendScore = numSegments > 0 ? numConnections / numSegments : 0
+        const fragmentationScore = this.computeFragmentationScore(design)
         const overallScore =
           areaScore * this.evaluationWeights.area +
           compactScore * this.evaluationWeights.compact +
           connectionLengthScore * this.evaluationWeights.connectionLength +
           symmetryScore * this.evaluationWeights.symmetry +
-          bendScore * this.evaluationWeights.bend
+          bendScore * this.evaluationWeights.bend +
+          fragmentationScore * this.evaluationWeights.fragmentation
         return {
           areaScore,
           compactScore,
           connectionLengthScore,
           symmetryScore,
           bendScore,
+          fragmentationScore,
           overallScore,
           explanation: 'Computed directly from output JSON in GUI using the applied Neptune_2026 formula.',
         }
@@ -852,32 +931,26 @@
             connectionLengthScore: null,
             symmetryScore: null,
             bendScore: null,
+            fragmentationScore: null,
             overallScore: null,
             explanation: 'No job data is available to compute this score.',
           }
         }
 
         const primaryFileId = this.getPrimaryOutputFileId(job)
-        const primaryFileData = primaryFileId ? this.fileDataById[primaryFileId] : null
-        const designForOverride = this.extractDesignJson(primaryFileData)
-        const localAreaOverride = this.computeGlobalUtilizationRatio(designForOverride)
-        const localCompactnessOverride = this.computeLocalCompactnessRatio(designForOverride)
         const computedFromJson = this.getComputedMetricsFromJob(job)
         if (computedFromJson) {
-          const effectiveAreaScore = localAreaOverride != null ? localAreaOverride : computedFromJson.areaScore
-          const effectiveCompactScore = localCompactnessOverride != null ? localCompactnessOverride : computedFromJson.compactScore
           const weightedOverall =
-            effectiveAreaScore * this.evaluationWeights.area +
-            effectiveCompactScore * this.evaluationWeights.compact +
+            computedFromJson.areaScore * this.evaluationWeights.area +
+            computedFromJson.compactScore * this.evaluationWeights.compact +
             computedFromJson.connectionLengthScore * this.evaluationWeights.connectionLength +
             computedFromJson.symmetryScore * this.evaluationWeights.symmetry +
-            computedFromJson.bendScore * this.evaluationWeights.bend
+            computedFromJson.bendScore * this.evaluationWeights.bend +
+            computedFromJson.fragmentationScore * this.evaluationWeights.fragmentation
           return {
             ...computedFromJson,
-            areaScore: effectiveAreaScore,
-            compactScore: effectiveCompactScore,
             overallScore: weightedOverall,
-            explanation: 'Computed by backend, with GUI geometry overrides for Global Utilization and Compact. Total is recalculated in GUI using applied weights.',
+            explanation: 'Computed by backend. Total is recalculated in GUI using applied weights.',
           }
         }
         if (primaryFileId) {
@@ -890,6 +963,7 @@
               connectionLengthScore: null,
               symmetryScore: null,
               bendScore: null,
+              fragmentationScore: null,
               overallScore: null,
               explanation: 'Evaluation metric is being calculated by Neptune_2026 backend...',
             }
@@ -901,6 +975,7 @@
               connectionLengthScore: null,
               symmetryScore: null,
               bendScore: null,
+              fragmentationScore: null,
               overallScore: null,
               explanation: 'Backend evaluation metric failed for this output JSON.',
             }
@@ -916,10 +991,9 @@
         let compactScore = this.resolveMetricFromCandidates(sources, ['compact_score', 'compactScore'])
         const symmetryScore = this.resolveMetricFromCandidates(sources, ['symmetry_score', 'symmetryScore'])
         const bendScore = this.resolveMetricFromCandidates(sources, ['bend_score', 'bendScore'])
-        if (localAreaOverride != null) areaScore = localAreaOverride
-        if (localCompactnessOverride != null) compactScore = localCompactnessOverride
+        const fragmentationScore = this.resolveMetricFromCandidates(sources, ['fragmentation_score', 'fragmentationScore'])
         if (compactScore == null) compactScore = 0
-        const components = [areaScore, connectionLengthScore, compactScore, symmetryScore, bendScore]
+        const components = [areaScore, connectionLengthScore, compactScore, symmetryScore, bendScore, fragmentationScore]
         const hasAllComponents = components.every(v => v != null)
 
         let overallScore = this.resolveMetricFromCandidates(sources, [
@@ -941,11 +1015,9 @@
             compactScore * this.evaluationWeights.compact +
             connectionLengthScore * this.evaluationWeights.connectionLength +
             symmetryScore * this.evaluationWeights.symmetry +
-            bendScore * this.evaluationWeights.bend
+            bendScore * this.evaluationWeights.bend +
+            fragmentationScore * this.evaluationWeights.fragmentation
           explanation = 'The total score is computed from Neptune_2026 weighted formula using the applied weights.'
-          if (localAreaOverride != null || localCompactnessOverride != null) {
-            explanation = 'The total score is computed in GUI with geometry overrides for Global Utilization and Local Compactness.'
-          }
         }
 
         return {
@@ -954,6 +1026,7 @@
           connectionLengthScore,
           symmetryScore,
           bendScore,
+          fragmentationScore,
           overallScore,
           explanation,
         }
@@ -985,12 +1058,14 @@
           const connectionLengthScore = this.toFiniteNumber(computed && computed.connectionLengthScore) ?? this.toFiniteNumber(row.connectionLengthScore) ?? 0
           const symmetryScore = this.toFiniteNumber(computed && computed.symmetryScore) ?? this.toFiniteNumber(row.symmetryScore) ?? 0
           const bendScore = this.toFiniteNumber(computed && computed.bendScore) ?? this.toFiniteNumber(row.bendScore) ?? 0
+          const fragmentationScore = this.toFiniteNumber(computed && computed.fragmentationScore) ?? this.toFiniteNumber(row.fragmentationScore) ?? 0
           const weightedOverall =
             areaScore * this.evaluationWeights.area +
             compactScore * this.evaluationWeights.compact +
             connectionLengthScore * this.evaluationWeights.connectionLength +
             symmetryScore * this.evaluationWeights.symmetry +
-            bendScore * this.evaluationWeights.bend
+            bendScore * this.evaluationWeights.bend +
+            fragmentationScore * this.evaluationWeights.fragmentation
           return {
             inputFile: row.inputFile,
             outputFile: row.outputFile,
@@ -1000,6 +1075,7 @@
             connectionLengthScore,
             symmetryScore,
             bendScore,
+            fragmentationScore,
             overallScore: weightedOverall,
           }
         })

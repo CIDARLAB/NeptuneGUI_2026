@@ -805,6 +805,67 @@ function findDiySourceNode (syntax, jsonObj) {
   return null
 }
 
+// Keep only DIY params that affect 3DuF geometry rendering for built-in components.
+// Derived from each corresponding 3DuF component class render2D()/transformRender().
+const DIY_RENDER_PARAM_ALLOWLIST = {
+  channel: new Set(['channelWidth', 'crossSection']),
+  mixer: new Set(['bendLength', 'bendSpacing', 'channelWidth', 'numberOfBends', 'rotation', 'mirrorByX', 'mirrorByY']),
+  mux: new Set([
+    'controlChannelWidth',
+    'flowChannelWidth',
+    'in',
+    'length',
+    'out',
+    'rotation',
+    'spacing',
+    'stageLength',
+    'width',
+    'mirrorByX',
+    'mirrorByY',
+  ]),
+  nozzle_droplet_generator: new Set([
+    'oilInputWidth',
+    'orificeLength',
+    'orificeSize',
+    'outputLength',
+    'outputWidth',
+    'waterInputWidth',
+    'rotation',
+    'mirrorByX',
+    'mirrorByY',
+  ]),
+  picoinjector: new Set([
+    'dropletWidth',
+    'electrodeDistance',
+    'electrodeLength',
+    'electrodeWidth',
+    'injectorLength',
+    'injectorWidth',
+    'nozzleLength',
+    'nozzleWidth',
+    'rotation',
+    'width',
+    'mirrorByX',
+    'mirrorByY',
+  ]),
+  port: new Set(['portRadius']),
+  reaction_chamber: new Set(['cornerRadius', 'length', 'rotation', 'width', 'mirrorByX', 'mirrorByY']),
+  tree: new Set(['flowChannelWidth', 'in', 'out', 'rotation', 'spacing', 'stageLength', 'mirrorByX', 'mirrorByY']),
+  valve3d: new Set(['gap', 'rotation', 'valveRadius']),
+  valve: new Set(['length', 'rotation', 'width', 'mirrorByX', 'mirrorByY']),
+}
+
+function filterDiyParamsByRenderImpact (syntax, params) {
+  const safeSyntax = data.sanitizeComponentSyntax(syntax)
+  const allow = DIY_RENDER_PARAM_ALLOWLIST[safeSyntax]
+  if (!allow || !params || typeof params !== 'object') return params || {}
+  const next = {}
+  Object.keys(params).forEach((k) => {
+    if (allow.has(k)) next[k] = params[k]
+  })
+  return next
+}
+
 function pickEditableParams (syntax, jsonObj) {
   const src = findDiySourceNode(syntax, jsonObj)
   if (!src || !src.params) return {}
@@ -813,7 +874,7 @@ function pickEditableParams (syntax, jsonObj) {
     const v = src.params[k]
     if (typeof v === 'number' && Number.isFinite(v)) params[k] = v
   })
-  return params
+  return filterDiyParamsByRenderImpact(syntax, params)
 }
 
 // In 3DuF JSON the same primary component/connection is mirrored inside
@@ -950,11 +1011,12 @@ app.put('/api/v1/componentFiles/:syntax', requireAuth, (req, res) => {
   }
   const custom = readCustomComponents(req.session)
   const customIdx = custom.findIndex(c => c.syntax === syntax)
-  const nextParams = {}
+  const parsedParams = {}
   Object.keys(rawParams).forEach((k) => {
     const n = Number(rawParams[k])
-    if (Number.isFinite(n)) nextParams[k] = n
+    if (Number.isFinite(n)) parsedParams[k] = n
   })
+  const nextParams = filterDiyParamsByRenderImpact(syntax, parsedParams)
 
   if (customIdx >= 0) {
     let parsed = null

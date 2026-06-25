@@ -26,7 +26,7 @@
     "",
     "END LAYER"
   ],
-  "name": "My Other Device",
+  "name": "nozzle_droplet_generator",
   "params": {
     "width": 135000,
     "length": 85000

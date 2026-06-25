@@ -1,4 +1,4 @@
-# Prompt Package User Guide (English)
+# Prompt Package User Guide
 
 This guide is for end users: after downloading `Prompt/`, how to connect to an LLM provider, how token billing works, and how to generate LFR code from your web UI in a few clicks.
 

@@ -203,7 +203,24 @@
             outlined
             dense
             class="mb-2"
-          />
+          >
+            <template v-slot:append-outer>
+              <v-tooltip bottom max-width="360">
+                <template v-slot:activator="{ on, attrs }">
+                  <v-icon
+                    small
+                    class="diy-param-help-icon"
+                    v-bind="attrs"
+                    v-on="on"
+                    tabindex="0"
+                  >
+                    mdi-help-circle-outline
+                  </v-icon>
+                </template>
+                <span>{{ diyParamDescription(key) }}</span>
+              </v-tooltip>
+            </template>
+          </v-text-field>
         </v-card-text>
         <v-card-actions>
           <v-spacer />
@@ -292,6 +309,8 @@ export default {
       defaultComponentDescriptions: {
         channel: 'Microfluidic channel that conveys fluid between components.',
         valve: 'Pneumatically actuated valve that gates flow on a channel.',
+        valve3d: '3D valve primitive with editable gap, radius, height, and rotation for flow-control geometry.',
+        valve_3d: '3D valve primitive with editable gap, radius, height, and rotation for flow-control geometry.',
         mixer: 'Serpentine mixer that combines two or more input streams via diffusion.',
         mux: 'Multiplexer that routes one input to a selected output channel.',
         port: 'External I/O port for connecting tubing or pressure lines to the chip.',
@@ -299,6 +318,39 @@ export default {
         tree: 'Branching network that splits a single stream into multiple equal outputs.',
         nozzle_droplet_generator: 'Flow-focusing nozzle that generates monodisperse droplets in a continuous phase.',
         picoinjector: 'Injects picoliter volumes of reagent into passing droplets.',
+      },
+      diyParamDescriptionsByComponent: {
+        valve: {
+          rotation: 'Valve orientation in degrees; rotates the valve geometry around its insertion point.',
+          gap: 'Flow-gap opening used by the valve geometry; larger values increase the open passage size.',
+          valveradius: 'Valve body radius; larger values create a larger circular valve footprint.',
+          width: 'Valve body width in the rendered geometry.',
+          length: 'Valve body length in the rendered geometry.',
+          height: 'Extrusion height (z dimension) used for valve rendering/manufacturing layers.',
+          componentspacing: 'Placement offset used by the component macro when positioning local valve features.',
+        },
+        valve3d: {
+          rotation: 'Valve orientation in degrees; rotates the valve geometry around its insertion point.',
+          gap: 'Flow-gap opening used by the valve geometry; larger values increase the open passage size.',
+          valveradius: 'Valve body radius; larger values create a larger circular valve footprint.',
+          width: 'Valve body width in the rendered geometry.',
+          length: 'Valve body length in the rendered geometry.',
+          height: 'Extrusion height (z dimension) used for valve rendering/manufacturing layers.',
+          componentspacing: 'Placement offset used by the component macro when positioning local valve features.',
+        },
+      },
+      diyParamDescriptionsGeneric: {
+        width: 'Overall width of the feature/component geometry in layout units.',
+        length: 'Overall length of the feature/component geometry in layout units.',
+        height: 'Feature height (z dimension) used in multilayer/3D rendering context.',
+        radius: 'Radius used to construct circular geometry elements.',
+        valveradius: 'Valve radius used to construct the valve body geometry.',
+        rotation: 'Rotation angle in degrees applied to the feature/component orientation.',
+        gap: 'Gap/opening size that controls spacing between two relevant geometry boundaries.',
+        channelwidth: 'Width of the channel cross-section in the flow layer.',
+        connectionspacing: 'Spacing value used when routing or placing connection/channel segments.',
+        componentspacing: 'Spacing offset used when placing component-local geometry around anchors.',
+        portradius: 'Port radius that controls the size of circular I/O port openings.',
       },
     }
   },
@@ -327,6 +379,14 @@ export default {
       if (!item || item.source === 'custom') return ''
       const key = String(item.syntax || item.name || '').toLowerCase()
       return this.defaultComponentDescriptions[key] || ''
+    },
+    diyParamDescription (key) {
+      const normalizedKey = String(key || '').trim().toLowerCase()
+      const syntax = String((this.diyComponent && (this.diyComponent.syntax || this.diyComponent.name)) || '').toLowerCase()
+      const byComponent = this.diyParamDescriptionsByComponent[syntax] || {}
+      if (byComponent[normalizedKey]) return byComponent[normalizedKey]
+      if (this.diyParamDescriptionsGeneric[normalizedKey]) return this.diyParamDescriptionsGeneric[normalizedKey]
+      return `Numeric parameter used by this component. Increasing "${key}" updates the same field in the generated JSON and may change the rendered geometry.`
     },
     /** Only session custom rows (upload / workspace import / zip restore), not built-in defaults. */
     isRemovableComponent (item) {
@@ -979,6 +1039,26 @@ export default {
 .component-library-diy-dialog >>> .v-text-field .v-label,
 .component-library-diy-dialog >>> .v-messages__message {
   font-size: var(--neptune-fs-body, 14pt) !important;
+}
+
+.component-library-diy-dialog .diy-param-help-icon {
+  color: rgba(0, 105, 148, 0.6);
+  cursor: help;
+  transition: color 120ms ease;
+}
+
+.component-library-diy-dialog .diy-param-help-icon:hover,
+.component-library-diy-dialog .diy-param-help-icon:focus {
+  color: #006994;
+}
+
+.theme--dark .component-library-diy-dialog .diy-param-help-icon {
+  color: rgba(128, 222, 234, 0.72);
+}
+
+.theme--dark .component-library-diy-dialog .diy-param-help-icon:hover,
+.theme--dark .component-library-diy-dialog .diy-param-help-icon:focus {
+  color: #80deea;
 }
 
 .component-library-file-dialog >>> .v-btn,

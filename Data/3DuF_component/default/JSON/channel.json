@@ -19,7 +19,7 @@
     "CHANNEL channel_1 from port_1 1 to port_2 1 connectionSpacing=1600 channelWidth=800 height=250;",
     "END LAYER"
   ],
-  "name": "My Other Device",
+  "name": "channel",
   "params": {
     "width": 135000,
     "length": 85000
