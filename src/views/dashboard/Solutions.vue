@@ -419,7 +419,7 @@
         })
         await Promise.all(tasks)
       },
-      normalizeEvaluationMetrics (metrics, design = null) {
+      normalizeEvaluationMetrics (metrics) {
         if (!metrics || typeof metrics !== 'object') return null
         const areaScore = this.toFiniteNumber(metrics.area_score ?? metrics.areaScore)
         const compactScore = this.toFiniteNumber(metrics.compact_score ?? metrics.compactScore)
@@ -463,7 +463,7 @@
             withCredentials: true,
             headers: { 'Content-Type': 'application/json' },
           })
-          const normalized = this.normalizeEvaluationMetrics(response && response.data && response.data.metrics, design)
+          const normalized = this.normalizeEvaluationMetrics(response && response.data && response.data.metrics)
           if (normalized) {
             this.$set(this.computedMetricsByFileId, fid, normalized)
             this.$set(this.evaluationFetchStateByFileId, fid, 'done')
@@ -587,312 +587,16 @@
         }
         return null
       },
-      computeCanvasArea (design) {
-        const params = (design && design.params) || {}
-        const width = this.toFiniteNumber(params.width ?? params['x-span'])
-        const length = this.toFiniteNumber(params.length ?? params['y-span'])
-        if (width == null || length == null) return null
-        return Math.max(0, width) * Math.max(0, length)
-      },
-      collectConnectionWaypoints (connections) {
-        const points = []
-        connections.forEach((connection) => {
-          const paths = Array.isArray(connection.paths) ? connection.paths : []
-          paths.forEach((path) => {
-            const wayPoints = Array.isArray(path.wayPoints) ? path.wayPoints : []
-            wayPoints.forEach((point) => {
-              if (!Array.isArray(point) || point.length < 2) return
-              const x = this.toFiniteNumber(point[0])
-              const y = this.toFiniteNumber(point[1])
-              if (x == null || y == null) return
-              points.push({ x, y })
-            })
-          })
-        })
-        return points
-      },
-      computeTotalComponentFootprintArea (components) {
-        let total = 0
-        components.forEach((component) => {
-          if (!component || typeof component !== 'object') return
-          const params = component.params || {}
-          const xSpan = this.toFiniteNumber(component['x-span'] ?? component.xspan ?? params['x-span'] ?? params.xspan) || 0
-          const ySpan = this.toFiniteNumber(component['y-span'] ?? component.yspan ?? params['y-span'] ?? params.yspan) || 0
-          total += Math.max(0, xSpan) * Math.max(0, ySpan)
-        })
-        return total
-      },
-      computeChannelArea (connections) {
-        let total = 0
-        connections.forEach((connection) => {
-          if (!connection || typeof connection !== 'object') return
-          const params = connection.params || {}
-          const channelWidth = this.toFiniteNumber(params.channelWidth ?? params.width ?? params.diameter) || 0
-          const paths = Array.isArray(connection.paths) ? connection.paths : []
-          paths.forEach((path) => {
-            const wayPoints = Array.isArray(path.wayPoints) ? path.wayPoints : []
-            let prev = null
-            wayPoints.forEach((point) => {
-              if (!Array.isArray(point) || point.length < 2) return
-              const x = this.toFiniteNumber(point[0])
-              const y = this.toFiniteNumber(point[1])
-              if (x == null || y == null) return
-              if (prev && channelWidth > 0) total += Math.hypot(x - prev.x, y - prev.y) * channelWidth
-              prev = { x, y }
-            })
-          })
-        })
-        return total
-      },
-      collectComponentFootprintPoints (components) {
-        const points = []
-        components.forEach((component) => {
-          if (!component || typeof component !== 'object') return
-          const params = component.params || {}
-          const pos = Array.isArray(params.position) ? params.position : []
-          const x = this.toFiniteNumber(pos[0])
-          const y = this.toFiniteNumber(pos[1])
-          if (x == null || y == null) return
-          const xSpan = this.toFiniteNumber(component['x-span'] ?? component.xspan ?? params['x-span'] ?? params.xspan) || 0
-          const ySpan = this.toFiniteNumber(component['y-span'] ?? component.yspan ?? params['y-span'] ?? params.yspan) || 0
-          // Use the rectangle footprint corners so the enclosing polygon fully contains components.
-          points.push({ x, y })
-          points.push({ x: x + xSpan, y })
-          points.push({ x, y: y + ySpan })
-          points.push({ x: x + xSpan, y: y + ySpan })
-        })
-        return points
-      },
-      computeConvexHull (points) {
-        if (!Array.isArray(points) || points.length < 3) return Array.isArray(points) ? points.slice() : []
-        const sorted = [...points].sort((a, b) => (a.x - b.x) || (a.y - b.y))
-        const cross = (o, a, b) => ((a.x - o.x) * (b.y - o.y)) - ((a.y - o.y) * (b.x - o.x))
-        const lower = []
-        sorted.forEach((p) => {
-          while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) lower.pop()
-          lower.push(p)
-        })
-        const upper = []
-        for (let i = sorted.length - 1; i >= 0; i -= 1) {
-          const p = sorted[i]
-          while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) upper.pop()
-          upper.push(p)
-        }
-        lower.pop()
-        upper.pop()
-        return [...lower, ...upper]
-      },
-      computePolygonArea (polygon) {
-        if (!Array.isArray(polygon) || polygon.length < 3) return 0
-        let sum = 0
-        for (let i = 0; i < polygon.length; i += 1) {
-          const a = polygon[i]
-          const b = polygon[(i + 1) % polygon.length]
-          sum += (a.x * b.y) - (a.y * b.x)
-        }
-        return Math.abs(sum) / 2
-      },
-      computeEnclosingHullArea (design) {
+      async computeEvaluationMetricForDesign (design) {
         if (!design || typeof design !== 'object') return null
-        const components = Array.isArray(design.components) ? design.components : []
-        const connections = Array.isArray(design.connections) ? design.connections : []
-        const points = [
-          ...this.collectComponentFootprintPoints(components),
-          ...this.collectConnectionWaypoints(connections),
-        ]
-        if (points.length < 3) return 0
-        const hull = this.computeConvexHull(points)
-        const hullArea = this.computePolygonArea(hull)
-        if (!Number.isFinite(hullArea)) return 0
-        return Math.max(0, hullArea)
-      },
-      computeGlobalUtilizationRatio (design) {
-        if (!design || typeof design !== 'object') return null
-        const canvasArea = this.computeCanvasArea(design)
-        if (canvasArea == null || canvasArea <= 0) return null
-        const hullArea = this.computeEnclosingHullArea(design)
-        if (hullArea == null) return null
-        const ratio = hullArea / canvasArea
-        return Math.max(0, Math.min(1, ratio))
-      },
-      computeLocalCompactnessRatio (design) {
-        if (!design || typeof design !== 'object') return null
-        const components = Array.isArray(design.components) ? design.components : []
-        const connections = Array.isArray(design.connections) ? design.connections : []
-        const componentArea = this.computeTotalComponentFootprintArea(components)
-        const channelArea = this.computeChannelArea(connections)
-        const occupiedArea = componentArea + channelArea
-        const hullArea = this.computeEnclosingHullArea(design)
-        if (hullArea == null || hullArea <= 0) return 0
-        const ratio = occupiedArea / hullArea
-        return Math.max(0, Math.min(1, ratio))
-      },
-      computeFragmentationScore (design) {
-        const components = Array.isArray(design.components) ? design.components : []
-        const connections = Array.isArray(design.connections) ? design.connections : []
-        const ids = components.map(c => c && c.id).filter(Boolean)
-        if (!ids.length) return 1
-        const graph = {}
-        ids.forEach((id) => { graph[id] = new Set() })
-        connections.forEach((connection) => {
-          const source = connection && connection.source && connection.source.component
-          const sinks = Array.isArray(connection && connection.sinks) ? connection.sinks : []
-          if (!source || !graph[source]) return
-          sinks.forEach((sink) => {
-            const target = sink && sink.component
-            if (!target || !graph[target]) return
-            graph[source].add(target)
-            graph[target].add(source)
+        try {
+          const response = await axios.post('/api/v1/evaluationMetric', { design }, {
+            withCredentials: true,
+            headers: { 'Content-Type': 'application/json' },
           })
-        })
-        let islands = 0
-        const visited = new Set()
-        ids.forEach((id) => {
-          if (visited.has(id)) return
-          islands += 1
-          const stack = [id]
-          visited.add(id)
-          while (stack.length) {
-            const cur = stack.pop()
-            graph[cur].forEach((nxt) => {
-              if (!visited.has(nxt)) {
-                visited.add(nxt)
-                stack.push(nxt)
-              }
-            })
-          }
-        })
-        return islands > 0 ? (1 / islands) : 0
-      },
-      computeDesignSymmetryScore (design) {
-        const components = Array.isArray(design.components) ? design.components : []
-        if (!components.length) return 1
-        const centers = components.map((component) => {
-          const params = component.params || {}
-          const pos = params.position || []
-          const x = this.toFiniteNumber(pos[0]) || 0
-          const y = this.toFiniteNumber(pos[1]) || 0
-          const xSpan = this.toFiniteNumber(component['x-span'] ?? component.xspan) || 0
-          const ySpan = this.toFiniteNumber(component['y-span'] ?? component.yspan) || 0
-          return { x: x + (xSpan / 2), y: y + (ySpan / 2) }
-        })
-        const xs = centers.map(c => c.x)
-        const ys = centers.map(c => c.y)
-        const minX = Math.min(...xs)
-        const maxX = Math.max(...xs)
-        const minY = Math.min(...ys)
-        const maxY = Math.max(...ys)
-        const cx = (minX + maxX) / 2
-        const cy = (minY + maxY) / 2
-        const tolerance = 1e-3
-
-        const hasMirror = (targetX, targetY) =>
-          centers.some(c => Math.abs(c.x - targetX) <= tolerance && Math.abs(c.y - targetY) <= tolerance)
-
-        let hMatch = 0
-        let vMatch = 0
-        centers.forEach((c) => {
-          if (hasMirror((2 * cx) - c.x, c.y)) hMatch += 1
-          if (hasMirror(c.x, (2 * cy) - c.y)) vMatch += 1
-        })
-        return ((hMatch / centers.length) + (vMatch / centers.length)) / 2
-      },
-      computeEvaluationFromDesign (design) {
-        if (!design || typeof design !== 'object') return null
-        const connections = Array.isArray(design.connections) ? design.connections : []
-
-        const sumConnectionLength = () => {
-          let total = 0
-          connections.forEach((connection) => {
-            const paths = Array.isArray(connection.paths) ? connection.paths : []
-            paths.forEach((path) => {
-              const wayPoints = Array.isArray(path.wayPoints) ? path.wayPoints : []
-              let prev = null
-              wayPoints.forEach((point) => {
-                if (!Array.isArray(point) || point.length < 2) return
-                const x = this.toFiniteNumber(point[0]) || 0
-                const y = this.toFiniteNumber(point[1]) || 0
-                if (prev) {
-                  total += Math.hypot(x - prev.x, y - prev.y)
-                }
-                prev = { x, y }
-              })
-            })
-          })
-          return total
-        }
-
-        const sumShortestDistance = () => {
-          let total = 0
-          connections.forEach((connection) => {
-            const paths = Array.isArray(connection.paths) ? connection.paths : []
-            if (!paths.length) return
-            const wayPoints = Array.isArray(paths[0].wayPoints) ? paths[0].wayPoints : []
-            if (wayPoints.length < 2) return
-            const start = wayPoints[0]
-            const end = wayPoints[wayPoints.length - 1]
-            if (!Array.isArray(start) || !Array.isArray(end)) return
-            total += Math.hypot((this.toFiniteNumber(start[0]) || 0) - (this.toFiniteNumber(end[0]) || 0), (this.toFiniteNumber(start[1]) || 0) - (this.toFiniteNumber(end[1]) || 0))
-          })
-          return total
-        }
-
-        const countSegments = () => {
-          let segments = 0
-          connections.forEach((connection) => {
-            const paths = Array.isArray(connection.paths) ? connection.paths : []
-            if (!paths.length) {
-              segments += 1
-              return
-            }
-            paths.forEach((path) => {
-              const wayPoints = Array.isArray(path.wayPoints) ? path.wayPoints : []
-              if (wayPoints.length < 2) return
-              let prevSlope = null
-              for (let i = 0; i < wayPoints.length - 1; i += 1) {
-                const p1 = wayPoints[i]
-                const p2 = wayPoints[i + 1]
-                if (!Array.isArray(p1) || !Array.isArray(p2)) continue
-                const dx = (this.toFiniteNumber(p2[0]) || 0) - (this.toFiniteNumber(p1[0]) || 0)
-                const dy = (this.toFiniteNumber(p2[1]) || 0) - (this.toFiniteNumber(p1[1]) || 0)
-                let slope = 0
-                if (dx === 0) slope = 'vertical'
-                else if (dy === 0) slope = 'horizontal'
-                else slope = dy / dx
-                if (slope !== prevSlope) segments += 1
-                prevSlope = slope
-              }
-            })
-          })
-          return segments
-        }
-
-        const connectionLength = sumConnectionLength()
-        const shortestLength = sumShortestDistance()
-        const numConnections = connections.length
-        const numSegments = countSegments()
-        const areaScore = this.computeGlobalUtilizationRatio(design) || 0
-        const compactScore = this.computeLocalCompactnessRatio(design) || 0
-        const connectionLengthScore = connectionLength > 0 ? shortestLength / connectionLength : 0
-        const symmetryScore = this.computeDesignSymmetryScore(design)
-        const bendScore = numSegments > 0 ? numConnections / numSegments : 0
-        const fragmentationScore = this.computeFragmentationScore(design)
-        const overallScore =
-          areaScore * this.evaluationWeights.area +
-          compactScore * this.evaluationWeights.compact +
-          connectionLengthScore * this.evaluationWeights.connectionLength +
-          bendScore * this.evaluationWeights.bend +
-          symmetryScore * this.evaluationWeights.symmetry +
-          fragmentationScore * this.evaluationWeights.fragmentation
-        return {
-          areaScore,
-          compactScore,
-          connectionLengthScore,
-          symmetryScore,
-          bendScore,
-          fragmentationScore,
-          overallScore,
-          explanation: 'Computed directly from output JSON in GUI using the applied Neptune_2026 formula.',
+          return this.normalizeEvaluationMetrics(response && response.data && response.data.metrics)
+        } catch (_) {
+          return null
         }
       },
       getPrimaryOutputFileId (job) {
@@ -1048,37 +752,25 @@
         return this.getComputedMetricsFromJob(job) ? 'done' : 'ongoing'
       },
       async refreshExampleResults () {
-        this.exampleResults = this.staticExampleRows.map((row) => {
+        const results = await Promise.all(this.staticExampleRows.map(async (row) => {
           const designFromJsonText = row.jsonText
             ? this.extractDesignJson({ content: row.jsonText })
             : null
-          const computed = designFromJsonText ? this.computeEvaluationFromDesign(designFromJsonText) : null
-          const areaScore = this.toFiniteNumber(computed && computed.areaScore) ?? this.toFiniteNumber(row.areaScore) ?? 0
-          const compactScore = this.toFiniteNumber(computed && computed.compactScore) ?? this.toFiniteNumber(row.compactScore) ?? 0
-          const connectionLengthScore = this.toFiniteNumber(computed && computed.connectionLengthScore) ?? this.toFiniteNumber(row.connectionLengthScore) ?? 0
-          const symmetryScore = this.toFiniteNumber(computed && computed.symmetryScore) ?? this.toFiniteNumber(row.symmetryScore) ?? 0
-          const bendScore = this.toFiniteNumber(computed && computed.bendScore) ?? this.toFiniteNumber(row.bendScore) ?? 0
-          const fragmentationScore = this.toFiniteNumber(computed && computed.fragmentationScore) ?? this.toFiniteNumber(row.fragmentationScore) ?? 0
-          const weightedOverall =
-            areaScore * this.evaluationWeights.area +
-            compactScore * this.evaluationWeights.compact +
-            connectionLengthScore * this.evaluationWeights.connectionLength +
-            bendScore * this.evaluationWeights.bend +
-            symmetryScore * this.evaluationWeights.symmetry +
-            fragmentationScore * this.evaluationWeights.fragmentation
+          const computed = await this.computeEvaluationMetricForDesign(designFromJsonText)
           return {
             inputFile: row.inputFile,
             outputFile: row.outputFile,
             lastUpdated: 'Static Example',
-            areaScore,
-            compactScore,
-            connectionLengthScore,
-            symmetryScore,
-            bendScore,
-            fragmentationScore,
-            overallScore: weightedOverall,
+            areaScore: this.toFiniteNumber(computed && computed.areaScore),
+            compactScore: this.toFiniteNumber(computed && computed.compactScore),
+            connectionLengthScore: this.toFiniteNumber(computed && computed.connectionLengthScore),
+            symmetryScore: this.toFiniteNumber(computed && computed.symmetryScore),
+            bendScore: this.toFiniteNumber(computed && computed.bendScore),
+            fragmentationScore: this.toFiniteNumber(computed && computed.fragmentationScore),
+            overallScore: this.toFiniteNumber(computed && computed.overallScore),
           }
-        })
+        }))
+        this.exampleResults = results
       },
       getEvaluationScoreBreakdownValue (job, key) {
         const resolved = this.resolveEvaluationScoreBreakdown(job)

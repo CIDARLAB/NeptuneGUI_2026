@@ -2,6 +2,16 @@
 
 This document defines how each evaluation parameter on the Jobs page is computed.
 
+## Document Structure
+
+This specification is organized as:
+
+1. Scope and interpretation
+2. Weighted formula
+3. Geometry inputs
+4. Metric-by-metric definitions (1-6)
+5. Implementation notes and code entry points
+
 ## Scope And Interpretation
 
 This metric is a **layout-quality engineering score** for placed/routed geometry.
@@ -89,15 +99,46 @@ If `HullArea <= 0`, Local Compactness is set to `0`.
 
 ## 3) Connection Length
 
-Compares actual routed length against straight-line distance.
+Compares total endpoint straight-line distance against total routed channel length.
 
-1. `RoutedLength`: sum of Euclidean distances between consecutive waypoints along each routed path.
-2. `ShortestLength`: sum of straight-line Euclidean distance from path start to path end (per connection path).
+1. `RoutedLength`: sum of Euclidean segment lengths between each pair of adjacent waypoints across **all** routed paths.
+2. `ShortestLength`: sum of Euclidean straight-line distances between path start and path end across **all** routed paths.
 3. Compute:
 
 `ConnectionLength = ShortestLength / RoutedLength`
 
 If `RoutedLength <= 0`, Connection Length is set to `0`.
+
+Interpretation examples:
+
+- If one port connects to another through a single straight segment, `ConnectionLength = 1`.
+- If one routed path contains one right-angle turn and the horizontal/vertical
+  leg lengths are equal, `ConnectionLength = 1 / sqrt(2)`.
+
+### ConnectionLength Implementation Standard
+
+To avoid ambiguity, backend Python should follow this procedure exactly:
+
+1. Traverse **all** `connections[*].paths[*]`.
+2. For each path:
+   - `RoutedLength += sum(distance(waypoint[i], waypoint[i+1]))`
+   - `ShortestLength += distance(waypoint[0], waypoint[last])`
+3. Return `ConnectionLength = ShortestLength / RoutedLength` when `RoutedLength > 0`.
+4. Skip malformed paths (missing/invalid waypoints) without crashing.
+
+Reference pseudocode:
+
+```text
+for connection in connections:
+  for path in connection.paths:
+    wp = valid_waypoints(path.wayPoints)
+    if len(wp) < 2:
+      continue
+    RoutedLength += sum(dist(wp[i], wp[i+1]) for i in range(len(wp)-1))
+    ShortestLength += dist(wp[0], wp[-1])
+
+ConnectionLength = 0 if RoutedLength <= 0 else ShortestLength / RoutedLength
+```
 
 ---
 
@@ -156,43 +197,39 @@ So:
 
 ## Notes
 
-- The Jobs UI computes evaluation terms and recomputes weighted total in the frontend
-  using current user weights.
+- Evaluation term computation is performed in backend Python (`Neptune_2026`).
+- The Jobs UI only recomputes weighted total in the frontend using current user weights.
 - Missing terms default to safe fallback values during normalization to avoid breaking table rendering.
 - If provided weights do not sum to `1`, weights are normalized proportionally
   before computing the weighted total.
 
-## GUI Implementation Transparency And DIY Customization
+## Backend-Frontend Execution Split
 
-NeptuneGUI is open source, and the evaluation functions are intentionally visible
-in the GUI codebase for auditability and user customization.
+To avoid divergence, Neptune follows this split:
 
-- Primary implementation file: `src/views/dashboard/Solutions.vue`
-- Metric sub-functions currently implemented in GUI include:
-  - `computeGlobalUtilizationRatio`
-  - `computeLocalCompactnessRatio`
-  - `computeDesignSymmetryScore`
-  - connection-length and bend helpers inside `computeEvaluationFromDesign`
-  - `computeFragmentationScore`
-- Weighted aggregation is performed in GUI using the current text-box weights.
+- **Backend (`Neptune_2026`)** computes all metric terms.
+- **Frontend (`NeptuneGUI_2026`)** performs only weighted total recomputation
+  when users adjust text-box weights.
 
-### View The Code
+Primary backend implementation file:
 
-- Repository: [CIDARLAB/NeptuneGUI_2026](https://github.com/CIDARLAB/NeptuneGUI_2026)
-- Direct file path to inspect and modify:
-  [`src/views/dashboard/Solutions.vue`](https://github.com/CIDARLAB/NeptuneGUI_2026/blob/main/src/views/dashboard/Solutions.vue)
+- `Neptune_2026/fluigi/evaluation_metric.py`
 
-### DIY Workflow (Local Deployment)
+Primary GUI integration file:
 
-If users want to customize the evaluation formula/logic:
+- `NeptuneGUI_2026/src/views/dashboard/Solutions.vue`
 
-1. Clone the repository locally.
-2. Edit the GUI evaluation functions in `src/views/dashboard/Solutions.vue`.
-3. Run locally from project root:
-   - `npm ci`
-   - `npm run server:install` (first setup only)
-   - `npm run start`
-4. Validate the new behavior in the Jobs page with your own test designs.
+## Open-Source Customization (DIY)
 
-Because NeptuneGUI is open source, users are free to fork and maintain their own
+Users who want custom evaluation formulas should modify backend Python code and
+run a local deployment.
+
+Suggested workflow:
+
+1. Clone both repositories locally (`Neptune_2026`, `NeptuneGUI_2026`).
+2. Edit evaluation logic in `Neptune_2026/fluigi/evaluation_metric.py`.
+3. Start local services and connect GUI to local backend.
+4. Validate updated behavior from the Jobs page.
+
+Because Neptune is open source, users are free to fork and maintain their own
 evaluation variant in local deployments.
