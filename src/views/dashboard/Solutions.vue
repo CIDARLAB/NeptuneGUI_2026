@@ -305,11 +305,23 @@
             inputFile: 'dx2.lfr',
             outputFile: 'dx2_PRfromLFR.json',
             jsonText: dx2JsonText,
+            areaScore: 0.6455377634135614,
+            compactScore: 0.31353925484425815,
+            connectionLengthScore: 0.8329158481882727,
+            bendScore: 0.4074074074074074,
+            symmetryScore: 0.25,
+            fragmentationScore: 1.0,
           },
           {
             inputFile: 'dx3.lfr',
             outputFile: 'dx3_PRfromLFR.json',
             jsonText: dx3JsonText,
+            areaScore: 0.6663971142964921,
+            compactScore: 0.41507288096673967,
+            connectionLengthScore: 0.8755375387352308,
+            bendScore: 0.5555555555555556,
+            symmetryScore: 0.3181818181818182,
+            fragmentationScore: 1.0,
           },
         ],
         exampleResults: [],
@@ -752,24 +764,44 @@
         return this.getComputedMetricsFromJob(job) ? 'done' : 'ongoing'
       },
       async refreshExampleResults () {
-        const results = await Promise.all(this.staticExampleRows.map(async (row) => {
-          const designFromJsonText = row.jsonText
-            ? this.extractDesignJson({ content: row.jsonText })
+        const results = this.staticExampleRows.map((row) => {
+          const areaScore = this.toFiniteNumber(row.areaScore)
+          const compactScore = this.toFiniteNumber(row.compactScore)
+          const connectionLengthScore = this.toFiniteNumber(row.connectionLengthScore)
+          const bendScore = this.toFiniteNumber(row.bendScore)
+          const symmetryScore = this.toFiniteNumber(row.symmetryScore)
+          const fragmentationScore = this.toFiniteNumber(row.fragmentationScore)
+          const hasAllComponents = [
+            areaScore,
+            compactScore,
+            connectionLengthScore,
+            bendScore,
+            symmetryScore,
+            fragmentationScore,
+          ].every(v => v != null)
+          const overallScore = hasAllComponents
+            ? (
+              areaScore * this.evaluationWeights.area +
+              compactScore * this.evaluationWeights.compact +
+              connectionLengthScore * this.evaluationWeights.connectionLength +
+              bendScore * this.evaluationWeights.bend +
+              symmetryScore * this.evaluationWeights.symmetry +
+              fragmentationScore * this.evaluationWeights.fragmentation
+            )
             : null
-          const computed = await this.computeEvaluationMetricForDesign(designFromJsonText)
           return {
             inputFile: row.inputFile,
             outputFile: row.outputFile,
             lastUpdated: 'Static Example',
-            areaScore: this.toFiniteNumber(computed && computed.areaScore),
-            compactScore: this.toFiniteNumber(computed && computed.compactScore),
-            connectionLengthScore: this.toFiniteNumber(computed && computed.connectionLengthScore),
-            symmetryScore: this.toFiniteNumber(computed && computed.symmetryScore),
-            bendScore: this.toFiniteNumber(computed && computed.bendScore),
-            fragmentationScore: this.toFiniteNumber(computed && computed.fragmentationScore),
-            overallScore: this.toFiniteNumber(computed && computed.overallScore),
+            areaScore,
+            compactScore,
+            connectionLengthScore,
+            symmetryScore,
+            bendScore,
+            fragmentationScore,
+            overallScore,
           }
-        }))
+        })
         this.exampleResults = results
       },
       getEvaluationScoreBreakdownValue (job, key) {
