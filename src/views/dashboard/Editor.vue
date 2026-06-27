@@ -32,6 +32,10 @@
         <v-btn class="editor-toolbar-btn editor-toolbar-btn-2" small @click="openCompile">Compile</v-btn>
         <v-btn class="editor-toolbar-btn editor-toolbar-btn-4" small @click="triggerImport">Import</v-btn>
         <v-btn class="editor-toolbar-btn editor-toolbar-btn-3" small @click="downloadfile">Export</v-btn>
+        <v-btn class="editor-toolbar-btn editor-toolbar-btn-5" small @click="openLfrGrammarGithub">
+          LFR Grammar
+          <v-icon right small>mdi-open-in-new</v-icon>
+        </v-btn>
         <v-btn class="editor-toolbar-btn editor-toolbar-btn-delete" small color="error" @click="deletefile">Delete</v-btn>
         <input ref="fileImportInput" type="file" accept=".lfr,.mint,.v,.uf" style="display: none" @change="importFile">
       </v-col>
@@ -1167,6 +1171,9 @@ export default {
       }
       term.write('\r\nNeptune> ' + cmd + '\r\n')
       this.cliCommand = ''
+    },
+    openLfrGrammarGithub () {
+      window.open('https://github.com/CIDARLAB/Neptune_2026/blob/main/pylfr/lfrX.g4', '_blank', 'noopener,noreferrer')
     },
   }
 }

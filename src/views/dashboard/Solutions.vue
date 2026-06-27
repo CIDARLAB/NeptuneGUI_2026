@@ -160,25 +160,26 @@
           <tr
             v-for="exampleResult in exampleResults"
             :key="exampleResult.outputFile"
-            class="results-example-row"
+            :class="['results-row', `results-row--${getExampleResultStatus(exampleResult)}`]"
           >
             <td>{{ exampleResult.inputFile }}</td>
             <td>{{ exampleResult.lastUpdated || '—' }}</td>
             <td>{{ exampleResult.outputFile }}</td>
-            <td>{{ toPercentDisplay(exampleResult.areaScore) }}</td>
-            <td>{{ toPercentDisplay(exampleResult.compactScore) }}</td>
-            <td>{{ toPercentDisplay(exampleResult.connectionLengthScore) }}</td>
-            <td>{{ toPercentDisplay(exampleResult.bendScore) }}</td>
-            <td>{{ toPercentDisplay(exampleResult.symmetryScore) }}</td>
-            <td>{{ toPercentDisplay(exampleResult.fragmentationScore) }}</td>
-            <td>{{ toPercentDisplay(exampleResult.overallScore) }}</td>
-            <td class="text-right">Done</td>
+            <td>{{ getExampleMetricDisplay(exampleResult, 'areaScore') }}</td>
+            <td>{{ getExampleMetricDisplay(exampleResult, 'compactScore') }}</td>
+            <td>{{ getExampleMetricDisplay(exampleResult, 'connectionLengthScore') }}</td>
+            <td>{{ getExampleMetricDisplay(exampleResult, 'bendScore') }}</td>
+            <td>{{ getExampleMetricDisplay(exampleResult, 'symmetryScore') }}</td>
+            <td>{{ getExampleMetricDisplay(exampleResult, 'fragmentationScore') }}</td>
+            <td>{{ getExampleMetricDisplay(exampleResult, 'overallScore') }}</td>
+            <td class="text-right">{{ formatStatusLabel(getExampleResultStatus(exampleResult)) }}</td>
           </tr>
 
 
           <tr
             v-for="(job, ijk) in jobs" 
             :key="ijk"
+            :class="['results-row', `results-row--${getJobActionStatus(job)}`]"
           >
             <td>{{ getInputFileDisplay(job) }}</td>
             <td>{{ formattimestamp(job.created_at) }}</td>
@@ -205,7 +206,7 @@
             </td>
             <td class="text-right">
               <span :class="['results-status', `results-status--${getJobActionStatus(job)}`]">
-                {{ getJobActionStatus(job) }}
+                {{ formatStatusLabel(getJobActionStatus(job)) }}
               </span>
             </td>
           </tr>
@@ -305,6 +306,7 @@
             inputFile: 'dx2.lfr',
             outputFile: 'dx2_PRfromLFR.json',
             jsonText: dx2JsonText,
+            status: 'done',
             areaScore: 0.6455377634135614,
             compactScore: 0.31353925484425815,
             connectionLengthScore: 0.8329158481882727,
@@ -316,6 +318,7 @@
             inputFile: 'dx3.lfr',
             outputFile: 'dx3_PRfromLFR.json',
             jsonText: dx3JsonText,
+            status: 'done',
             areaScore: 0.6663971142964921,
             compactScore: 0.41507288096673967,
             connectionLengthScore: 0.8755375387352308,
@@ -763,8 +766,15 @@
         if (/done|success|completed|complete/.test(normalized)) return 'done'
         return this.getComputedMetricsFromJob(job) ? 'done' : 'ongoing'
       },
+      getExampleResultStatus (exampleResult) {
+        const normalized = String(exampleResult && exampleResult.status || 'done').toLowerCase()
+        if (/fail|error/.test(normalized)) return 'fail'
+        if (/ongoing|running|pending|progress/.test(normalized)) return 'ongoing'
+        return 'done'
+      },
       async refreshExampleResults () {
         const results = this.staticExampleRows.map((row) => {
+          const status = this.getExampleResultStatus(row)
           const areaScore = this.toFiniteNumber(row.areaScore)
           const compactScore = this.toFiniteNumber(row.compactScore)
           const connectionLengthScore = this.toFiniteNumber(row.connectionLengthScore)
@@ -793,6 +803,7 @@
             inputFile: row.inputFile,
             outputFile: row.outputFile,
             lastUpdated: 'Static Example',
+            status,
             areaScore,
             compactScore,
             connectionLengthScore,
@@ -805,8 +816,23 @@
         this.exampleResults = results
       },
       getEvaluationScoreBreakdownValue (job, key) {
+        if (this.shouldMaskMetricValues(job)) return '-'
         const resolved = this.resolveEvaluationScoreBreakdown(job)
         return this.toPercentDisplay(resolved[key])
+      },
+      getExampleMetricDisplay (exampleResult, key) {
+        const status = this.getExampleResultStatus(exampleResult)
+        if (status === 'fail' || status === 'ongoing') return '-'
+        return this.toPercentDisplay(exampleResult[key])
+      },
+      formatStatusLabel (status) {
+        const value = String(status || '').trim().toLowerCase()
+        if (!value) return 'Unknown'
+        return value.charAt(0).toUpperCase() + value.slice(1)
+      },
+      shouldMaskMetricValues (job) {
+        const status = this.getJobActionStatus(job)
+        return status === 'fail' || status === 'ongoing'
       },
       getEvaluationScoreTooltip (job) {
         return this.resolveEvaluationScoreBreakdown(job).explanation
@@ -1048,12 +1074,25 @@
   .solutions-apply-btn
     align-self: center
 
-  .results-example-row
+  .results-row
+    td
+      font-style: italic
+      font-weight: 600
+
+  .results-row--done
     td
       background: rgba(76, 175, 80, 0.18)
       color: #1b5e20
-      font-style: italic
-      font-weight: 600
+
+  .results-row--fail
+    td
+      background: rgba(244, 67, 54, 0.18)
+      color: #b71c1c
+
+  .results-row--ongoing
+    td
+      background: rgba(255, 193, 7, 0.18)
+      color: #795548
 
   .results-status
     display: inline-block
@@ -1062,7 +1101,7 @@
     border-radius: 999px
     padding: 2px 10px
     font-weight: 600
-    text-transform: lowercase
+    text-transform: none
 
   .results-status--done
     background: rgba(76, 175, 80, 0.22)
@@ -1073,7 +1112,7 @@
     color: #b71c1c
 
   .results-status--ongoing
-    background: rgba(255, 193, 7, 0.22)
+    background: rgba(255, 193, 7, 0.18)
     color: #795548
 </style>
 <style lang="sass">
