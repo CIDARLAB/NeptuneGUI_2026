@@ -32,10 +32,6 @@
         <v-btn class="editor-toolbar-btn editor-toolbar-btn-2" small @click="openCompile">Compile</v-btn>
         <v-btn class="editor-toolbar-btn editor-toolbar-btn-4" small @click="triggerImport">Import</v-btn>
         <v-btn class="editor-toolbar-btn editor-toolbar-btn-3" small @click="downloadfile">Export</v-btn>
-        <v-btn class="editor-toolbar-btn editor-toolbar-btn-5" small @click="openLfrGrammarGithub">
-          LFR Grammar
-          <v-icon right small>mdi-open-in-new</v-icon>
-        </v-btn>
         <v-btn class="editor-toolbar-btn editor-toolbar-btn-delete" small color="error" @click="deletefile">Delete</v-btn>
         <input ref="fileImportInput" type="file" accept=".lfr,.mint,.v,.uf" style="display: none" @change="importFile">
       </v-col>
@@ -1172,9 +1168,6 @@ export default {
       term.write('\r\nNeptune> ' + cmd + '\r\n')
       this.cliCommand = ''
     },
-    openLfrGrammarGithub () {
-      window.open('https://github.com/CIDARLAB/Neptune_2026/blob/main/pylfr/lfrX.g4', '_blank', 'noopener,noreferrer')
-    },
   }
 }
 </script>
@@ -1302,7 +1295,6 @@ export default {
 .editor-page .editor-toolbar .editor-toolbar-btn-2 { background-color: #007fa1 !important; border-color: #007fa1 !important; }
 .editor-page .editor-toolbar .editor-toolbar-btn-3 { background-color: #50c878 !important; border-color: #50c878 !important; }
 .editor-page .editor-toolbar .editor-toolbar-btn-4 { background-color: #006994 !important; border-color: #006994 !important; }
-.editor-page .editor-toolbar .editor-toolbar-btn-5 { background-color: #00ACC1 !important; border-color: #00ACC1 !important; }
 .editor-page .editor-toolbar .editor-toolbar-btn-6 { background-color: #00CAE3 !important; border-color: #00CAE3 !important; }
 .editor-page .editor-toolbar .editor-toolbar-btn-delete { color: #fff !important; }
 /* File name: label +2pt (16pt); text inside box matches */

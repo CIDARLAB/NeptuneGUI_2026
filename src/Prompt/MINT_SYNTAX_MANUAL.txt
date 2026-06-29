@@ -1,0 +1,66 @@
+Neptune 2026 - MINT Syntax Manual (Quick Reference)
+
+Canonical implementation and examples:
+- Neptune_2026/docs/LFR_MINT_LANGUAGE_MANUAL.md
+- Neptune_2026/pylfr/pymint/
+- Neptune_2026/Microfluidics-Benchmarks/MINT-TestCases/
+
+1) Top-level structure
+DEVICE <name>
+
+LAYER FLOW
+  ...
+END LAYER
+
+LAYER CONTROL
+  ...
+END LAYER
+
+Notes:
+- LAYER CONTROL is optional.
+- DEVICE name should usually match the LFR module name.
+
+2) Comments
+- # comment to end of line
+
+3) Typical components
+FLOW layer:
+- PORT
+- MIXER
+- NOZZLE DROPLET GENERATOR
+- REACTION CHAMBER / DIAMOND REACTION CHAMBER
+- NODE
+- MICROARRAY
+
+CONTROL layer:
+- PORT
+- VALVE
+
+Examples:
+MIXER mixer_1 componentSpacing=9000;
+PORT port_1 componentSpacing=9000;
+VALVE valve_0 on channel_7 controlPort=Cport_0 componentSpacing=9000;
+
+4) Connectivity statements
+- CHANNEL ... from ... to ...
+- CONNECTION ... from ... to ...
+
+Examples:
+CHANNEL channel_1 from mixer_1 2 to port_1 1 connectionSpacing=1000;
+CONNECTION c1 from p1 1 to ma1 1;
+
+5) Common parameters
+- componentSpacing
+- connectionSpacing
+- channelWidth
+- portRadius
+
+6) LFR -> MINT intuition
+- assign out = in1 + in2      often maps to mixer + channels
+- distribute@(control)         often maps to valves + control channels
+- storage declarations          often map to chambers/traps
+
+7) Useful commands
+poetry run fluigi compile_mint -o <out_dir> <design.mint>
+poetry run fluigi compile_lfr  -o <out_dir> <design.lfr>
+

@@ -1,0 +1,81 @@
+Neptune 2026 - LFR Syntax Manual (Quick Reference)
+
+Canonical implementation lives in:
+- Neptune_2026/docs/LFR_READABLE_SYNTAX_SPEC_V2.md
+- Neptune_2026/pylfr/lfrX.g4
+
+1) Basic module form
+module <module_name>(<io_block>);
+  <declarations and statements>
+endmodule
+
+2) IO declarations
+- finput
+- foutput
+- control
+
+Vector form is supported, for example:
+finput [0:15] inputs
+control [0:3] route
+
+3) Common declarations
+- flow
+- storage
+- number
+- signal
+- pump
+
+Examples:
+flow a_to_mix, mix_out;
+storage stage_1;
+number ratio = 2, gain = 10;
+
+4) Behavior statements
+4.1 assign
+assign <lhs> = <expression>;
+
+Common operators used in Neptune examples:
+- +   merge
+- -   branch/waste style
+- %   metering/sampling style
+- /N  split style
+- ~   mapped primitive style
+
+4.2 distribute@(control)
+Use distribute blocks for control-sensitive routing:
+
+distribute@(sel)
+begin
+  if (sel == 1'b0) out <= a;
+  else out <= b;
+end
+
+case(...) forms are also supported.
+
+5) Directives
+- #MAP
+- #CONSTRAIN
+- #MATERIAL
+
+6) Comments
+- // line comment
+- /* block comment */
+
+7) Cross-file imports (Neptune 2026)
+Verilog-style backtick imports are supported:
+`import "Valve.lfr"
+`import "library/Valve.lfr"
+`import "/abs/path/Valve.lfr"
+
+Rules:
+- one import per line
+- quoted path must end with .lfr
+- transitive import is supported
+- circular import raises preprocessing error
+
+8) Authoring rules
+- Keep source ASCII when possible.
+- Drive declared outputs explicitly.
+- Use <= inside distribute branches; use = in assign.
+- Prefer explicit intermediate flow nodes for complex expressions.
+

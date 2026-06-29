@@ -1,0 +1,35 @@
+Neptune 2026 - Developer Entry Points
+
+Purpose:
+This note helps future developers quickly locate where to edit language behavior,
+compiler behavior, and package-level data models.
+
+1) LFR language behavior
+- Parser grammar: Neptune_2026/pylfr/lfrX.g4
+- Preprocessing/import rules: Neptune_2026/pylfr/lfr/preprocessor.py
+- Compiler entry API: Neptune_2026/pylfr/lfr/api.py
+- Human-readable syntax spec: Neptune_2026/docs/LFR_READABLE_SYNTAX_SPEC_V2.md
+
+2) MINT language behavior
+- pyMINT implementation: Neptune_2026/pylfr/pymint/
+- Common reference manual: Neptune_2026/docs/LFR_MINT_LANGUAGE_MANUAL.md
+
+3) Legacy conceptual wiki (imported snapshot)
+- Neptune_2026/docs/external/LFR-TestCases-wiki/
+- Useful for concept explanations (FIG/distribute/control logic)
+- Neptune 2026 implementation details are documented in local docs above
+
+4) Package documentation
+- parchmint docs: https://parchmint.readthedocs.io/en/latest/
+- pymint docs: https://pymint.readthedocs.io/en/latest/
+
+5) Where to start when changing functionality
+- Syntax parse errors:
+  start with lfrX.g4 (LFR) or pymint parser modules.
+- Import resolution issues:
+  start with pylfr/lfr/preprocessor.py.
+- LFR-to-netlist behavior:
+  start with pylfr/lfr/netlistgenerator/.
+- MINT object model/serialization:
+  start with pylfr/pymint/ and pyparchmint modules.
+

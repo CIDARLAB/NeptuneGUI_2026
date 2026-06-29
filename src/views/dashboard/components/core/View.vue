@@ -52,6 +52,11 @@
                   :to="{ name: 'PromptSteps' }"
                   class="agent-panel-steps-link"
                 >Prompt steps guide</router-link>.
+                Grammar user guides and syntax references are now in
+                <router-link
+                  :to="{ name: 'References' }"
+                  class="agent-panel-steps-link"
+                >References</router-link>.
                 The same content is at the root of the exported zip.
               </p>
 
@@ -81,12 +86,13 @@
                   depressed
                   small
                   block
-                  class="agent-panel-export-btn"
+                  class="agent-panel-export-btn mb-2"
                   @click="openExternalAgent"
                 >
                   <v-icon left small>mdi-open-in-new</v-icon>
                   <span>Open {{ selectedModel.label }} chat</span>
                 </v-btn>
+
               </div>
             </div>
           </div>
@@ -105,6 +111,12 @@
     'en2lfr_user_template.txt',
     'lfr2en_system.txt',
     'lfr2en_user_template.txt',
+  ]
+
+  const SUPPORT_DOC_FILE_NAMES = [
+    'LFR_SYNTAX_MANUAL.txt',
+    'MINT_SYNTAX_MANUAL.txt',
+    'DEVELOPER_ENTRY_POINTS.txt',
   ]
 
   /* Alphabetical by label */
@@ -170,6 +182,12 @@
             }
             const text = await res.text()
             zip.file(`${folder}/${name}`, text)
+          }
+          for (const name of SUPPORT_DOC_FILE_NAMES) {
+            const res = await fetch(`${root}/${name}`)
+            if (!res.ok) continue
+            const text = await res.text()
+            zip.file(name, text)
           }
           const guideFile = await this.fetchGuideForZip(root)
           if (guideFile) {

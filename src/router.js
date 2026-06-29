@@ -78,6 +78,12 @@ export default new Router({
           component: () => import('@/views/dashboard/Library'),
           meta: { requiresAuth: true }
         },
+        {
+          name: 'References',
+          path: 'references',
+          component: () => import('@/views/dashboard/References'),
+          meta: { requiresAuth: true }
+        },
 
         // Pages
         {

@@ -138,6 +138,11 @@
           title: 'Component Library',
           to: '/library',
         },
+        {
+          icon: 'mdi-book-open-page-variant',
+          title: 'References',
+          to: '/references',
+        },
         // {
         //   group: '',
         //   icon: 'mdi-image',
