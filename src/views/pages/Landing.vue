@@ -34,7 +34,7 @@
             hide-details
             label="I understand that Neptune does not save my data online."
           />
-          <v-card-actions class="px-0 pt-4 pb-0">
+          <v-card-actions class="landing-notice-actions px-0 pt-4 pb-0">
             <v-spacer />
             <v-btn color="success" large :disabled="!hasAcknowledgedNoOnlineStorage" @click="continueAsGuest">
               Enter Dashboard
@@ -49,7 +49,7 @@
 <style scoped>
 .landing-shell {
   position: relative;
-  min-height: 100%;
+  min-height: 100vh;
 }
 
 .landing-main-row {
@@ -75,9 +75,12 @@
   width: 100%;
   max-width: 29.5rem;
   min-height: 40rem;
-  margin-top: 30pt;
+  height: auto;
+  max-height: none;
+  margin-top: -20pt;
   display: flex;
   flex-direction: column;
+  overflow: visible;
   border-color: rgba(255, 255, 255, 0.22) !important;
   background: linear-gradient(
     140deg,
@@ -113,21 +116,58 @@
   color: #fff !important;
 }
 
+.landing-notice-actions {
+  background: transparent;
+}
+
 @media (max-width: 960px) {
+  .landing-shell {
+    --mobile-logo-bottom-gap: calc(8pt + min(170px, 55vw) + 12pt);
+    --mobile-about-button-gap: 84pt;
+  }
+
   .landing-right-panel {
-    min-height: auto;
-    padding-right: 30pt;
-    padding-left: 10pt;
+    min-height: 100vh;
+    padding: var(--mobile-logo-bottom-gap) 0.75rem var(--mobile-about-button-gap);
+    justify-content: flex-start;
   }
 
   .landing-logo {
-    width: 230px;
-    max-width: 62vw;
+    width: 170px;
+    max-width: 55vw;
+    top: 8pt;
+    left: 8pt;
   }
 
   .landing-notice-card {
-    margin-top: 30pt;
-    min-height: 34rem;
+    margin-top: 0;
+    max-width: 100%;
+    min-height: auto;
+    height: calc(100vh - var(--mobile-logo-bottom-gap) - var(--mobile-about-button-gap));
+    max-height: calc(100vh - var(--mobile-logo-bottom-gap) - var(--mobile-about-button-gap));
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .landing-notice-title {
+    margin-bottom: 6pt;
+    font-size: 1.15rem;
+  }
+
+  .landing-notice-text {
+    font-size: 0.92rem;
+    line-height: 1.45;
+  }
+
+  .landing-notice-actions {
+    position: sticky;
+    bottom: 0;
+    padding-bottom: 0.25rem !important;
+    background: linear-gradient(
+      to top,
+      rgba(14, 28, 45, 0.98) 70%,
+      rgba(14, 28, 45, 0.2) 100%
+    );
   }
 }
 </style>
