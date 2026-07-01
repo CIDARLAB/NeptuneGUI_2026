@@ -1,0 +1,24 @@
+name: Sync production with main
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync-production:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Sync production branch to main
+        run: |
+          git checkout -B production origin/main
+          git push origin production --force-with-lease
