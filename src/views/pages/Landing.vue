@@ -50,14 +50,18 @@
 .landing-shell {
   position: relative;
   min-height: 100vh;
+  --logo-bottom-gap: 150px;
+  --about-button-gap: 110px;
+  --landing-safe-gap: 12px;
 }
 
 .landing-main-row {
-  min-height: 100%;
+  min-height: 100vh;
 }
 
 .landing-right-panel {
-  min-height: 100%;
+  position: relative;
+  min-height: 100vh;
   justify-content: flex-end;
   padding-right: 30pt;
 }
@@ -72,15 +76,19 @@
 }
 
 .landing-notice-card {
+  position: absolute;
+  top: calc(var(--logo-bottom-gap) + var(--landing-safe-gap));
+  right: 30pt;
+  bottom: calc(var(--about-button-gap) + var(--landing-safe-gap));
   width: 100%;
   max-width: 29.5rem;
-  min-height: 40rem;
+  min-height: 0;
   height: auto;
   max-height: none;
-  margin-top: -20pt;
+  margin-top: 0;
   display: flex;
   flex-direction: column;
-  overflow: visible;
+  overflow: hidden;
   border-color: rgba(255, 255, 255, 0.22) !important;
   background: linear-gradient(
     140deg,
@@ -103,6 +111,9 @@
 
 .landing-notice-text {
   flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   font-size: 1.02rem;
   line-height: 1.6;
   color: #fff;
@@ -122,14 +133,15 @@
 
 @media (max-width: 960px) {
   .landing-shell {
-    --mobile-logo-bottom-gap: calc(8pt + min(170px, 55vw) + 12pt);
-    --mobile-about-button-gap: 84pt;
+    --logo-bottom-gap: calc(8pt + min(170px, 55vw) + 12pt);
+    --about-button-gap: 120px;
+    --landing-safe-gap: 10px;
   }
 
   .landing-right-panel {
     min-height: 100vh;
-    padding: var(--mobile-logo-bottom-gap) 0.75rem var(--mobile-about-button-gap);
-    justify-content: flex-start;
+    padding-right: 0;
+    justify-content: flex-end;
   }
 
   .landing-logo {
@@ -140,13 +152,9 @@
   }
 
   .landing-notice-card {
-    margin-top: 0;
+    right: 0.75rem;
+    left: 0.75rem;
     max-width: 100%;
-    min-height: auto;
-    height: calc(100vh - var(--mobile-logo-bottom-gap) - var(--mobile-about-button-gap));
-    max-height: calc(100vh - var(--mobile-logo-bottom-gap) - var(--mobile-about-button-gap));
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
   }
 
   .landing-notice-title {
