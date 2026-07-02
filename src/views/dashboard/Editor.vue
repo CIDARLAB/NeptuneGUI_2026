@@ -1175,7 +1175,7 @@ export default {
 <style>
 /* Editor height: 1.3 × original (385px → 500px) */
 .editor {
-  height: 500px;
+  height: calc(500px * var(--neptune-content-scale, 1));
   width: 100%;
 }
 
@@ -1232,7 +1232,7 @@ export default {
 #terminal {
   width: 100%;
   min-height: 280px;
-  height: 500px;
+  height: calc(500px * var(--neptune-content-scale, 1));
 }
 /* When console card is stretched to match editor card, terminal fills remaining space */
 .editor-page .neptune-console-card .neptune-console-content .neptune-console-terminal {
@@ -1378,7 +1378,7 @@ export default {
 
 /* Programming area: double padding from border */
 .editor-card-text {
-  padding: 32px !important;
+  padding: calc(32px * var(--neptune-content-scale, 1)) !important;
 }
 .editor-card-text .editor {
   border-radius: 4px;
@@ -1467,5 +1467,72 @@ export default {
 
 .editor-dialog-card .v-card__actions .v-btn {
   font-size: var(--neptune-fs-body, 14pt);
+}
+
+@media (max-width: 1280px) {
+  .editor-page .editor-toolbar {
+    gap: 4px;
+  }
+
+  .editor-page .editor-toolbar .v-btn {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .editor-page .script-language-select {
+    max-width: 220px !important;
+  }
+}
+
+@media (max-width: 1100px) {
+  .editor-page .editor-toolbar {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .editor-page .editor-toolbar .v-btn {
+    width: 100%;
+    margin: 0 !important;
+  }
+
+  .editor-page .editor-toolbar .v-menu {
+    width: 100%;
+  }
+
+  .editor-page .editor-toolbar .v-menu .v-btn {
+    width: 100%;
+  }
+
+  .editor-page .script-language-wrapper {
+    width: 100%;
+    gap: 8px;
+  }
+
+  .editor-page .script-language-select {
+    width: 100%;
+    max-width: 100% !important;
+  }
+
+  .editor-page .editor-page-filename-input,
+  .editor-page .new-script-filename-input {
+    max-width: 100% !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .editor-page .editor-toolbar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .editor,
+  .terminal,
+  #terminal {
+    height: calc(420px * var(--neptune-content-scale, 1));
+  }
+
+  .editor-card-text {
+    padding: 14px !important;
+  }
 }
 </style>

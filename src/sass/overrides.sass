@@ -81,30 +81,30 @@ html.font-size-small
 html.font-size-large .v-btn,
 html.font-size-normal .v-btn,
 html.font-size-small .v-btn
-  font-size: calc(14pt * var(--ui-scale)) !important
+  font-size: calc(14pt * var(--ui-scale) * var(--neptune-content-scale)) !important
 
 html.font-size-large .v-btn:not(.v-btn--icon):not(.v-btn--fab),
 html.font-size-normal .v-btn:not(.v-btn--icon):not(.v-btn--fab),
 html.font-size-small .v-btn:not(.v-btn--icon):not(.v-btn--fab)
-  min-height: calc(36px * var(--ui-scale)) !important
-  padding-left: calc(16px * var(--ui-scale)) !important
-  padding-right: calc(16px * var(--ui-scale)) !important
+  min-height: calc(36px * var(--ui-scale) * var(--neptune-content-scale)) !important
+  padding-left: calc(16px * var(--ui-scale) * var(--neptune-content-scale)) !important
+  padding-right: calc(16px * var(--ui-scale) * var(--neptune-content-scale)) !important
 
 html.font-size-large .v-btn.v-btn--icon,
 html.font-size-normal .v-btn.v-btn--icon,
 html.font-size-small .v-btn.v-btn--icon
-  width: calc(36px * var(--ui-scale)) !important
-  height: calc(36px * var(--ui-scale)) !important
+  width: calc(36px * var(--ui-scale) * var(--neptune-content-scale)) !important
+  height: calc(36px * var(--ui-scale) * var(--neptune-content-scale)) !important
 
 html.font-size-large .v-icon,
 html.font-size-normal .v-icon,
 html.font-size-small .v-icon
-  font-size: calc(24px * var(--ui-scale)) !important
+  font-size: calc(24px * var(--ui-scale) * var(--neptune-content-scale)) !important
 
 html.font-size-large .v-input,
 html.font-size-normal .v-input,
 html.font-size-small .v-input
-  font-size: calc(14pt * var(--ui-scale)) !important
+  font-size: calc(14pt * var(--ui-scale) * var(--neptune-content-scale)) !important
 
 html.font-size-large .drawer-logo-img,
 html.font-size-normal .drawer-logo-img,
@@ -112,7 +112,7 @@ html.font-size-small .drawer-logo-img,
 html.font-size-large .landing-top-right-logo,
 html.font-size-normal .landing-top-right-logo,
 html.font-size-small .landing-top-right-logo
-  transform: scale(var(--ui-scale))
+  transform: scale(calc(var(--ui-scale) * var(--neptune-content-scale)))
   transform-origin: top left
 
 // Show button labels with natural casing (Vuetify defaults to uppercase)
@@ -123,3 +123,26 @@ html.font-size-small .landing-top-right-logo
 .v-application .v-btn .v-btn__content
   text-transform: none !important
   letter-spacing: normal !important
+
+// Global responsive hardening: narrow desktop/tablet widths
+@media (max-width: 1280px)
+  .v-application .container
+    padding-left: calc(10px * var(--neptune-content-scale)) !important
+    padding-right: calc(10px * var(--neptune-content-scale)) !important
+
+@media (max-width: 1024px)
+  .v-application .container
+    padding-left: calc(8px * var(--neptune-content-scale)) !important
+    padding-right: calc(8px * var(--neptune-content-scale)) !important
+
+  .v-application .v-card__title
+    word-break: break-word
+
+  .v-application .v-simple-table
+    display: block
+    width: 100%
+    overflow-x: auto
+    -webkit-overflow-scrolling: touch
+
+  .v-application .v-simple-table table
+    min-width: 760px

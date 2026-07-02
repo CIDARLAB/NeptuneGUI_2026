@@ -1,17 +1,44 @@
 // Neptune UI type scale — body matches LLM prompts hint (14pt); page title largest; sections next.
 \:root
+  --neptune-scale: 1
+  --neptune-content-scale: 1
   // App bar + workspace card names (another +2pt vs prior)
-  --neptune-fs-page-title: calc(1.625rem + 4pt)
+  --neptune-fs-page-title: calc((1.625rem + 4pt) * var(--neptune-scale))
   // Section/card labels such as Solutions “Jobs” / workspace names on cards — not bold, 4pt below page title
-  --neptune-fs-below-page-title: calc(var(--neptune-fs-page-title) - 4pt)
+  --neptune-fs-below-page-title: calc(var(--neptune-fs-page-title) - calc(4pt * var(--neptune-scale)))
   // “Last Update” / “Last edited” lines (2pt smaller than previous −2pt vs body → −4pt vs body)
-  --neptune-fs-timestamp: calc(var(--neptune-fs-body) - 4pt)
-  --neptune-fs-section: 1.1875rem
-  --neptune-fs-body: 14pt
-  --neptune-fs-label: 13.25pt
-  --neptune-fs-small: 12.75pt
+  --neptune-fs-timestamp: calc(var(--neptune-fs-body) - calc(4pt * var(--neptune-scale)))
+  --neptune-fs-section: calc(1.1875rem * var(--neptune-scale))
+  --neptune-fs-body: calc(14pt * var(--neptune-scale))
+  --neptune-fs-label: calc(13.25pt * var(--neptune-scale))
+  --neptune-fs-small: calc(12.75pt * var(--neptune-scale))
   // Matches typical Cursor/VS Code editor defaults (Consolas/Menlo); no webfonts
   --neptune-font-code: Consolas, Menlo, Monaco, 'Courier New', 'Droid Sans Mono', 'Ubuntu Monospace', 'Liberation Mono', ui-monospace, monospace
+
+@media (max-width: 1440px)
+  \:root
+    --neptune-scale: 0.95
+    --neptune-content-scale: 0.95
+
+@media (max-width: 1280px)
+  \:root
+    --neptune-scale: 0.9
+    --neptune-content-scale: 0.9
+
+@media (max-width: 1100px)
+  \:root
+    --neptune-scale: 0.85
+    --neptune-content-scale: 0.85
+
+@media (max-width: 960px)
+  \:root
+    --neptune-scale: 0.8
+    --neptune-content-scale: 0.8
+
+@media (max-width: 768px)
+  \:root
+    --neptune-scale: 0.76
+    --neptune-content-scale: 0.76
 
 // Route name in app bar (Dashboard, Editor, …) — largest text in the shell
 .theme--light .dashboard-appbar-title,

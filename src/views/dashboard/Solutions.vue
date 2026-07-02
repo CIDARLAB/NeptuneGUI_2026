@@ -1114,6 +1114,42 @@
   .results-status--ongoing
     background: rgba(255, 193, 7, 0.18)
     color: #795548
+
+  @media (max-width: 1280px)
+    ::v-deep .solutions-jobs-table
+      overflow-x: auto
+      -webkit-overflow-scrolling: touch
+
+    ::v-deep .solutions-jobs-table table
+      min-width: 980px
+
+    .solutions-weight-input
+      max-width: 102px
+
+  @media (max-width: 1100px)
+    .solutions-formula-inputs
+      gap: 6px
+
+    .solutions-weight-input
+      max-width: 92px
+
+    .solutions-apply-btn
+      width: 100%
+      margin-top: 4px
+
+    .solutions-parameter-hint-row
+      align-items: flex-start
+
+    .solutions-parameter-spec-btn
+      margin-left: 0 !important
+
+  @media (max-width: 768px)
+    .solutions-weight-input
+      flex: 1 1 calc(50% - 6px)
+      max-width: calc(50% - 6px)
+
+    .solutions-apply-btn
+      flex: 1 1 100%
 </style>
 <style lang="sass">
   #coloured-line

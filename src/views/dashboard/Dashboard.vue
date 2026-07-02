@@ -1625,8 +1625,8 @@
         background: rgba(80, 200, 120, 0.08);
     }
     #dashboard .file-grid-create-btn {
-        width: 90px;
-        height: 90px;
+        width: calc(90px * var(--neptune-content-scale, 1));
+        height: calc(90px * var(--neptune-content-scale, 1));
     }
     #dashboard .file-grid-create-label {
         font-size: var(--neptune-fs-body, 14pt);
@@ -1805,6 +1805,40 @@
     .dashboard-naming-dialog .v-btn {
         text-transform: none !important;
         letter-spacing: normal !important;
+    }
+
+    @media (max-width: 1200px) {
+        #dashboard .d-flex.align-center.flex-wrap {
+            row-gap: 8px;
+        }
+
+        #dashboard .dashboard-guest-export-btn,
+        #dashboard .dashboard-guest-import-btn {
+            margin-left: 0 !important;
+        }
+    }
+
+    @media (max-width: 1024px) {
+        #dashboard .file-list-table-card {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        #dashboard .file-list-table table {
+            min-width: 760px;
+        }
+
+        #dashboard .file-grid-create-btn {
+            width: calc(74px * var(--neptune-content-scale, 1));
+            height: calc(74px * var(--neptune-content-scale, 1));
+        }
+    }
+
+    @media (max-width: 768px) {
+        #dashboard .guest-storage-text {
+            white-space: normal !important;
+            max-width: 100%;
+        }
     }
 
 </style>
