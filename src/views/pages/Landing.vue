@@ -131,6 +131,97 @@
   background: transparent;
 }
 
+@media (max-width: 1360px) {
+  .landing-notice-card {
+    max-width: 27.5rem;
+  }
+
+  .landing-notice-title {
+    font-size: 1.42rem;
+  }
+
+  .landing-notice-text {
+    font-size: 0.98rem;
+    line-height: 1.54;
+  }
+
+  .landing-ack-checkbox ::v-deep .v-label {
+    font-size: 0.93rem;
+  }
+}
+
+@media (max-width: 1200px) {
+  .landing-shell {
+    --logo-bottom-gap: 140px;
+    --about-button-gap: 104px;
+  }
+
+  .landing-right-panel {
+    padding-right: 20pt;
+  }
+
+  .landing-notice-card {
+    right: 20pt;
+    max-width: 24.5rem;
+  }
+
+  .landing-notice-title {
+    margin-bottom: 7pt;
+    font-size: 1.26rem;
+  }
+
+  .landing-notice-text {
+    font-size: 0.92rem;
+    line-height: 1.46;
+  }
+
+  .landing-ack-checkbox {
+    margin-top: 0.5rem !important;
+  }
+
+  .landing-ack-checkbox ::v-deep .v-label {
+    font-size: 0.86rem;
+    line-height: 1.32;
+  }
+}
+
+@media (max-width: 1024px) {
+  .landing-shell {
+    --logo-bottom-gap: 132px;
+    --about-button-gap: 100px;
+  }
+
+  .landing-right-panel {
+    padding-right: 14pt;
+  }
+
+  .landing-notice-card {
+    right: 14pt;
+    max-width: 21.8rem;
+  }
+
+  .landing-notice-title {
+    font-size: 1.15rem;
+  }
+
+  .landing-notice-text {
+    font-size: 0.84rem;
+    line-height: 1.38;
+  }
+
+  .landing-ack-checkbox ::v-deep .v-label {
+    font-size: 0.8rem;
+    line-height: 1.26;
+  }
+
+  .landing-notice-actions .v-btn {
+    font-size: 0.78rem;
+    min-width: 112px;
+    height: 34px;
+    padding: 0 12px;
+  }
+}
+
 @media (max-width: 960px) {
   .landing-shell {
     --logo-bottom-gap: calc(8pt + min(170px, 55vw) + 12pt);
@@ -176,6 +267,36 @@
       rgba(14, 28, 45, 0.98) 70%,
       rgba(14, 28, 45, 0.2) 100%
     );
+  }
+}
+
+@media (max-width: 768px) {
+  .landing-shell {
+    --about-button-gap: 114px;
+  }
+
+  .landing-notice-card {
+    right: 0.6rem;
+    left: 0.6rem;
+  }
+
+  .landing-notice-title {
+    font-size: 1.06rem;
+  }
+
+  .landing-notice-text {
+    font-size: 0.86rem;
+    line-height: 1.38;
+  }
+
+  .landing-ack-checkbox ::v-deep .v-label {
+    font-size: 0.79rem;
+  }
+
+  .landing-notice-actions .v-btn {
+    font-size: 0.75rem;
+    min-width: 106px;
+    height: 32px;
   }
 }
 </style>
