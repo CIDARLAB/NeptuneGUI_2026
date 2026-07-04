@@ -13,6 +13,8 @@ const { v4: uuidv4 } = require('uuid')
 const axios = require('axios')
 const JSZip = require('jszip')
 const data = require('./dataLayer')
+const { seedBundledDataIfNeeded } = require('./seedData')
+const { mergeComponentBundles, toCompileComponentBundle } = require('./componentBundle')
 
 // Optional: forward compile to Neptune_2026 (e.g. http://localhost:5000)
 const NEPTUNE_COMPILE_URL = process.env.NEPTUNE_COMPILE_URL || ''
@@ -475,14 +477,40 @@ app.get('/api/v1/exampleScript', requireAuth, (req, res) => {
   })
 })
 
+function listComponentFilePayloads (session) {
+  const syntaxes = data.listDefaultComponentSyntaxes()
+  const defaults = syntaxes.map((syntax) => {
+    const loaded = data.loadComponentJson(syntax)
+    if (!loaded) return null
+    return buildComponentPayload(loaded.syntax, loaded.json, loaded.source)
+  }).filter(Boolean)
+  const custom = readCustomComponents(session).map((c) => {
+    let jsonObj = null
+    try { jsonObj = JSON.parse(c.jsonScript) } catch (_) { jsonObj = null }
+    return {
+      syntax: c.syntax,
+      name: c.name,
+      source: 'custom',
+      sourceType: c.sourceType,
+      showLfrMint: false,
+      params: pickEditableParams(c.syntax, jsonObj || {}),
+      lfrScript: '',
+      mintScript: '',
+      jsonScript: c.jsonScript,
+      jsonViewScript: c.jsonScript,
+    }
+  })
+  return [...defaults, ...custom]
+}
+
 // Compile: proxy to Modal compute endpoint (NEPTUNE_COMPILE_URL).
-// Enriches the request with actual file content so Modal doesn't need
-// access to the local Data/ filesystem.
+// Enriches the request with script content and a component-library snapshot
+// (JSON + LFR/MINT) so Modal/fluigi can use the latest component definitions.
 function proxyCompile (req, res, routePath) {
   if (!NEPTUNE_COMPILE_URL) {
     return res.status(501).json({ error: 'Compile not configured. Set NEPTUNE_COMPILE_URL to the Modal endpoint URL.' })
   }
-  const { sourcefileid, configfileid, workspace: workspaceId } = req.body || {}
+  const { sourcefileid, configfileid, workspace: workspaceId, componentBundle: clientBundle } = req.body || {}
   let sourceContent = ''
   let configContent = ''
   if (sourcefileid && workspaceId) {
@@ -493,7 +521,10 @@ function proxyCompile (req, res, routePath) {
     const f = data.getFile(req.session, workspaceId, configfileid)
     if (f && f.content != null) configContent = typeof f.content === 'string' ? f.content : JSON.stringify(f.content)
   }
-  const enrichedBody = { ...req.body, sourceContent, configContent }
+  const serverComponents = listComponentFilePayloads(req.session)
+  const mergedComponents = mergeComponentBundles(serverComponents, clientBundle)
+  const componentBundle = toCompileComponentBundle(mergedComponents)
+  const enrichedBody = { ...req.body, sourceContent, configContent, componentBundle }
   const url = NEPTUNE_COMPILE_URL.replace(/\/$/, '') + routePath
   axios.post(url, enrichedBody, { timeout: 60000, validateStatus: () => true })
     .then((axRes) => res.status(axRes.status).json(axRes.data))
@@ -977,29 +1008,7 @@ function buildComponentPayload (syntax, jsonObj, source) {
 }
 
 app.get('/api/v1/componentFiles', requireAuth, (req, res) => {
-  const syntaxes = data.listDefaultComponentSyntaxes()
-  const defaults = syntaxes.map((syntax) => {
-    const loaded = data.loadComponentJson(syntax)
-    if (!loaded) return null
-    return buildComponentPayload(loaded.syntax, loaded.json, loaded.source)
-  }).filter(Boolean)
-  const custom = readCustomComponents(req.session).map((c) => {
-    let jsonObj = null
-    try { jsonObj = JSON.parse(c.jsonScript) } catch (_) { jsonObj = null }
-    return {
-      syntax: c.syntax,
-      name: c.name,
-      source: 'custom',
-      sourceType: c.sourceType,
-      showLfrMint: false,
-      params: pickEditableParams(c.syntax, jsonObj || {}),
-      lfrScript: '',
-      mintScript: '',
-      jsonScript: c.jsonScript,
-      jsonViewScript: c.jsonScript,
-    }
-  })
-  res.json({ components: [...defaults, ...custom] })
+  res.json({ components: listComponentFilePayloads(req.session) })
 })
 
 app.put('/api/v1/componentFiles/:syntax', requireAuth, (req, res) => {
@@ -1190,6 +1199,27 @@ if (require('fs').existsSync(DIST_DIR)) {
   app.use(express.static(DIST_DIR))
   app.get('*', (req, res) => res.sendFile(path.join(DIST_DIR, 'index.html')))
 }
+
+data.ensureDirs()
+const seedResult = seedBundledDataIfNeeded(data.DATA_ROOT)
+if (seedResult.seeded) {
+  console.log(
+    `Seeded ${seedResult.copied} bundled Data file(s) into ${data.DATA_ROOT} (${seedResult.skipped} already present)`,
+  )
+} else if (seedResult.reason === 'no-seed-root') {
+  console.log('Startup seed skipped (no bundled seed-data; using existing Data/ tree)')
+} else {
+  console.log(
+    `Startup seed: ${seedResult.reason} (copied=${seedResult.copied}, skipped=${seedResult.skipped})`,
+  )
+}
+
+const defaultSyntaxes = data.listDefaultComponentSyntaxes()
+console.log(
+  `Component library defaults: ${defaultSyntaxes.length} type(s)` +
+    (defaultSyntaxes.length ? ` [${defaultSyntaxes.join(', ')}]` : ' — check seed-data/ and Data/3DuF_component/default/JSON'),
+)
+console.log('Bundled seed root:', data.SEED_ROOT, fs.existsSync(data.SEED_ROOT) ? '(present)' : '(missing)')
 
 app.listen(PORT, () => {
   console.log('Neptune Data server running at http://localhost:' + PORT)

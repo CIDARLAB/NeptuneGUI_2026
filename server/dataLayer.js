@@ -1,6 +1,14 @@
 /**
  * File-based data layer using project root Data/ folder.
  * Structure: Data/Admin, Data/Temp/<sessionId>, Data/Users/<username>
+ *
+ * Default component library files are resolved from (in order):
+ *   1. Data/3DuF_component/default/  — volume / local checkout (optional overrides)
+ *   2. seed-data/3DuF_component/default/ — immutable copy baked into the Docker image
+ *
+ * Production mounts a persistent volume at Data/. That volume often starts empty
+ * (or only has Admin/Temp/Users). Without the seed-data fallback, Component Library
+ * would list zero defaults even though the image bundles them.
  */
 
 const fs = require('fs')
@@ -16,6 +24,27 @@ const COMPONENT_DEFAULT_JSON_DIR = path.join(COMPONENT_DEFAULT_DIR, 'JSON')
 const COMPONENT_DEFAULT_LFR_DIR = path.join(COMPONENT_DEFAULT_DIR, 'LFR')
 const COMPONENT_DEFAULT_MINT_DIR = path.join(COMPONENT_DEFAULT_DIR, 'MINT')
 const COMPONENT_TMP_DIR = path.join(COMPONENT_ROOT, 'tmp')
+
+// Baked into the image by Dockerfile (COPY Data/3DuF_component/default → seed-data/...).
+// Override with NEPTUNE_SEED_DATA_ROOT if the seed tree lives elsewhere.
+const SEED_ROOT = process.env.NEPTUNE_SEED_DATA_ROOT || path.join(__dirname, '..', 'seed-data')
+const BUNDLED_COMPONENT_DEFAULT_DIR = path.join(SEED_ROOT, '3DuF_component', 'default')
+const BUNDLED_COMPONENT_JSON_DIR = path.join(BUNDLED_COMPONENT_DEFAULT_DIR, 'JSON')
+const BUNDLED_COMPONENT_LFR_DIR = path.join(BUNDLED_COMPONENT_DEFAULT_DIR, 'LFR')
+const BUNDLED_COMPONENT_MINT_DIR = path.join(BUNDLED_COMPONENT_DEFAULT_DIR, 'MINT')
+
+/** Volume path first (overrides), then image-bundled defaults. */
+function componentDefaultJsonDirs () {
+  return [COMPONENT_DEFAULT_JSON_DIR, BUNDLED_COMPONENT_JSON_DIR]
+}
+
+function componentDefaultLfrDirs () {
+  return [COMPONENT_DEFAULT_LFR_DIR, BUNDLED_COMPONENT_LFR_DIR]
+}
+
+function componentDefaultMintDirs () {
+  return [COMPONENT_DEFAULT_MINT_DIR, BUNDLED_COMPONENT_MINT_DIR]
+}
 
 const ADMIN_FILE = path.join(ADMIN_DIR, 'admin.json')
 const DEFAULT_ADMIN = { username: 'cidar', password: '12345' }
@@ -58,9 +87,16 @@ function resolveComponentFilename (dir, syntax, extRe) {
   ) || null
 }
 
+function resolveComponentPathInDirs (dirs, syntax, extRe) {
+  for (const dir of dirs) {
+    const fname = resolveComponentFilename(dir, syntax, extRe)
+    if (fname) return path.join(dir, fname)
+  }
+  return null
+}
+
 function getComponentDefaultPath (syntax) {
-  const fname = resolveComponentFilename(COMPONENT_DEFAULT_JSON_DIR, syntax, /\.json$/i)
-  return fname ? path.join(COMPONENT_DEFAULT_JSON_DIR, fname) : null
+  return resolveComponentPathInDirs(componentDefaultJsonDirs(), syntax, /\.json$/i)
 }
 
 function getComponentTmpPath (syntax) {
@@ -71,11 +107,15 @@ function getComponentTmpPath (syntax) {
 
 function listDefaultComponentSyntaxes () {
   ensureDirs()
-  if (!fs.existsSync(COMPONENT_DEFAULT_JSON_DIR)) return []
-  return fs.readdirSync(COMPONENT_DEFAULT_JSON_DIR)
-    .filter(name => /\.json$/i.test(name))
-    .map(name => name.replace(/\.json$/i, '').toLowerCase())
-    .sort()
+  const syntaxes = new Set()
+  for (const dir of componentDefaultJsonDirs()) {
+    if (!fs.existsSync(dir)) continue
+    for (const name of fs.readdirSync(dir)) {
+      if (!/\.json$/i.test(name)) continue
+      syntaxes.add(name.replace(/\.json$/i, '').toLowerCase())
+    }
+  }
+  return [...syntaxes].sort()
 }
 
 function loadComponentJson (syntax) {
@@ -104,13 +144,11 @@ function loadComponentJson (syntax) {
 }
 
 function getComponentDefaultLfrPath (syntax) {
-  const fname = resolveComponentFilename(COMPONENT_DEFAULT_LFR_DIR, syntax, /\.lfr$/i)
-  return fname ? path.join(COMPONENT_DEFAULT_LFR_DIR, fname) : null
+  return resolveComponentPathInDirs(componentDefaultLfrDirs(), syntax, /\.lfr$/i)
 }
 
 function getComponentDefaultMintPath (syntax) {
-  const fname = resolveComponentFilename(COMPONENT_DEFAULT_MINT_DIR, syntax, /\.mint$/i)
-  return fname ? path.join(COMPONENT_DEFAULT_MINT_DIR, fname) : null
+  return resolveComponentPathInDirs(componentDefaultMintDirs(), syntax, /\.mint$/i)
 }
 
 function readTextIfExists (p) {
@@ -513,4 +551,6 @@ module.exports = {
   getComponentDefaultMintPath,
   readTextIfExists,
   DATA_ROOT,
+  SEED_ROOT,
+  BUNDLED_COMPONENT_DEFAULT_DIR,
 }

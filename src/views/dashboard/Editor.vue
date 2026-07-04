@@ -955,7 +955,7 @@ export default {
           alert('Could not create workspace. ' + (msg ? String(msg) : 'Please try again.'))
         })
     },
-    compilefile (event) {
+    async compilefile (event) {
       let self = this
       self.isloading = true
       this.compiledialog = false
@@ -964,6 +964,15 @@ export default {
         crossorigin: true,
         headers: { 'Content-Type': 'application/json' },
       }
+      let componentBundle = []
+      try {
+        const compRes = await axios.get('/api/v1/componentFiles', config)
+        componentBundle = (compRes.data && Array.isArray(compRes.data.components))
+          ? compRes.data.components
+          : []
+      } catch (_) {
+        componentBundle = []
+      }
       const data = {
         sourcefileid: this.fileobject.id,
         sourcefilename: this.fileobject.name,
@@ -971,6 +980,7 @@ export default {
         configfilename: this.selectedconfig.name,
         workspace: this.$store.getters.currentWorkspace._id,
         user: this.$store.getters.currentUser.email,
+        componentBundle,
       }
       const ext = this.fileobject.name.match(/\.[0-9a-z]+$/i) ? this.fileobject.name.match(/\.[0-9a-z]+$/i)[0] : ''
       let endpoint = ''
@@ -981,7 +991,7 @@ export default {
         endpoint = '/api/v1/mushroommapper'
         this.lastCompileType = 'lfr'
       }
-      else { alert('Unknown File Type !'); return }
+      else { alert('Unknown File Type !'); self.isloading = false; return }
       axios.post(endpoint, data, config)
         .then((response) => {
           const jobid = response.data
