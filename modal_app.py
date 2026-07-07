@@ -38,6 +38,12 @@ from fastapi.responses import JSONResponse
 # Includes: Python (fluigi + deps), Node.js (3DuF primitives server)
 # ---------------------------------------------------------------------------
 
+# Neptune_2026 main pin. Modal caches the git-clone layer, so an unpinned clone
+# silently freezes fluigi at a months-old commit (that's how synthesizeFromMINT
+# ended up rejecting --component-library). Bump this SHA to re-sync with upstream
+# — changing it alters the clone command string, which busts Modal's layer cache.
+NEPTUNE_REF = "82c5d7a49f9fee803639b44787a37c419c7da527"  # Neptune_2026 main @ 2026-07-02
+
 image = (
     modal.Image.debian_slim(python_version="3.10")
     .apt_install(
@@ -56,17 +62,33 @@ image = (
         "curl -fsSL https://deb.nodesource.com/setup_18.x | bash -",
         "apt-get install -y nodejs",
     )
-    # Neptune_2026 — private repo, needs GITHUB_TOKEN build secret
-    # Secret name: neptune-github
+    # Neptune_2026 — private repo, needs GITHUB_TOKEN build secret (neptune-github).
+    # Full clone + checkout of NEPTUNE_REF so the pinned commit is exact and the
+    # layer-cache key changes whenever the pin is bumped.
     .run_commands(
-        "git clone https://oauth2:$GITHUB_TOKEN@github.com/CIDARLAB/Neptune_2026.git"
-        " /neptune --recurse-submodules -j4 --depth 1",
+        "git clone https://oauth2:$GITHUB_TOKEN@github.com/CIDARLAB/Neptune_2026.git /neptune"
+        f" && cd /neptune && git checkout {NEPTUNE_REF}"
+        " && git submodule update --init --recursive --depth 1",
         secrets=[modal.Secret.from_name("neptune-github")],
     )
     # Install fluigi and its Python deps, plus FastAPI for the web endpoint
     .run_commands(
         "pip install poetry fastapi uvicorn",
-        "cd /neptune && poetry config virtualenvs.create false && poetry install --without dev",
+        # The antlr "==4.10" pin was added to pyproject.toml (commit b7d09e82) WITHOUT
+        # regenerating poetry.lock, so Poetry 2.x refuses to install from the stale
+        # lock. Re-locking is NOT viable: it re-resolves the whole graph and pulls a
+        # source-only scikit-learn that fails to build on this image. Instead, drop the
+        # pin line so pyproject matches the committed (known-good) lock, install those
+        # exact wheeled versions, then force antlr to 4.10 below.
+        "cd /neptune"
+        " && sed -i '/^antlr4-python3-runtime = /d' pyproject.toml"
+        " && poetry config virtualenvs.create false"
+        " && poetry install --without dev",
+        # The generated parser code (pylfr/pymint antlrgen) is ANTLR 4.10.1; a
+        # mismatched runtime yields "ANTLR runtime and generated code versions
+        # disagree" and the LFR/MINT parser degrades (0 ports -> linear-placement
+        # fallback) or crashes. PyPI package is "4.10" (== the maintainer's intended pin).
+        "pip install --force-reinstall 'antlr4-python3-runtime==4.10'",
     )
     # 3DuF primitives server — public repo
     .run_commands(
