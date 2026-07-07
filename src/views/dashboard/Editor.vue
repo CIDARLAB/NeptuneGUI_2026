@@ -995,7 +995,12 @@ export default {
       axios.post(endpoint, data, config)
         .then((response) => {
           const jobid = response.data
-          self.$socket.emit('monitor', jobid)
+          // Optional live-output subscription (no-op if the socket server is absent).
+          try { if (self.$socket) self.$socket.emit('monitor', jobid) } catch (e) { /* ignore */ }
+          // Compile jobs run asynchronously on the compute backend; clear the
+          // loading state and send the user to the Jobs page to watch the result.
+          self.isloading = false
+          self.$router.push({ name: 'Jobs' }).catch(() => {})
         })
         .catch((error) => {
           console.error(error)

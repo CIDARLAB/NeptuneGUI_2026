@@ -503,6 +503,23 @@ function listComponentFilePayloads (session) {
   return [...defaults, ...custom]
 }
 
+// Per-session compile job IDs. The Modal job store can't be listed per-user,
+// so we track which jobs each session started and serve those from /api/v1/jobs
+// (avoids exposing other users' jobs). In-memory: results are transient.
+const sessionJobs = new Map()
+function sessionKey (session) {
+  return session ? `${session.type}:${session.id}` : 'anon'
+}
+function recordSessionJob (session, jobId) {
+  if (!jobId || typeof jobId !== 'string') return
+  const key = sessionKey(session)
+  const list = sessionJobs.get(key) || []
+  if (!list.includes(jobId)) {
+    list.unshift(jobId)
+    sessionJobs.set(key, list.slice(0, 100))
+  }
+}
+
 // Compile: proxy to Modal compute endpoint (NEPTUNE_COMPILE_URL).
 // Enriches the request with script content and a component-library snapshot
 // (JSON + LFR/MINT) so Modal/fluigi can use the latest component definitions.
@@ -527,16 +544,20 @@ function proxyCompile (req, res, routePath) {
   const enrichedBody = { ...req.body, sourceContent, configContent, componentBundle }
   const url = NEPTUNE_COMPILE_URL.replace(/\/$/, '') + routePath
   axios.post(url, enrichedBody, { timeout: 60000, validateStatus: () => true })
-    .then((axRes) => res.status(axRes.status).json(axRes.data))
+    .then((axRes) => {
+      // Modal returns the job id (a string) on success — record it for this session.
+      if (axRes.status >= 200 && axRes.status < 300 && typeof axRes.data === 'string') {
+        recordSessionJob(req.session, axRes.data)
+      }
+      res.status(axRes.status).json(axRes.data)
+    })
     .catch((err) => res.status(502).json({ error: 'Neptune compute error', message: err.message }))
 }
 app.post('/api/v1/fluigi', requireAuth, (req, res) => proxyCompile(req, res, '/api/v1/fluigi'))
 app.post('/api/v1/mushroommapper', requireAuth, (req, res) => proxyCompile(req, res, '/api/v1/mushroommapper'))
 app.get('/api/v1/jobs', requireAuth, (req, res) => {
-  if (!NEPTUNE_COMPILE_URL) return res.json([])
-  axios.get(NEPTUNE_COMPILE_URL.replace(/\/$/, '') + '/api/v1/jobs', { headers: req.headers, validateStatus: () => true })
-    .then((axRes) => res.json(axRes.data || []))
-    .catch(() => res.json([]))
+  // Return the job ids this session started; Solutions.vue fetches each via /api/v1/job.
+  res.json(sessionJobs.get(sessionKey(req.session)) || [])
 })
 app.get('/api/v1/job', requireAuth, (req, res) => {
   if (!NEPTUNE_COMPILE_URL) return res.json({ status: 'unknown' })
