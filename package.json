@@ -20,7 +20,7 @@
     "@mdi/js": "^4.8.95",
     "@sentry/tracing": "^6.1.0",
     "@sentry/vue": "^6.1.0",
-    "axios": "^1.6.0",
+    "axios": "^1.16.0",
     "core-js": "^3.6.2",
     "jszip": "^3.10.1",
     "marked": "^4.3.0",
@@ -60,6 +60,9 @@
     "vuetify-loader": "^1.4.3"
   },
   "overrides": {
+    "form-data": ">=4.0.6",
+    "js-cookie": ">=3.0.7",
+    "js-yaml": "3.15.0",
     "eslint-plugin-promise": "4.2.1",
     "follow-redirects": ">=1.15.6",
     "ejs": ">=3.1.10",

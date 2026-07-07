@@ -18,12 +18,32 @@ END LAYER
 
 Notes:
 - LAYER CONTROL is optional.
+- LAYER INTEGRATION is also supported.
 - DEVICE name should usually match the LFR module name.
 
-2) Comments
+2) IMPORT / UF-module declarations
+IMPORT TESTMOD
+DEVICE demo
+TESTMOD u0;
+
+Current behavior:
+- IMPORT <MODULE> records module availability intent (validation intent).
+- UFMODULE instance; materializes components with entity=<MODULE>.
+- UF-module declarations before layer blocks attach when the first layer is created.
+- This is declaration-level reuse in one parse/compile pass, not external file include/link loading.
+
+3) Structural generators (BANK / GRID)
+- BANK declarations and generated banks (... BANK b of N ...) are supported.
+- GRID declarations and generated grids (... GRID g of X,Y ...) are supported.
+- Generated naming:
+  - BANK: base_1 ... base_N
+  - GRID: base_1_1 ... base_X_Y
+- BANK-index channel endpoints (for example from b 2) normalize to generated IDs (b_2).
+
+4) Comments
 - # comment to end of line
 
-3) Typical components
+5) Typical components
 FLOW layer:
 - PORT
 - MIXER
@@ -31,6 +51,7 @@ FLOW layer:
 - REACTION CHAMBER / DIAMOND REACTION CHAMBER
 - NODE
 - MICROARRAY
+- BANK / GRID generated component arrays
 
 CONTROL layer:
 - PORT
@@ -41,7 +62,7 @@ MIXER mixer_1 componentSpacing=9000;
 PORT port_1 componentSpacing=9000;
 VALVE valve_0 on channel_7 controlPort=Cport_0 componentSpacing=9000;
 
-4) Connectivity statements
+6) Connectivity statements
 - CHANNEL ... from ... to ...
 - CONNECTION ... from ... to ...
 
@@ -49,18 +70,17 @@ Examples:
 CHANNEL channel_1 from mixer_1 2 to port_1 1 connectionSpacing=1000;
 CONNECTION c1 from p1 1 to ma1 1;
 
-5) Common parameters
+7) Common parameters
 - componentSpacing
 - connectionSpacing
 - channelWidth
 - portRadius
 
-6) LFR -> MINT intuition
+8) LFR -> MINT intuition
 - assign out = in1 + in2      often maps to mixer + channels
 - distribute@(control)         often maps to valves + control channels
 - storage declarations          often map to chambers/traps
 
-7) Useful commands
+9) Useful commands
 poetry run fluigi compile_mint -o <out_dir> <design.mint>
 poetry run fluigi compile_lfr  -o <out_dir> <design.lfr>
-

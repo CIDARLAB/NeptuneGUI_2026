@@ -22,10 +22,12 @@ This section summarizes the **bring-your-own-key** path from **English descripti
 
 | Step | What to do |
 |------|------------|
-| Prompts | **Editor** → sidebar **LLM prompts** → choose model → **Export prompt package (.zip)** (`src/Prompt` templates); optionally **Open … chat** for your provider. |
-| Guide | In-app page **`/prompt/steps`** (route `PromptSteps`) renders **[src/Prompt/USER_GUIDE.md](./src/Prompt/USER_GUIDE.md)**. |
-| Write LFR | Paste into **Editor**, set **Script language** to **LFR**, **Save** / **Compile** per **[RUN_LFR.md](./RUN_LFR.md)**. |
-| Workspace backup | **Dashboard** → **Export workspaces** / **Import workspaces** (.zip restores workspaces and component-library cache). Same ZIP export is available from the sidebar **Export** button and when confirming exit (guest). |
+| 1. Export | **Editor** → sidebar **LLM prompts** → choose model → **Export prompt package (.zip)** |
+| 2. Setup (once) | Paste **`en2lfr_system.txt`** into that LLM’s system / custom instructions (see **`START_HERE.md`** in the zip). Do **not** edit template files. |
+| 3. Chat | Open your provider chat (**Open … chat** button) and describe your device in **plain English** in the message. |
+| 4. Paste LFR | Copy the ` ```lfr ` block into **Editor**, set **Script language** to **LFR**, **Save** / **Compile** per **[RUN_LFR.md](./RUN_LFR.md)**. |
+| Guide | In-app **`/prompt/steps`** renders **[src/Prompt/USER_GUIDE.md](./src/Prompt/USER_GUIDE.md)**. |
+| Workspace backup | **Dashboard** → **Export workspaces** / **Import workspaces** (.zip). Same ZIP from sidebar **Export** or export-on-exit (guest). |
 
 ### Neptune screens (sidebar)
 

@@ -1,127 +1,131 @@
 <template>
   <base-material-card
-    :icon="icon"
-    class="v-card--material-stats"
+    :color="cardColor"
+    class="v-card--material-stats file-stats-card"
     v-bind="$attrs"
     v-on="$listeners"
   >
-    <template v-slot:after-heading>
-      <div class="ml-auto text-right">
-        <div
-          class="body-3 grey--text font-weight-light"
-          v-text="title"
-        />
+    <template v-slot:heading>
+      <span class="file-stats-ext-heading">{{ ext || '—' }}</span>
+    </template>
 
-        <h3 class="display-2 font-weight-light text--primary">
-          {{ value }} <small>{{ smallValue }}</small>
-        </h3>
+    <template v-slot:after-heading>
+      <div class="file-stats-actions d-flex flex-shrink-0 align-center">
+        <v-tooltip bottom>
+          <template v-slot:activator="{ on, attrs }">
+            <v-btn
+              text
+              icon
+              color="green"
+              class="file-stats-action-btn"
+              v-bind="attrs"
+              v-on="on"
+              @click="downloadfile(id)"
+            >
+              <v-icon>mdi-download</v-icon>
+            </v-btn>
+          </template>
+          <span>Download this file</span>
+        </v-tooltip>
+        <v-tooltip
+          v-if="(ext || '').toLowerCase() !== '.log' && (ext || '').toLowerCase() !== '.json'"
+          bottom
+        >
+          <template v-slot:activator="{ on, attrs }">
+            <v-btn
+              text
+              icon
+              color="blue"
+              class="file-stats-action-btn"
+              v-bind="attrs"
+              v-on="on"
+              @click="editfile(id)"
+            >
+              <v-icon>mdi-pen</v-icon>
+            </v-btn>
+          </template>
+          <span>Open this file in the Editor</span>
+        </v-tooltip>
+        <v-tooltip
+          v-if="(ext || '').toLowerCase() === '.json'"
+          bottom
+        >
+          <template v-slot:activator="{ on, attrs }">
+            <v-btn
+              text
+              icon
+              color="purple"
+              class="file-stats-action-btn"
+              v-bind="attrs"
+              v-on="on"
+              @click="$emit('view3duf', { id, name, workspaceid, ext, content })"
+            >
+              <img
+                class="go-3duf-btn-logo"
+                :src="logo3duf"
+                alt="3DuF"
+              >
+            </v-btn>
+          </template>
+          <span>Open design JSON in 3DuF</span>
+        </v-tooltip>
+        <v-tooltip
+          v-if="(ext || '').toLowerCase() === '.json'"
+          bottom
+        >
+          <template v-slot:activator="{ on, attrs }">
+            <v-btn
+              text
+              icon
+              color="primary"
+              class="file-stats-action-btn"
+              v-bind="attrs"
+              v-on="on"
+              @click="$emit('importComponentJson', { id, name, workspaceid })"
+            >
+              <v-icon>mdi-database-import-outline</v-icon>
+            </v-btn>
+          </template>
+          <span>Import this JSON into Component Library</span>
+        </v-tooltip>
+        <v-tooltip bottom>
+          <template v-slot:activator="{ on, attrs }">
+            <v-btn
+              text
+              icon
+              color="red"
+              class="file-stats-action-btn"
+              v-bind="attrs"
+              v-on="on"
+              @click="deletefile(id)"
+            >
+              <v-icon>mdi-delete</v-icon>
+            </v-btn>
+          </template>
+          <span>Remove this file from the workspace</span>
+        </v-tooltip>
       </div>
     </template>
-    
-    <v-col
-      cols="12"
-      class="px-0 file-stats-row"
-    >
-      <div class="file-stats-line d-flex flex-nowrap">
-        <div class="file-stats-name text--darken-4">
-          {{ name }}
-        </div>
-        <div class="file-stats-actions d-flex flex-shrink-0 align-center">
-          <v-tooltip
-            v-if="(ext || '').toLowerCase() !== '.log' && (ext || '').toLowerCase() !== '.json'"
-            bottom
-          >
-            <template v-slot:activator="{ on, attrs }">
-              <v-btn
-                text
-                icon
-                color="blue"
-                class="file-stats-action-btn"
-                v-bind="attrs"
-                v-on="on"
-                @click="editfile(id)"
-              >
-                <v-icon>mdi-pen</v-icon>
-              </v-btn>
-            </template>
-            <span>Open this file in the Editor</span>
-          </v-tooltip>
-          <v-tooltip
-            v-if="(ext || '').toLowerCase() === '.json'"
-            bottom
-          >
-            <template v-slot:activator="{ on, attrs }">
-              <v-btn
-                text
-                icon
-                color="purple"
-                class="file-stats-action-btn"
-                v-bind="attrs"
-                v-on="on"
-                @click="$emit('view3duf', { id, name, workspaceid, ext, content })"
-              >
-                <img
-                  class="go-3duf-btn-logo"
-                  :src="logo3duf"
-                  alt="3DuF"
-                >
-              </v-btn>
-            </template>
-            <span>Open design JSON in 3DuF</span>
-          </v-tooltip>
-          <v-tooltip
-            v-if="(ext || '').toLowerCase() === '.json'"
-            bottom
-          >
-            <template v-slot:activator="{ on, attrs }">
-              <v-btn
-                text
-                icon
-                color="primary"
-                class="file-stats-action-btn"
-                v-bind="attrs"
-                v-on="on"
-                @click="$emit('importComponentJson', { id, name, workspaceid })"
-              >
-                <v-icon>mdi-database-import-outline</v-icon>
-              </v-btn>
-            </template>
-            <span>Import this JSON into Component Library</span>
-          </v-tooltip>
-          <v-tooltip bottom>
-            <template v-slot:activator="{ on, attrs }">
-              <v-btn
-                text
-                icon
-                color="red"
-                class="file-stats-action-btn"
-                v-bind="attrs"
-                v-on="on"
-                @click="deletefile(id)"
-              >
-                <v-icon>mdi-delete</v-icon>
-              </v-btn>
-            </template>
-            <span>Remove this file from the workspace</span>
-          </v-tooltip>
-        </div>
-      </div>
-      <v-divider />
-    </v-col>
 
-    <v-icon
-      class="mr-1"
-      small
-    >
-      <!-- {{ subIcon }} -->
-      mdi-clockwise
-    </v-icon>
+    <div class="file-stats-body">
+      <h3 class="file-stats-name-heading font-weight-light text--primary">
+        {{ displayNameWithoutExt }}
+      </h3>
+    </div>
 
-    <span
-      :class="subTextColor"
-      class="caption grey--text font-weight-light"
-      v-text="subText"
-    />
+    <div class="file-stats-footer d-flex align-center">
+      <v-icon
+        class="mr-1"
+        small
+      >
+        mdi-clockwise
+      </v-icon>
+      <span
+        :class="subTextColor"
+        class="caption grey--text font-weight-light"
+        v-text="subText"
+      />
+    </div>
   </base-material-card>
 </template>
 
@@ -129,7 +133,7 @@
   import Card from './Card'
   import axios from 'axios'
   import router from '../../router'
-  import guestStore from '@/lib/guestStore'
+  import guestStore, { fileContentForZipExport } from '@/lib/guestStore'
 
   export default {
     name: 'MaterialStatsCard',
@@ -144,7 +148,7 @@
       ...Card.props,
       icon: {
         type: String,
-        required: true,
+        default: undefined,
       },
       subIcon: {
         type: String,
@@ -180,11 +184,11 @@
       },
       id: {
         type: String,
-        default: undefined
+        default: undefined,
       },
       workspaceid: {
         type: String,
-        default: undefined
+        default: undefined,
       },
       ext: {
         type: String,
@@ -194,9 +198,69 @@
         type: [String, Object, Array],
         default: undefined,
       },
+      cardColor: {
+        type: String,
+        default: 'info',
+      },
+    },
+
+    computed: {
+      displayNameWithoutExt () {
+        const raw = String(this.name || '').trim()
+        const ext = String(this.ext || '').trim()
+        if (!raw) return '—'
+        if (!ext) return raw
+        const normalizedExt = ext.startsWith('.') ? ext : `.${ext}`
+        if (raw.toLowerCase().endsWith(normalizedExt.toLowerCase())) {
+          const stem = raw.slice(0, raw.length - normalizedExt.length)
+          return stem || raw
+        }
+        return raw
+      },
     },
 
     methods: {
+      downloadfile (fid) {
+        const wid =
+          this.workspaceid ||
+          (this.$store.getters.currentWorkspace && this.$store.getters.currentWorkspace._id) ||
+          null
+        if (!fid) return
+        const fileName = this.name || `file${this.ext || ''}`
+
+        if (this.$store.getters.isGuest) {
+          if (!wid) return
+          const f = guestStore.getFile(wid, fid)
+          const text = f ? fileContentForZipExport(f.content) : fileContentForZipExport(this.content)
+          const blob = new Blob([text], { type: 'application/octet-stream' })
+          const url = window.URL.createObjectURL(blob)
+          const link = document.createElement('a')
+          link.href = url
+          link.setAttribute('download', fileName)
+          document.body.appendChild(link)
+          link.click()
+          document.body.removeChild(link)
+          window.URL.revokeObjectURL(url)
+          return
+        }
+
+        axios.get('/api/v1/downloadFile', {
+          params: { id: fid },
+          responseType: 'arraybuffer',
+          withCredentials: true,
+        })
+          .then((response) => {
+            const url = window.URL.createObjectURL(new Blob([response.data]))
+            const link = document.createElement('a')
+            link.href = url
+            link.setAttribute('download', fileName)
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+            window.URL.revokeObjectURL(url)
+          })
+          .catch((error) => { console.log(error) })
+      },
       deletefile (fid) {
         const wid =
           this.workspaceid ||
@@ -226,66 +290,76 @@
           })
           .catch((error) => { console.log(error) })
       },
-      editfile(id){
-        // For .log and .json files, keep cards read-only (no editor open)
+      editfile (id) {
         const lowerExt = (this.ext || '').toLowerCase()
         if (lowerExt === '.log' || lowerExt === '.json') {
           return
         }
-        console.log("edit:",id)
         this.$store.commit('SET_CURRENT_FILE', id)
         router.push('/editor')
-      }
-    }
+      },
+    },
   }
 </script>
 
 <style lang="sass">
-.v-card--material-stats
+.v-card--material-stats.file-stats-card
   display: flex
+  flex-direction: column
   flex-wrap: wrap
   position: relative
+  min-height: 168px
 
   > div:first-child
     justify-content: space-between
+    align-items: flex-start
+    width: 100%
 
   .v-card
     border-radius: 4px
     flex: 0 1 auto
 
-  .v-card__text
-    display: inline-block
-    flex: 1 0 calc(100% - 120px)
-    position: absolute
-    top: 0
-    right: 0
-    width: 100%
+  .v-card--material__heading
+    min-width: 72px
+    min-height: 72px
+    display: flex
+    align-items: center
+    justify-content: center
+    padding: 12px 16px !important
 
-  .v-card__actions
-    flex: 1 0 100%
-
-  .file-stats-line
-    width: 100%
-    gap: 4px
-    align-items: stretch
+  .file-stats-ext-heading
+    font-family: var(--neptune-font-code), monospace
+    font-size: 1.1rem
+    font-weight: 600
+    line-height: 1.2
+    letter-spacing: 0.02em
 
   .file-stats-actions
     flex: 0 0 auto
     white-space: nowrap
     margin-left: auto
-    padding-left: 8px
-    align-self: flex-end
-
-  .file-stats-name
-    flex: 1 1 auto
-    min-width: 0
-    word-break: break-word
-    overflow-wrap: anywhere
-    line-height: 1.35
-    text-align: left
+    align-self: flex-start
 
   .file-stats-action-btn
     margin: 0 !important
+
+  .file-stats-body
+    width: 100%
+    margin-top: 12px
+    flex: 1 1 auto
+
+  .file-stats-name-heading
+    font-size: var(--neptune-fs-body, 14pt) !important
+    line-height: 1.35
+    word-break: break-word
+    overflow-wrap: anywhere
+    text-align: left
+    margin: 0
+
+  .file-stats-footer
+    width: 100%
+    margin-top: 10px
+    padding-top: 6px
 
   .go-3duf-btn-logo
     width: 24px

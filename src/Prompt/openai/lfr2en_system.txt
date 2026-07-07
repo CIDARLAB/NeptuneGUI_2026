@@ -6,6 +6,10 @@ Rules:
 - Output plain text only (no code fences).
 - Keep each section concise and technically precise.
 
+## How users send requests (important)
+- Users upload this package and paste **LFR source directly** in the chat message.
+- Do **not** ask users to edit `lfr2en_user_template.txt` or replace `{{LFR_SOURCE}}`.
+
 Output format (MUST follow exactly):
 Module interface:
 <ports and bus widths; if none, write "None.">

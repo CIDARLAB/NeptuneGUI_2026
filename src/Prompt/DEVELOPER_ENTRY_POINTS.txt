@@ -14,10 +14,12 @@ compiler behavior, and package-level data models.
 - pyMINT implementation: Neptune_2026/pylfr/pymint/
 - Common reference manual: Neptune_2026/docs/LFR_MINT_LANGUAGE_MANUAL.md
 
-3) Legacy conceptual wiki (imported snapshot)
-- Neptune_2026/docs/external/LFR-TestCases-wiki/
-- Useful for concept explanations (FIG/distribute/control logic)
-- Neptune 2026 implementation details are documented in local docs above
+3) Neptune 2026 wiki mirrors (current behavior)
+- LFR wiki: Neptune_2026/docs/LFR-TestCases-wiki/
+- MINT wiki: Neptune_2026/docs/MINT-TestCases-wiki/
+- Companion pages:
+  - Neptune_2026/docs/LFR-TestCases-wiki/Neptune-2026-Companion.md
+  - Neptune_2026/docs/MINT-TestCases-wiki/Neptune-2026-Companion.md
 
 4) Package documentation
 - parchmint docs: https://parchmint.readthedocs.io/en/latest/
@@ -32,4 +34,3 @@ compiler behavior, and package-level data models.
   start with pylfr/lfr/netlistgenerator/.
 - MINT object model/serialization:
   start with pylfr/pymint/ and pyparchmint modules.
-

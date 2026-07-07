@@ -51,6 +51,17 @@ Common errors:
 
 ## 3) Smoke test checklist (2-5 minutes per provider)
 
+### Local automated pre-check (no API keys)
+
+From `Neptune_2026` repo root:
+
+```bash
+poetry run python scripts/verify_prompt_smoke.py
+```
+
+This validates prompt-pack structure, updated distribute/MINT support-doc markers,
+`lfr2en` section headers, and `compile_lfr` on checklist + new distribute patterns.
+
 Run two minimum tests per provider: `en2lfr` + `lfr2en`.
 
 ### A. en2lfr test (English requirement -> LFR)

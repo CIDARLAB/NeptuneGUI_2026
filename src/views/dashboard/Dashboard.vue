@@ -288,10 +288,7 @@
                   >
                       <base-material-workspace-stats-card
                           class="file-grid-card"
-                          color="info"
-                          icon="mdi-file"
-                          title="File Type:"
-                          :value="file.ext"
+                          :card-color="getFileGridCardColor(file.ext)"
                           :name="getFileDisplayName(file)"
                           :ext="file.ext"
                           sub-icon="mdi-clockwise-outline"
@@ -369,6 +366,23 @@
                             </td>
                             <td class="text-right file-list-col-actions">
                               <div class="d-inline-flex align-center file-list-actions">
+                                <v-tooltip bottom>
+                                  <template v-slot:activator="{ on, attrs }">
+                                    <v-btn
+                                      text
+                                      icon
+                                      small
+                                      color="green"
+                                      v-bind="attrs"
+                                      v-on="on"
+                                      @click="downloadWorkspaceFile(file)"
+                                    >
+                                      <v-icon small>mdi-download</v-icon>
+                                    </v-btn>
+                                  </template>
+                                  <span>Download this file</span>
+                                </v-tooltip>
+
                                 <v-tooltip
                                   v-if="(file.ext || '').toLowerCase() === '.json'"
                                   bottom
@@ -645,6 +659,54 @@
         if (lowerExt === '.lfr') return 'file-list-ext-pill--lfr'
         if (lowerExt === '.mint') return 'file-list-ext-pill--mint'
         return ''
+      },
+      getFileGridCardColor (ext) {
+        const lowerExt = String(ext || '').toLowerCase()
+        if (lowerExt === '.json') return 'orange darken-1'
+        if (lowerExt === '.lfr') return 'info'
+        if (lowerExt === '.mint') return 'success'
+        return 'blue-grey'
+      },
+      downloadWorkspaceFile (file) {
+        if (!file || !file.id) return
+        const wid =
+          (this.selectedworkspace && this.selectedworkspace._id) ||
+          file.workspaceid ||
+          null
+        const fileName = this.getFileDisplayName(file)
+
+        if (this.$store.getters.isGuest) {
+          if (!wid) return
+          const f = guestStore.getFile(wid, file.id)
+          const text = f ? fileContentForZipExport(f.content) : ''
+          const blob = new Blob([text], { type: 'application/octet-stream' })
+          const url = window.URL.createObjectURL(blob)
+          const link = document.createElement('a')
+          link.href = url
+          link.setAttribute('download', fileName)
+          document.body.appendChild(link)
+          link.click()
+          document.body.removeChild(link)
+          window.URL.revokeObjectURL(url)
+          return
+        }
+
+        axios.get('/api/v1/downloadFile', {
+          params: { id: file.id },
+          responseType: 'arraybuffer',
+          withCredentials: true,
+        })
+          .then((response) => {
+            const url = window.URL.createObjectURL(new Blob([response.data]))
+            const link = document.createElement('a')
+            link.href = url
+            link.setAttribute('download', fileName)
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+            window.URL.revokeObjectURL(url)
+          })
+          .catch((error) => { console.log(error) })
       },
       canEditFile (file) {
         const lowerExt = String((file && file.ext) || '').toLowerCase()
@@ -1330,6 +1392,12 @@
       formattimestamp(datestring){
         return Utils.getprettytimestamp(datestring)
       },
+      shouldExpandWorkspaceFromRoute () {
+        const q = this.$route && this.$route.query
+        if (!q) return false
+        const expand = q.expand
+        return expand === '1' || expand === 'true' || expand === true
+      },
         refreshworkspacedata () {
           this.workspaces = []
           this.workspacesobjects = {}
@@ -1345,8 +1413,9 @@
               this.workspacesobjects[w._id] = w
             })
             const target = this.$route && this.$route.query && this.$route.query.workspace
+            const shouldExpand = this.shouldExpandWorkspaceFromRoute()
             if (target && this.workspacesobjects[target]) {
-              this.expandWorkspaceFiles(target)
+              if (shouldExpand) this.expandWorkspaceFiles(target)
             } else if (!list.length) {
               this.$store.commit('SET_WORKSPACE', null)
               this.$store.commit('SET_CURRENT_FILE', null)
@@ -1391,8 +1460,9 @@
                 this.workspacesobjects[w._id] = w
               })
               const target = this.$route && this.$route.query && this.$route.query.workspace
+              const shouldExpand = this.shouldExpandWorkspaceFromRoute()
               if (target && this.workspacesobjects[target]) {
-                this.expandWorkspaceFiles(target)
+                if (shouldExpand) this.expandWorkspaceFiles(target)
               } else if (!loaded.length) {
                 this.$store.commit('SET_WORKSPACE', null)
                 this.$store.commit('SET_CURRENT_FILE', null)

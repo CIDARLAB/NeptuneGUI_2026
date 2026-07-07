@@ -177,8 +177,8 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn text color="primary" @click="exportCurrentFile">Export</v-btn>
-          <v-btn text color="secondary" @click="closeFileDialog">Close</v-btn>
+          <v-btn text color="success" @click="exportCurrentFile">Export</v-btn>
+          <v-btn text color="error" @click="closeFileDialog">Close</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>

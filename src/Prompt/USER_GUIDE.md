@@ -1,114 +1,98 @@
-# Prompt Package User Guide
+# Neptune Prompt Package — User Guide
 
-This guide is for end users: after downloading `Prompt/`, how to connect to an LLM provider, how token billing works, and how to generate LFR code from your web UI in a few clicks.
+Use this package with **your own LLM account** (ChatGPT, Claude, Gemini, Qwen, DeepSeek).
+Neptune does **not** host or require your API key for this workflow.
 
-## 1. What this Prompt Package contains
+See **`START_HERE.md`** for the shortest path. This guide adds detail.
 
-`Prompt/` includes 5 provider packs (OpenAI / Claude / Gemini / Qwen / DeepSeek). Each pack contains:
+## 1. What the package contains
 
-- `manifest.json`: provider integration info (API key env var, suggested base URL, default model)
-- `en2lfr_system.txt`: system prompt for English spec -> LFR code
-- `en2lfr_user_template.txt`: user template (`{{ENGLISH_SPEC}}`)
-- `lfr2en_system.txt`: system prompt for LFR -> English explanation
-- `lfr2en_user_template.txt`: user template (`{{LFR_SOURCE}}`)
+Five provider folders (`openai`, `anthropic`, `google_gemini`, `alibaba_qwen`, `deepseek`). Each includes:
 
-`buttons.json` maps web buttons to these provider folders.
+| File | Purpose |
+|------|---------|
+| `en2lfr_system.txt` | **Required** — paste into system / custom instructions |
+| `lfr2en_system.txt` | Optional — explain LFR back to English |
+| `en2lfr_user_template.txt` | **Example only** — do not edit to use the package |
+| `lfr2en_user_template.txt` | **Example only** — do not edit to use the package |
+| `README.txt` | Short setup reminder for that provider |
+| `manifest.json` | For developers (env var names, default model) |
 
-## 2. What users need first
+Shared reference (optional, improves quality):
 
-1. Choose one provider (Qwen/OpenAI/Anthropic/Gemini/DeepSeek).
-2. Enable API access on that provider and create an API key.
-3. Add funds (or use free trial credits) so your account has available token balance.
-4. Paste your key in Neptune web UI under "Model Settings" or "API Settings".
+- `LFR_SYNTAX_MANUAL.txt`
+- `MINT_SYNTAX_MANUAL.txt`
+- `DEVELOPER_ENTRY_POINTS.txt`
 
-> This is BYOK (Bring Your Own Key): billing is charged directly to the user's own provider account.
+## 2. One-time setup
 
-## 3. How token payment works (general)
+1. Download or export the zip from Neptune GUI (Dashboard → pick a model → download prompt pack).
+2. Pick **one** provider folder matching the LLM you use.
+3. Copy **`en2lfr_system.txt`** into that LLM's system / custom / project instructions field.
+4. Optionally attach `LFR_SYNTAX_MANUAL.txt` as knowledge or project file.
 
-Most providers bill by token:
+You do **not** need to edit any template file or replace placeholders like `{{ENGLISH_SPEC}}`.
 
-- Input tokens: your request content (system prompt + user input + optional history)
-- Output tokens: model response content (mostly LFR code in this workflow)
+## 3. Daily use — English → LFR
 
-Typical cost = input token cost + output token cost (usually priced per 1M tokens).
+1. Open a chat with the configured assistant.
+2. Write your **design requirement in plain English** in the message.
+3. The model returns **one** ` ```lfr ` fenced block.
+4. Copy that block into Neptune GUI → **Editor** → set language **LFR** → **Save** → **Compile**.
 
-Billing appears in each provider console, not in Neptune itself.
+Example message:
 
-## 4. Provider setup and payment steps (user view)
+```text
+I need a module with fluid inputs a and b, control sel, and output y.
+When sel is 0, route a to y; when sel is 1, route b to y.
+```
 
-Names and UI labels may change over time; follow your provider dashboard.
+If compile fails, paste the compiler error into the same chat and ask for a corrected LFR block.
 
-### A) Alibaba Qwen (DashScope / Model Studio)
+## 4. Optional — LFR → English
 
-1. Sign in to Alibaba Cloud and enable Model Studio / DashScope.
-2. Create an API key (common env var: `DASHSCOPE_API_KEY`).
-3. Add credit or use trial quota if available.
-4. In Neptune web UI, select Qwen, paste the key, and test connection.
+1. Use **`lfr2en_system.txt`** as instructions (new chat or swap instructions).
+2. Paste your **full LFR source** directly in the message.
+3. You do **not** need to edit `lfr2en_user_template.txt`.
 
-Reference: <https://www.alibabacloud.com/help/en/model-studio/model-pricing>
+## 5. Provider-specific setup
 
-### B) OpenAI
+| Provider | Where to paste `en2lfr_system.txt` |
+|----------|-------------------------------------|
+| **ChatGPT** | Custom GPT or Project → Instructions |
+| **Claude** | Project → Custom Instructions |
+| **Gemini** | Gem or system instruction field |
+| **Qwen** | Chat or DashScope API system prompt |
+| **DeepSeek** | Chat or API system prompt |
 
-1. Sign in to OpenAI platform and create an API key (`OPENAI_API_KEY`).
-2. Add payment method / enable usage billing.
-3. In Neptune web UI, select OpenAI, paste key, and test.
+Billing and API keys are on **your** provider account (BYOK). Neptune only ships the prompt text.
 
-Reference: <https://openai.com/api/pricing>
+## 6. Token cost (if using API)
 
-### C) Anthropic (Claude)
+Most providers charge by token (input + output). Typical drivers of cost:
 
-1. Sign in to Anthropic Console and create key (`ANTHROPIC_API_KEY`).
-2. Enable billing under current account rules.
-3. In Neptune web UI, select Claude, paste key, and test.
+- Length of your English requirement and any follow-up fixes
+- Size of attached syntax manuals
+- Model tier you choose
 
-Reference: <https://platform.claude.com/docs/en/about-claude/pricing>
+Check your provider's pricing page for current rates.
 
-### D) Google Gemini API
+## 7. Security
 
-1. In Google AI Studio / Gemini API, create key (`GEMINI_API_KEY`).
-2. Upgrade to paid tier when free limits are not enough.
-3. In Neptune web UI, select Gemini, paste key, and test.
-
-Reference: <https://ai.google.dev/gemini-api/docs/pricing>
-
-### E) DeepSeek
-
-1. In DeepSeek console, create key (`DEEPSEEK_API_KEY`).
-2. Top up account if free quota is insufficient.
-3. In Neptune web UI, select DeepSeek, paste key, and test.
-
-Reference: <https://api-docs.deepseek.com/quick_start/pricing>
-
-## 5. Standard flow to generate LFR in Neptune web UI
-
-1. Open the web app and go to "Model Settings".
-2. Click one provider button (OpenAI/Claude/Gemini/Qwen/DeepSeek).
-3. Paste your API key and click "Test Connection".
-4. Enter your design request in English (inputs/outputs/control logic/split/mix behavior).
-5. Click "Generate LFR".
-6. Review generated LFR and compile status (if compile validation is enabled).
-7. If failed, revise the request based on error hints and retry.
-
-## 6. Practical tips to reduce token cost
-
-- Keep requirements structured and specific to reduce retries.
-- Avoid pasting unrelated long text into the input box.
-- Use a lower-cost model for draft attempts; switch to stronger model for hard cases.
-- Enable caching/batch options if the provider supports them.
-
-## 7. Security tips (important)
-
-- Only enter API keys in trusted web apps/backends.
-- Never commit keys to git, screenshots, or public issues.
-- Rotate keys periodically; revoke immediately if leakage is suspected.
+- Do not commit API keys to git or share them in screenshots.
+- Rotate keys if you suspect leakage.
+- The prompt package contains **no** secrets — only instructions and reference text.
 
 ## 8. FAQ
 
-### Q1: I clicked generate but got no result. What should I check?
-Check key validity, account balance/quota, model availability, and network connectivity.
+**Do I edit `en2lfr_user_template.txt`?**  
+No. Write your requirement directly in chat.
 
-### Q2: Why did my cost spike?
-Multiple retries, long prompts, and long outputs all increase token usage.
+**The model asked me to fill in `{{ENGLISH_SPEC}}`.**  
+Re-paste `en2lfr_system.txt` into instructions; it tells the model to treat your chat message as the spec.
 
-### Q3: Can different models share one prompt strategy?
-Yes. Keep core rules aligned, while allowing small provider-specific variations (see `Prompt/MAINTENANCE.md`).
+**Can I use a different model than the folder name?**  
+Yes. Pick any folder whose system prompt fits your UI; core LFR rules are aligned across all five.
+
+**Where is Neptune's in-app API key UI?**  
+This open-source GUI exports the pack for external LLM use. There is no built-in key field — upload the pack to your LLM instead.

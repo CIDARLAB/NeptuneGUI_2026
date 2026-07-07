@@ -27,6 +27,13 @@ For all `*/en2lfr_system.txt` files, keep these invariant blocks semantically co
 For all `*/lfr2en_system.txt` files:
 - Do not invent ports/signals/behavior.
 - Keep structured explanation sections.
+- Tell the model: user pastes LFR in chat; do not ask to edit `lfr2en_user_template.txt`.
+
+Upload-and-use workflow (all providers):
+- Users upload the package to their LLM and send requirements in chat.
+- `en2lfr_user_template.txt` / `lfr2en_user_template.txt` are **optional examples only** (no `{{ENGLISH_SPEC}}` / `{{LFR_SOURCE}}` workflow).
+- `START_HERE.md` and `USER_GUIDE.md` describe end-user steps; keep them aligned with system prompts.
+- Each `*/README.txt` is a one-screen provider setup reminder.
 
 ## Update workflow (recommended)
 1. Edit one provider first (usually `openai/en2lfr_system.txt`) as reference.
@@ -43,9 +50,24 @@ For all `*/lfr2en_system.txt` files:
 - `Prompt/buttons.json`: button-to-folder mapping used by UI.
 - `Prompt/<provider>/manifest.json`: key env var, base URL, default model.
 - `Prompt/<provider>/en2lfr_system.txt`: English spec -> LFR generation rules.
-- `Prompt/<provider>/en2lfr_user_template.txt`: user template (`{{ENGLISH_SPEC}}`).
+- `Prompt/<provider>/en2lfr_user_template.txt`: optional example user message (not a form).
 - `Prompt/<provider>/lfr2en_system.txt`: LFR -> English explanation rules.
-- `Prompt/<provider>/lfr2en_user_template.txt`: user template (`{{LFR_SOURCE}}`).
+- `Prompt/<provider>/lfr2en_user_template.txt`: optional example (paste LFR in chat).
+- `Prompt/<provider>/README.txt`: short provider setup note for zip exports.
+- `Prompt/START_HERE.md`: primary end-user entry (upload → chat → LFR).
+- `Prompt/USER_GUIDE.md`: extended user guide (BYOK, providers, FAQ).
+- `Prompt/LFR_SYNTAX_MANUAL.txt`: quick LFR reference bundled in GUI zip exports.
+- `Prompt/MINT_SYNTAX_MANUAL.txt`: quick MINT reference bundled in GUI zip exports.
+- `Prompt/DEVELOPER_ENTRY_POINTS.txt`: developer/wiki entry-point index for zip exports.
+
+## Wiki/docs sync checklist
+When Neptune docs or compiler behavior changes, update prompt package in the same pass:
+1. `docs/LFR_READABLE_SYNTAX_SPEC_V2.md` and/or `docs/LFR_MINT_LANGUAGE_MANUAL.md`
+2. `docs/LFR-TestCases-wiki/` and/or `docs/MINT-TestCases-wiki/` companion pages
+3. `Prompt/LFR_SYNTAX_MANUAL.txt` and `Prompt/MINT_SYNTAX_MANUAL.txt`
+4. `Prompt/DEVELOPER_ENTRY_POINTS.txt` (wiki paths and entry points)
+5. Shared invariant blocks in all five `*/en2lfr_system.txt` files
+6. Keep `Neptune_2026/Prompt/` and `NeptuneGUI_2026/src/Prompt/` aligned
 
 ## Versioning notes
 - Treat benchmark-aligned blocks as "shared contract".

@@ -52,6 +52,17 @@ end
 
 case(...) forms are also supported.
 
+Current distribute condition scope (Neptune 2026):
+- Supported operators in if/else if:
+  == != && || & | ^ ^~ ~^
+- Supports chained expressions and parentheses, for example:
+  if (c1 && c2 || c3)
+  if ((c1 && c2) || c3)
+- Precedence (high to low):
+  == !=, then &, then ^/^~/~^, then |, then &&, then ||
+- Signal-vs-signal ops with == != & | ^ ^~ ~^ require matching widths.
+- Prefer explicit parentheses when mixing logical and bitwise operators.
+
 5) Directives
 - #MAP
 - #CONSTRAIN
@@ -78,4 +89,3 @@ Rules:
 - Drive declared outputs explicitly.
 - Use <= inside distribute branches; use = in assign.
 - Prefer explicit intermediate flow nodes for complex expressions.
-

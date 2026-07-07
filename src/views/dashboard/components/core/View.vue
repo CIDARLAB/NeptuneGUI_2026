@@ -20,7 +20,9 @@
               </div>
               <div class="agent-panel-subtitle">
                 <span class="agent-panel-subtitle-text">
-                  Export Neptune prompt scripts, open the vendor chat, describe your device in English, then paste the generated
+                  Download the prompt pack, paste
+                  <code>en2lfr_system.txt</code>
+                  into your LLM once, describe your device in chat, then paste the generated
                   <span class="agent-panel-keep-together">LFR</span>
                   into the
                   <span class="agent-panel-keep-together">Editor</span>.
@@ -44,20 +46,37 @@
                 :menu-props="{ contentClass: 'agent-panel-model-select-menu' }"
               />
 
+              <ol class="agent-panel-steps mb-3 pl-0">
+                <li>
+                  <strong>Export</strong> the prompt <strong>.zip</strong> for your model (includes
+                  <code>START_HERE.md</code>).
+                </li>
+                <li>
+                  <strong>One-time setup:</strong> paste
+                  <code>en2lfr_system.txt</code>
+                  into that LLM’s system / custom instructions. No need to edit template files.
+                </li>
+                <li>
+                  <strong>Chat:</strong> write your design requirement in plain English in the message.
+                </li>
+                <li>
+                  <strong>Paste</strong> the returned
+                  <code>```lfr</code>
+                  block here and <strong>Compile</strong>.
+                </li>
+              </ol>
+
               <p class="agent-panel-hint mb-3">
-                The <strong>.zip</strong> is plain-text <strong>prompt scripts</strong> for your chosen LLM: load them as custom instructions or paste per turn so the model can help you write and refine
-                <span class="agent-panel-keep-together">LFR</span>.
-                Full step-by-step guide:
+                Full guide:
                 <router-link
                   :to="{ name: 'PromptSteps' }"
                   class="agent-panel-steps-link"
-                >Prompt steps guide</router-link>.
-                Grammar user guides and syntax references are now in
+                >Prompt user guide</router-link>.
+                LFR/MINT syntax references:
                 <router-link
                   :to="{ name: 'References' }"
                   class="agent-panel-steps-link"
                 >References</router-link>.
-                The same content is at the root of the exported zip.
               </p>
 
               <div class="agent-panel-actions d-flex flex-column align-stretch">
@@ -111,12 +130,14 @@
     'en2lfr_user_template.txt',
     'lfr2en_system.txt',
     'lfr2en_user_template.txt',
+    'README.txt',
   ]
 
   const SUPPORT_DOC_FILE_NAMES = [
     'LFR_SYNTAX_MANUAL.txt',
     'MINT_SYNTAX_MANUAL.txt',
     'DEVELOPER_ENTRY_POINTS.txt',
+    'START_HERE.md',
   ]
 
   /* Alphabetical by label */
@@ -269,6 +290,70 @@
   opacity: 0.88;
   line-height: 1.45;
   font-weight: 500;
+}
+
+.agent-panel-subtitle code {
+  font-size: 0.92em;
+  padding: 0.05em 0.25em;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.theme--dark .agent-panel-subtitle code {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.agent-panel-steps {
+  list-style: none;
+  counter-reset: agent-step;
+  margin: 0;
+}
+
+.agent-panel-steps li {
+  counter-increment: agent-step;
+  position: relative;
+  padding-left: 1.75rem;
+  margin-bottom: 0.55rem;
+  font-size: var(--neptune-fs-body, 14pt);
+  font-weight: 500;
+  line-height: 1.45;
+  color: rgba(0, 0, 0, 0.87);
+}
+
+.theme--dark .agent-panel-steps li {
+  color: rgba(255, 255, 255, 0.87);
+}
+
+.agent-panel-steps li::before {
+  content: counter(agent-step);
+  position: absolute;
+  left: 0;
+  top: 0.05em;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  background: rgba(0, 105, 148, 0.12);
+  color: #006994;
+  font-size: 0.75em;
+  font-weight: 700;
+  line-height: 1.25rem;
+  text-align: center;
+}
+
+.theme--dark .agent-panel-steps li::before {
+  background: rgba(0, 172, 193, 0.2);
+  color: #00acc1;
+}
+
+.agent-panel-steps code {
+  font-size: 0.92em;
+  padding: 0.05em 0.25em;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.theme--dark .agent-panel-steps code {
+  background: rgba(255, 255, 255, 0.08);
 }
 
 /* Avoid breaking words mid-token; keep “LFR” / “Editor” intact */
