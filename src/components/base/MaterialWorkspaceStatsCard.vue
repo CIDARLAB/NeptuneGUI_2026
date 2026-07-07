@@ -9,8 +9,8 @@
       <span class="file-stats-ext-heading">{{ ext || '—' }}</span>
     </template>
 
-    <template v-slot:after-heading>
-      <div class="file-stats-actions d-flex flex-shrink-0 align-center">
+    <div class="file-stats-actions-row">
+      <div class="file-stats-actions d-flex align-center justify-center">
         <v-tooltip bottom>
           <template v-slot:activator="{ on, attrs }">
             <v-btn
@@ -105,7 +105,7 @@
           <span>Remove this file from the workspace</span>
         </v-tooltip>
       </div>
-    </template>
+    </div>
 
     <div class="file-stats-body">
       <h3 class="file-stats-name-heading font-weight-light text--primary">
@@ -311,9 +311,22 @@
   min-height: 168px
 
   > div:first-child
-    justify-content: space-between
+    justify-content: flex-start
     align-items: flex-start
     width: 100%
+
+  .file-stats-actions-row
+    width: 100%
+    margin-top: 4px
+
+  .file-stats-actions
+    width: 100%
+    flex-wrap: wrap
+    justify-content: center
+    gap: 2px
+
+  .file-stats-action-btn
+    margin: 0 !important
 
   .v-card
     border-radius: 4px
@@ -333,15 +346,6 @@
     font-weight: 600
     line-height: 1.2
     letter-spacing: 0.02em
-
-  .file-stats-actions
-    flex: 0 0 auto
-    white-space: nowrap
-    margin-left: auto
-    align-self: flex-start
-
-  .file-stats-action-btn
-    margin: 0 !important
 
   .file-stats-body
     width: 100%
