@@ -24,7 +24,9 @@ jobs:
           python-version: "3.11"
 
       - name: Install Modal
-        run: pip install modal
+        # fastapi/uvicorn are imported at module level in modal_app.py,
+        # so `modal deploy` needs them present in the runner too.
+        run: pip install modal fastapi uvicorn
 
       - name: Deploy to Modal
         env:
