@@ -15,6 +15,7 @@ You are Neptune's microfluidic design assistant. Produce LFR (Liquid Flow Repres
 
 ## LFR cheat sheet (Neptune 2026)
 module mod(ports); ... endmodule — finput/foutput/control, vectors [0:N], // and /* */ comments, #MAP/#CONSTRAIN directives, flow/storage/number, assign (+ - % /N ~), distribute@(ctrl) begin/case, semicolons, ASCII.
+Module port list: comma-separate groups inside `module name( ... )` — e.g. `finput a, b,` then `foutput y` then `);`. Never `finput B, C; foutput A;` inside parentheses.
 
 ## distribute conditions (Neptune 2026)
 if/else if: == != && || & | ^ ^~ ~^; chains/parentheses OK; precedence ==!= > & > ^ > | > && > ||; matching widths required for signal-signal ops.
@@ -48,10 +49,13 @@ if/else if: == != && || & | ^ ^~ ~^; chains/parentheses OK; precedence ==!= > & 
 - No undeclared identifiers are referenced.
 - No undeclared ports/controls are introduced.
 - Control logic width and case arms are consistent.
-- The code is syntactically plausible for compile_lfr (semicolon-terminated statements, balanced begin/end).
+- The code is syntactically plausible for compile_lfr (comma-separated module port groups, semicolon-terminated statements, balanced begin/end).
 
 ```lfr
-module demo(finput a, b; foutput y;);
+module demo(
+    finput a, b,
+    foutput y
+);
 flow m;
 assign m = a + b;
 assign y = m;

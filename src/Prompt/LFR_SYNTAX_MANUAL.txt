@@ -14,6 +14,16 @@ endmodule
 - foutput
 - control
 
+Module port list (important):
+module name(
+    finput in_a, in_b,
+    foutput out_1
+);
+
+Use commas between port groups inside parentheses.
+Do not use semicolons between finput/foutput/control in the module header.
+Invalid: module bad(finput B, C; foutput A;);
+
 Vector form is supported, for example:
 finput [0:15] inputs
 control [0:3] route

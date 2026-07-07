@@ -3,7 +3,11 @@
 
 Example (paste something like this in chat):
 
-module mux2(finput a, b; control sel; foutput y;);
+module mux2(
+    finput a, b,
+    control sel,
+    foutput y
+);
 flow tmp;
 distribute@(sel) begin
   if (sel == 1'b0) tmp <= a;

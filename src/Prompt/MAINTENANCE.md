@@ -16,13 +16,14 @@ This file defines how to maintain multi-provider prompt packs in `Prompt/`.
 For all `*/en2lfr_system.txt` files, keep these invariant blocks semantically consistent:
 1. One fenced LFR-only output (no extra text, no MINT/JSON).
 2. Neptune LFR grammar essentials (module/ports/declarations/assign/distribute).
-3. Benchmark-aligned generation rules:
+3. Module port list uses commas between finput/foutput/control groups inside `module name( ... )` — never semicolons in the header.
+4. Benchmark-aligned generation rules:
    - preserve interface counts and widths,
    - drive all outputs,
    - gate staged writes with `distribute@(ctrl)` and `<=` inside branches,
    - keep N-bit routing case coverage consistent,
    - prefer explicit intermediate flow nodes.
-4. Final self-check before responding.
+5. Final self-check before responding.
 
 For all `*/lfr2en_system.txt` files:
 - Do not invent ports/signals/behavior.
