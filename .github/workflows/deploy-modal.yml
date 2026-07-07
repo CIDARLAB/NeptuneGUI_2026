@@ -1,10 +1,11 @@
 name: Deploy Modal compute backend
 
 # Auto-deploys the fluigi compute service to Modal whenever the backend
-# definition changes on the production branch.
+# definition changes on main. (Triggers on the dev branch directly: a
+# bot-synced push to production would not trigger Actions.)
 on:
   push:
-    branches: [production]
+    branches: [main]
     paths:
       - modal_app.py
       - .github/workflows/deploy-modal.yml
