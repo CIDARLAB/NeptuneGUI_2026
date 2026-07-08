@@ -20,5 +20,11 @@ jobs:
 
       - name: Sync production branch to main
         run: |
-          git checkout -B production origin/main
+          git fetch origin
+          if ! git rev-parse --verify origin/production >/dev/null 2>&1; then
+            echo "production branch not found on origin; skipping sync."
+            exit 0
+          fi
+          git checkout production
+          git reset --hard origin/main
           git push origin production --force-with-lease
