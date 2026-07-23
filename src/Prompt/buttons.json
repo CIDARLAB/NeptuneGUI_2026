@@ -1,10 +1,10 @@
 {
-  "description": "Maps UI button order to prompt packages (BYOK). Load manifest.json in each folder for API hints.",
+  "description": "Maps UI button order to prompt packages (BYOK). Load manifest.json in each folder for API hints. GUI export: zip for openai/anthropic/google_gemini; single .md for alibaba_qwen/deepseek (those chats do not accept zip).",
   "packages": [
-    { "folder": "openai", "label": "OpenAI" },
-    { "folder": "anthropic", "label": "Claude" },
-    { "folder": "google_gemini", "label": "Gemini" },
-    { "folder": "alibaba_qwen", "label": "Qwen" },
-    { "folder": "deepseek", "label": "DeepSeek" }
+    { "folder": "openai", "label": "OpenAI", "export_format": "zip" },
+    { "folder": "anthropic", "label": "Claude", "export_format": "zip" },
+    { "folder": "google_gemini", "label": "Gemini", "export_format": "zip" },
+    { "folder": "alibaba_qwen", "label": "Qwen", "export_format": "md" },
+    { "folder": "deepseek", "label": "DeepSeek", "export_format": "md" }
   ]
 }

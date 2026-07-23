@@ -5,5 +5,5 @@
   "env_var_api_key": "DASHSCOPE_API_KEY",
   "suggested_base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
   "default_model": "qwen3-max",
-  "notes": "OpenAI-compatible endpoint shown; region/deployment mode affects models and billing. User brings own key (BYOK)."
+  "notes": "OpenAI-compatible endpoint shown; region/deployment mode affects models and billing. User brings own key (BYOK). Neptune GUI exports this pack as a single .md file (not .zip) because Qwen chat does not accept zip uploads."
 }

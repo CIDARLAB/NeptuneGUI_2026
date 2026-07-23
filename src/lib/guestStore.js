@@ -447,6 +447,25 @@ function pruneEmptyWorkspaces () {
   save(data)
 }
 
+/**
+ * Snapshot of all guest .lfr files for compile-time
+ * `` `import "WorkspaceName/file.lfr" `` resolution.
+ */
+function collectWorkspaceLfrBundle () {
+  const out = []
+  ;(getWorkspaces() || []).forEach((w) => {
+    const workspaceName = String((w && w.name) || 'Workspace').trim() || 'Workspace'
+    ;(w.files || []).forEach((f) => {
+      const fileName = String((f && f.name) || '')
+      if (!/\.lfr$/i.test(fileName)) return
+      const content = fileContentForZipExport(f && f.content)
+      if (!String(content).trim()) return
+      out.push({ workspaceName, fileName, content })
+    })
+  })
+  return out
+}
+
 export default {
   getWorkspaceIds,
   getWorkspace,
@@ -466,4 +485,5 @@ export default {
   ensureExampleWorkspace,
   getWorkspacesSortedForDashboard,
   pruneEmptyWorkspaces,
+  collectWorkspaceLfrBundle,
 }

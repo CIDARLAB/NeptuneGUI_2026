@@ -24,16 +24,24 @@ Shared reference (optional, improves quality):
 - `MINT_SYNTAX_MANUAL.txt`
 - `DEVELOPER_ENTRY_POINTS.txt`
 
-## 2. One-time setup
+## 2. Download format from Neptune GUI
 
-1. Download or export the zip from Neptune GUI (Dashboard → pick a model → download prompt pack).
-2. Pick **one** provider folder matching the LLM you use.
-3. Copy **`en2lfr_system.txt`** into that LLM's system / custom / project instructions field.
-4. Optionally attach `LFR_SYNTAX_MANUAL.txt` as knowledge or project file.
+| Model | Export button | File you get |
+|-------|---------------|--------------|
+| Claude, GPT, Gemini | **Export prompt package (.zip)** | `<provider>-neptune-prompts.zip` |
+| **Qwen, DeepSeek** | **Export prompt package (.md)** | `<provider>-neptune-prompts.md` |
 
-You do **not** need to edit any template file or replace placeholders like `{{ENGLISH_SPEC}}`.
+**Qwen and DeepSeek do not use zip.** Their chat products typically cannot upload `.zip` archives, so Neptune ships their pack as one Markdown file that embeds the same prompts and manuals.
 
-## 3. Daily use — English → LFR
+## 3. One-time setup
+
+1. In Neptune GUI → **Editor** → **LLM prompts**, pick your model and export the pack (`.zip` or `.md` as above).
+2. Load the pack into that LLM:
+   - **Zip providers:** unzip if needed; paste `en2lfr_system.txt` into system / custom instructions; optionally upload manuals.
+   - **Qwen / DeepSeek:** upload the `.md` file if allowed, or open it and paste the **English → LFR** system section into the system prompt.
+3. You do **not** need to edit any template file or replace placeholders like `{{ENGLISH_SPEC}}`.
+
+## 4. Daily use — English → LFR
 
 1. Open a chat with the configured assistant.
 2. Write your **design requirement in plain English** in the message.
@@ -49,25 +57,25 @@ When sel is 0, route a to y; when sel is 1, route b to y.
 
 If compile fails, paste the compiler error into the same chat and ask for a corrected LFR block.
 
-## 4. Optional — LFR → English
+## 5. Optional — LFR → English
 
 1. Use **`lfr2en_system.txt`** as instructions (new chat or swap instructions).
 2. Paste your **full LFR source** directly in the message.
 3. You do **not** need to edit `lfr2en_user_template.txt`.
 
-## 5. Provider-specific setup
+## 6. Provider-specific setup
 
-| Provider | Where to paste `en2lfr_system.txt` |
-|----------|-------------------------------------|
-| **ChatGPT** | Custom GPT or Project → Instructions |
-| **Claude** | Project → Custom Instructions |
-| **Gemini** | Gem or system instruction field |
-| **Qwen** | Chat or DashScope API system prompt |
-| **DeepSeek** | Chat or API system prompt |
+| Provider | Export | Where to paste `en2lfr_system` |
+|----------|--------|--------------------------------|
+| **ChatGPT** | `.zip` | Custom GPT or Project → Instructions |
+| **Claude** | `.zip` | Project → Custom Instructions |
+| **Gemini** | `.zip` | Gem or system instruction field |
+| **Qwen** | **`.md`** | Chat or DashScope API system prompt |
+| **DeepSeek** | **`.md`** | Chat or API system prompt |
 
 Billing and API keys are on **your** provider account (BYOK). Neptune only ships the prompt text.
 
-## 6. Token cost (if using API)
+## 7. Token cost (if using API)
 
 Most providers charge by token (input + output). Typical drivers of cost:
 
@@ -77,19 +85,22 @@ Most providers charge by token (input + output). Typical drivers of cost:
 
 Check your provider's pricing page for current rates.
 
-## 7. Security
+## 8. Security
 
 - Do not commit API keys to git or share them in screenshots.
 - Rotate keys if you suspect leakage.
 - The prompt package contains **no** secrets — only instructions and reference text.
 
-## 8. FAQ
+## 9. FAQ
 
 **Do I edit `en2lfr_user_template.txt`?**  
 No. Write your requirement directly in chat.
 
 **The model asked me to fill in `{{ENGLISH_SPEC}}`.**  
-Re-paste `en2lfr_system.txt` into instructions; it tells the model to treat your chat message as the spec.
+Re-paste `en2lfr_system.txt` (or the English→LFR section of the `.md` pack) into instructions; it tells the model to treat your chat message as the spec.
+
+**Why is Qwen/DeepSeek a `.md` instead of `.zip`?**  
+Those chat UIs do not support zip uploads. The Markdown file is the full package in one uploadable/copyable file.
 
 **Can I use a different model than the folder name?**  
 Yes. Pick any folder whose system prompt fits your UI; core LFR rules are aligned across all five.

@@ -226,6 +226,11 @@ import { Terminal } from 'xterm'
 import router from '../../router'
 import guestStore, { EXAMPLE_WORKSPACE_NAME } from '@/lib/guestStore'
 import { EXAMPLE_LFR_SCRIPT, EXAMPLE_MINT_SCRIPT } from '@/lib/exampleScripts'
+import {
+  buildWorkspaceLfrIndex,
+  collectImportLfr,
+  formatImportResolveError,
+} from '@/lib/lfrImportResolve'
 
 const term = new Terminal()
 let initialPromptWritten = false
@@ -973,15 +978,7 @@ export default {
       } catch (_) {
         componentBundle = []
       }
-      const data = {
-        sourcefileid: this.fileobject.id,
-        sourcefilename: this.fileobject.name,
-        configfileid: this.selectedconfig.id,
-        configfilename: this.selectedconfig.name,
-        workspace: this.$store.getters.currentWorkspace._id,
-        user: this.$store.getters.currentUser.email,
-        componentBundle,
-      }
+
       const ext = this.fileobject.name.match(/\.[0-9a-z]+$/i) ? this.fileobject.name.match(/\.[0-9a-z]+$/i)[0] : ''
       let endpoint = ''
       if (ext === '.uf' || ext === '.mint') {
@@ -990,15 +987,47 @@ export default {
       } else if (ext === '.lfr' || ext === '.v') {
         endpoint = '/api/v1/mushroommapper'
         this.lastCompileType = 'lfr'
+      } else {
+        alert('Unknown File Type !')
+        self.isloading = false
+        return
       }
-      else { alert('Unknown File Type !'); self.isloading = false; return }
+
+      const data = {
+        sourcefileid: this.fileobject.id,
+        sourcefilename: this.fileobject.name,
+        configfileid: this.selectedconfig.id,
+        configfilename: this.selectedconfig.name,
+        workspace: this.$store.getters.currentWorkspace._id,
+        user: this.$store.getters.currentUser.email,
+        componentBundle,
+        sourceContent: this.code || '',
+      }
+
+      // LFR: resolve `` `import `` on the frontend; send only referenced files.
+      if (this.lastCompileType === 'lfr') {
+        try {
+          const workspaces = await this.loadWorkspacesForImportIndex(config)
+          const index = buildWorkspaceLfrIndex(workspaces)
+          const resolved = collectImportLfr(this.code || '', index)
+          if (!resolved.ok) {
+            alert(formatImportResolveError(resolved))
+            self.isloading = false
+            return
+          }
+          data.importLfr = resolved.importLfr || []
+        } catch (err) {
+          console.error(err)
+          alert('Could not check LFR import files. Please try again.')
+          self.isloading = false
+          return
+        }
+      }
+
       axios.post(endpoint, data, config)
         .then((response) => {
           const jobid = response.data
-          // Optional live-output subscription (no-op if the socket server is absent).
           try { if (self.$socket) self.$socket.emit('monitor', jobid) } catch (e) { /* ignore */ }
-          // Compile jobs run asynchronously on the compute backend; clear the
-          // loading state and send the user to the Jobs page to watch the result.
           self.isloading = false
           self.$router.push({ name: 'Jobs' }).catch(() => {})
         })
@@ -1008,6 +1037,33 @@ export default {
           const kind = (self.lastCompileType || self.selectedScriptLanguage || 'script').toUpperCase()
           alert(kind + ' compile failed. Could not start compile job.')
         })
+    },
+    /**
+     * Load every workspace + file content so `` `import "Ws/file.lfr" `` can be checked locally.
+     */
+    async loadWorkspacesForImportIndex (config) {
+      if (this.$store.getters.isGuest) {
+        return guestStore.getWorkspaces() || []
+      }
+      const idsRes = await axios.get('/api/v1/workspaces', config)
+      const ids = idsRes.data || []
+      const workspaces = []
+      for (const wid of ids) {
+        const wRes = await axios.get('/api/v1/workspace', { params: { workspace_id: wid }, ...config })
+        const w = wRes.data || { _id: wid, name: 'Workspace' }
+        const filesRes = await axios.get('/api/v1/files', { params: { id: wid }, ...config })
+        const fileIds = filesRes.data || []
+        const files = await Promise.all(
+          fileIds.map((fid) =>
+            axios.get('/api/v1/file', { params: { id: fid }, ...config }).then((r) => r.data).catch(() => null)
+          )
+        )
+        workspaces.push({
+          ...w,
+          files: files.filter(Boolean),
+        })
+      }
+      return workspaces
     },
     deletefile (event) {
       const fid = this.fileobject.id

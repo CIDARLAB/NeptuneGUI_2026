@@ -441,6 +441,32 @@ function deleteFile (session, workspaceId, fileId) {
   saveFiles(session, workspaceId, list)
 }
 
+/**
+ * All .lfr files across the session's workspaces, for Editor
+ * `` `import "WorkspaceName/file.lfr" `` resolution at compile time.
+ */
+function collectWorkspaceLfrFiles (session) {
+  const workspaces = getWorkspaces(session) || []
+  const out = []
+  workspaces.forEach((w) => {
+    const workspaceName = (w && w.name) ? String(w.name) : 'Workspace'
+    const wid = w && w._id
+    if (wid == null) return
+    const files = getFiles(session, wid) || []
+    files.forEach((f) => {
+      const fileName = f && f.name ? String(f.name) : ''
+      if (!/\.lfr$/i.test(fileName)) return
+      let content = f && f.content != null ? f.content : ''
+      if (typeof content !== 'string') {
+        try { content = JSON.stringify(content) } catch (_) { content = '' }
+      }
+      if (!String(content).trim()) return
+      out.push({ workspaceName, fileName, content: String(content) })
+    })
+  })
+  return out
+}
+
 function getComponentLibraryPath (session) {
   const dir = ensureSessionDir(session)
   if (!dir) return null
@@ -536,6 +562,7 @@ module.exports = {
   createFile,
   updateFileContent,
   deleteFile,
+  collectWorkspaceLfrFiles,
   getComponentLibrary,
   saveComponentLibrary,
   clearGuestSessionUserData,

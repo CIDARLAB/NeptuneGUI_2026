@@ -5,10 +5,11 @@ Wraps the fluigi CLI (Neptune_2026) and the 3DuF primitives server.
 Deploy:   modal deploy modal_app.py
 Dev/test: modal serve modal_app.py
 
-Compile requests carry a per-job componentBundle (JSON + LFR/MINT). Fluigi
-receives it as:
+Compile requests carry a per-job componentBundle (JSON + LFR/MINT) and an optional
+importLfr list (only files referenced by Editor `` `import ``). Fluigi receives them as:
   --component-library <tmpdir>/.../JSON   # geometry / defaults / terminals
-  --pre-load <tmpdir>/.../LFR             # LFR import module search
+  --pre-load <tmpdir>/.../LFR             # component-library LFR modules
+  --pre-load <tmpdir>/import_lfr          # `` `import "WorkspaceName/file.lfr" ``
 Primitives server is the fallback for entities not present in the bundle.
 
 Primitives lifecycle (container-scoped reuse):
@@ -115,6 +116,98 @@ _primitives_proc: subprocess.Popen | None = None
 
 def _sanitize_syntax(syntax: str) -> str:
     return re.sub(r"[^a-z0-9_-]", "", str(syntax or "").strip().lower())
+
+
+def _sanitize_workspace_import_name(name: str) -> str:
+    """Single path segment for `` `import "WorkspaceName/file.lfr" ``."""
+    s = str(name or "").strip() or "Workspace"
+    s = re.sub(r"[/\\]+", "_", s).replace("\0", "")
+    if s in (".", ".."):
+        s = "Workspace"
+    return s
+
+
+def _sanitize_lfr_file_name(name: str) -> str:
+    base = Path(str(name or "").strip()).name
+    if not base or base in (".", ".."):
+        return ""
+    if not base.lower().endswith(".lfr"):
+        return ""
+    return base
+
+
+def write_workspace_lfr_tree(tmpdir: Path, bundle: list | None) -> dict | None:
+    """Stage Editor workspace .lfr files as WorkspaceName/file.lfr for --pre-load."""
+    if not bundle:
+        return None
+
+    root = tmpdir / "workspace_imports"
+    count = 0
+    for item in bundle:
+        if not isinstance(item, dict):
+            continue
+        ws = _sanitize_workspace_import_name(
+            item.get("workspaceName") or item.get("workspace") or item.get("workspace_name")
+        )
+        fname = _sanitize_lfr_file_name(
+            item.get("fileName") or item.get("name") or item.get("filename")
+        )
+        if not fname:
+            continue
+        content = item.get("content")
+        if content is None:
+            content = item.get("lfrScript") or item.get("lfr_script") or ""
+        text = str(content)
+        if not text.strip():
+            continue
+        dest_dir = root / ws
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        (dest_dir / fname).write_text(text, encoding="utf-8")
+        count += 1
+
+    if count == 0:
+        return None
+    return {"root": root, "count": count}
+
+
+def write_import_lfr_tree(tmpdir: Path, bundle: list | None) -> dict | None:
+    """Stage only Editor-resolved `` `import `` dependencies under import_lfr/."""
+    if not bundle:
+        return None
+
+    root = tmpdir / "import_lfr"
+    count = 0
+    for item in bundle:
+        if not isinstance(item, dict):
+            continue
+        path_spec = str(item.get("path") or item.get("importPath") or "").strip().replace("\\", "/")
+        ws = item.get("workspaceName") or item.get("workspace") or item.get("workspace_name")
+        fname = item.get("fileName") or item.get("name") or item.get("filename")
+        if path_spec:
+            parts = [p for p in path_spec.split("/") if p]
+            if len(parts) >= 2:
+                fname = parts[-1]
+                ws = "/".join(parts[:-1])
+            elif len(parts) == 1:
+                fname = parts[0]
+        ws = _sanitize_workspace_import_name(ws)
+        fname = _sanitize_lfr_file_name(fname)
+        if not fname:
+            continue
+        content = item.get("content")
+        if content is None:
+            content = item.get("lfrScript") or item.get("lfr_script") or ""
+        text = str(content)
+        if not text.strip():
+            continue
+        dest_dir = root / ws
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        (dest_dir / fname).write_text(text, encoding="utf-8")
+        count += 1
+
+    if count == 0:
+        return None
+    return {"root": root, "count": count}
 
 
 def write_component_bundle(tmpdir: Path, bundle: list) -> dict | None:
@@ -260,6 +353,12 @@ def build_fluigi_cmd(
     if compile_type == "lfr" and component_paths.get("lfr_count"):
         cmd.extend(["--pre-load", str(component_paths["lfr_dir"])])
 
+    # Editor workspace imports: `` `import "WorkspaceName/file.lfr" ``
+    if compile_type == "lfr" and component_paths.get("import_lfr_root"):
+        cmd.extend(["--pre-load", str(component_paths["import_lfr_root"])])
+    elif compile_type == "lfr" and component_paths.get("workspace_lfr_root"):
+        cmd.extend(["--pre-load", str(component_paths["workspace_lfr_root"])])
+
     return cmd
 
 
@@ -278,6 +377,8 @@ def run_compile(
     config_filename: str,
     compile_type: str,
     component_bundle: list | None = None,
+    workspace_lfr_bundle: list | None = None,
+    import_lfr_bundle: list | None = None,
 ):
     """Execute a fluigi compile job. Stores result in job_store.
 
@@ -302,6 +403,23 @@ def run_compile(
                 cfg_path.write_text(config_content, encoding="utf-8")
 
             component_paths = write_component_bundle(tmppath, component_bundle or [])
+            import_meta = write_import_lfr_tree(tmppath, import_lfr_bundle or [])
+            ws_meta = None if import_meta else write_workspace_lfr_tree(
+                tmppath, workspace_lfr_bundle or []
+            )
+            if import_meta or ws_meta:
+                if component_paths is None:
+                    component_paths = {
+                        "json_count": 0,
+                        "lfr_count": 0,
+                        "mint_count": 0,
+                    }
+                if import_meta:
+                    component_paths["import_lfr_root"] = import_meta["root"]
+                    component_paths["import_lfr_count"] = import_meta["count"]
+                if ws_meta:
+                    component_paths["workspace_lfr_root"] = ws_meta["root"]
+                    component_paths["workspace_lfr_count"] = ws_meta["count"]
 
             env = {
                 **os.environ,
@@ -328,7 +446,7 @@ def run_compile(
                     except Exception:
                         pass
 
-            if component_paths is not None:
+            if component_paths is not None and component_paths.get("manifest"):
                 try:
                     outputs["component_library.json"] = component_paths["manifest"].read_text(
                         encoding="utf-8"
@@ -345,6 +463,8 @@ def run_compile(
                 "componentCount": len(component_bundle or []),
                 "componentJsonCount": (component_paths or {}).get("json_count", 0),
                 "componentLfrCount": (component_paths or {}).get("lfr_count", 0),
+                "importLfrCount": (component_paths or {}).get("import_lfr_count", 0),
+                "workspaceLfrCount": (component_paths or {}).get("workspace_lfr_count", 0),
                 "primitivesReused": primitives_reused,
                 "fluigiCmd": cmd,
             }
@@ -378,6 +498,8 @@ def api():
             body.get("configfilename", "config.json"),
             compile_type,
             body.get("componentBundle") or [],
+            body.get("workspaceLfrBundle") or [],
+            body.get("importLfr") or [],
         )
         return job_id
 

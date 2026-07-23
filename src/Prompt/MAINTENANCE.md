@@ -54,12 +54,17 @@ Upload-and-use workflow (all providers):
 - `Prompt/<provider>/en2lfr_user_template.txt`: optional example user message (not a form).
 - `Prompt/<provider>/lfr2en_system.txt`: LFR -> English explanation rules.
 - `Prompt/<provider>/lfr2en_user_template.txt`: optional example (paste LFR in chat).
-- `Prompt/<provider>/README.txt`: short provider setup note for zip exports.
+- `Prompt/<provider>/README.txt`: short provider setup note for GUI exports.
 - `Prompt/START_HERE.md`: primary end-user entry (upload → chat → LFR).
 - `Prompt/USER_GUIDE.md`: extended user guide (BYOK, providers, FAQ).
-- `Prompt/LFR_SYNTAX_MANUAL.txt`: quick LFR reference bundled in GUI zip exports.
-- `Prompt/MINT_SYNTAX_MANUAL.txt`: quick MINT reference bundled in GUI zip exports.
-- `Prompt/DEVELOPER_ENTRY_POINTS.txt`: developer/wiki entry-point index for zip exports.
+- `Prompt/LFR_SYNTAX_MANUAL.txt`: quick LFR reference bundled in GUI exports.
+- `Prompt/MINT_SYNTAX_MANUAL.txt`: quick MINT reference bundled in GUI exports.
+- `Prompt/DEVELOPER_ENTRY_POINTS.txt`: developer/wiki entry-point index for GUI exports.
+
+## GUI export formats (NeptuneGUI Editor → LLM prompts)
+- **Claude / GPT / Gemini** (`anthropic`, `openai`, `google_gemini`): export a **`.zip`** of the provider folder + shared manuals.
+- **Qwen / DeepSeek** (`alibaba_qwen`, `deepseek`): export a single **`.md`** file that embeds the same pack (those chat UIs do not accept `.zip`).
+- Source of truth remains the per-file tree under `Prompt/`; the GUI builds zip/md on download. Keep `README.txt` for qwen/deepseek describing the `.md` export.
 
 ## Wiki/docs sync checklist
 When Neptune docs or compiler behavior changes, update prompt package in the same pass:

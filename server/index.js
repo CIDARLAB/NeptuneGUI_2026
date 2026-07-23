@@ -14,7 +14,12 @@ const axios = require('axios')
 const JSZip = require('jszip')
 const data = require('./dataLayer')
 const { seedBundledDataIfNeeded } = require('./seedData')
-const { mergeComponentBundles, toCompileComponentBundle } = require('./componentBundle')
+const {
+  mergeComponentBundles,
+  toCompileComponentBundle,
+  normalizeWorkspaceLfrBundle,
+  normalizeImportLfr,
+} = require('./componentBundle')
 
 // Optional: forward compile to Neptune_2026 (e.g. http://localhost:5000)
 const NEPTUNE_COMPILE_URL = process.env.NEPTUNE_COMPILE_URL || ''
@@ -521,16 +526,27 @@ function recordSessionJob (session, jobId) {
 }
 
 // Compile: proxy to Modal compute endpoint (NEPTUNE_COMPILE_URL).
-// Enriches the request with script content and a component-library snapshot
-// (JSON + LFR/MINT) so Modal/fluigi can use the latest component definitions.
+// Enriches the request with script content, a component-library snapshot
+// (JSON + LFR/MINT), and importLfr (only files referenced by `` `import ``).
 function proxyCompile (req, res, routePath) {
   if (!NEPTUNE_COMPILE_URL) {
     return res.status(501).json({ error: 'Compile not configured. Set NEPTUNE_COMPILE_URL to the Modal endpoint URL.' })
   }
-  const { sourcefileid, configfileid, workspace: workspaceId, componentBundle: clientBundle } = req.body || {}
+  const {
+    sourcefileid,
+    configfileid,
+    workspace: workspaceId,
+    componentBundle: clientBundle,
+    sourceContent: clientSourceContent,
+    importLfr: clientImportLfr,
+    workspaceLfrBundle: clientWorkspaceLfr,
+  } = req.body || {}
   let sourceContent = ''
   let configContent = ''
-  if (sourcefileid && workspaceId) {
+  // Prefer the Editor buffer when present (guest browser store + latest edits).
+  if (typeof clientSourceContent === 'string' && clientSourceContent.length > 0) {
+    sourceContent = clientSourceContent
+  } else if (sourcefileid && workspaceId) {
     const f = data.getFile(req.session, workspaceId, sourcefileid)
     if (f && f.content != null) sourceContent = typeof f.content === 'string' ? f.content : JSON.stringify(f.content)
   }
@@ -541,7 +557,26 @@ function proxyCompile (req, res, routePath) {
   const serverComponents = listComponentFilePayloads(req.session)
   const mergedComponents = mergeComponentBundles(serverComponents, clientBundle)
   const componentBundle = toCompileComponentBundle(mergedComponents)
-  const enrichedBody = { ...req.body, sourceContent, configContent, componentBundle }
+  // Prefer explicitly resolved imports from the Editor; do not ship the whole workspace.
+  let importLfr = normalizeImportLfr(clientImportLfr)
+  if (!importLfr.length) {
+    // Backward-compatible fallback for older clients that still send workspaceLfrBundle.
+    importLfr = normalizeImportLfr(
+      normalizeWorkspaceLfrBundle(clientWorkspaceLfr).map((e) => ({
+        path: `${e.workspaceName}/${e.fileName}`,
+        content: e.content,
+      }))
+    )
+  }
+  const enrichedBody = {
+    ...req.body,
+    sourceContent,
+    configContent,
+    componentBundle,
+    importLfr,
+  }
+  // Avoid re-sending a stale full-workspace tree to the compute backend.
+  delete enrichedBody.workspaceLfrBundle
   const url = NEPTUNE_COMPILE_URL.replace(/\/$/, '') + routePath
   axios.post(url, enrichedBody, { timeout: 60000, validateStatus: () => true })
     .then((axRes) => {

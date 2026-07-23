@@ -16,14 +16,14 @@ This section summarizes the **bring-your-own-key** path from **English descripti
 
 - **If your deployment includes** “API / model settings” (names vary): choose provider → paste key → save; use **test connection** if offered.
 - **If your deployment includes** a dedicated **English → LFR** screen: describe the design in English, pick a model if available, run **Generate LFR**, then review compile results and iterate.
-- **This open-source NeptuneGUI_2026** focuses on the **Editor**, workspace files, and compile integration with Neptune_2026 (see **[RUN_LFR.md](./RUN_LFR.md)**). It **does not require** in-app cloud API key fields to be present. For LLM-assisted authoring, use the **Editor** sidebar **“LLM prompts”**: **export** the **prompt `.zip`**, use the files with your provider’s chat or API, then paste LFR back into the Editor.
+- **This open-source NeptuneGUI_2026** focuses on the **Editor**, workspace files, and compile integration with Neptune_2026 (see **[RUN_LFR.md](./RUN_LFR.md)**). It **does not require** in-app cloud API key fields to be present. For LLM-assisted authoring, use the **Editor** sidebar **“LLM prompts”**: **export** the prompt package (`.zip` for Claude/GPT/Gemini, **`.md` for Qwen/DeepSeek** — those chats do not accept zip), use it with your provider’s chat or API, then paste LFR back into the Editor.
 
 ### In this GUI today
 
 | Step | What to do |
 |------|------------|
-| 1. Export | **Editor** → sidebar **LLM prompts** → choose model → **Export prompt package (.zip)** |
-| 2. Setup (once) | Paste **`en2lfr_system.txt`** into that LLM’s system / custom instructions (see **`START_HERE.md`** in the zip). Do **not** edit template files. |
+| 1. Export | **Editor** → sidebar **LLM prompts** → choose model → **Export prompt package**. Claude/GPT/Gemini → **`.zip`**; **Qwen/DeepSeek → `.md`** (not zip). |
+| 2. Setup (once) | Paste **`en2lfr_system`** (or the English→LFR section of the `.md` pack) into that LLM’s system / custom instructions (see **`START_HERE.md`**). Do **not** edit template files. |
 | 3. Chat | Open your provider chat (**Open … chat** button) and describe your device in **plain English** in the message. |
 | 4. Paste LFR | Copy the ` ```lfr ` block into **Editor**, set **Script language** to **LFR**, **Save** / **Compile** per **[RUN_LFR.md](./RUN_LFR.md)**. |
 | Guide | In-app **`/prompt/steps`** renders **[src/Prompt/USER_GUIDE.md](./src/Prompt/USER_GUIDE.md)**. |
@@ -34,7 +34,7 @@ This section summarizes the **bring-your-own-key** path from **English descripti
 These routes are what the **guest UI** exposes today:
 
 - **Dashboard** — Workspaces and files; **3DuF** on JSON rows; **Export workspaces** / **Import workspaces** (.zip).
-- **Editor** — Monaco editor; **Save**, **Compile**, per-file **Import** / **Export**; integrated **terminal** (talks to the local API / Neptune stack via Socket.IO per your setup); **LLM prompts** sidebar **only** on this route.
+- **Editor** — Monaco editor; **Save**, **Compile**, per-file **Import** / **Export**; LFR cross-file `` `import "WorkspaceName/file.lfr" ``; integrated **terminal** (talks to the local API / Neptune stack via Socket.IO per your setup); **LLM prompts** sidebar **only** on this route.
 - **Jobs** — Jobs table for compile runs: download outputs, open a job as a workspace, inspect files, delete jobs.
 - **Component Library** — Component table (syntax is **case-sensitive** in-app); **Import JSON component**; **DIY** overrides; **Go to 3DuF** per row.
 

@@ -56,6 +56,19 @@ Open **http://localhost:8081**. Log in (e.g. admin **cidar** / **12345**) or use
 3. Compile request goes: **Browser** → **Data server (8080)** → **Neptune_2026 (5000)**. Console output appears in the Neptune Console panel if Socket.IO is connected.
 4. If Neptune_2026 is configured to write output into **NeptuneGUI_2026/Data/** (e.g. `Data/output` or `Data/Temp/...`), those files are your temporary result database.
 
+### Cross-workspace LFR imports
+
+Neptune_2026 supports Verilog-style backtick imports. In the Editor, reference another workspace file as:
+
+```lfr
+`import "WorkspaceName/module.lfr"
+```
+
+- `WorkspaceName` is the **exact Dashboard workspace name**.
+- `module.lfr` is an LFR file stored in that workspace.
+- On **Compile**, the Editor parses every `` `import `` (including transitive imports), looks up those files in your workspaces, and **only sends the referenced files** to the backend as `importLfr`.
+- If a path cannot be found (or a circular import is detected), compile is blocked with an error so you can fix the workspace name / filename before anything is uploaded.
+
 ## Summary
 
 | Role              | Port  | Command / config |

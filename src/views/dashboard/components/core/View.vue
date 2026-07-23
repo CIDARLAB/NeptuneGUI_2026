@@ -22,7 +22,9 @@
                 <span class="agent-panel-subtitle-text">
                   Download the prompt pack, paste
                   <code>en2lfr_system.txt</code>
-                  into your LLM once, describe your device in chat, then paste the generated
+                  (or the System section in the
+                  <code>.md</code>
+                  pack) into your LLM once, describe your device in chat, then paste the generated
                   <span class="agent-panel-keep-together">LFR</span>
                   into the
                   <span class="agent-panel-keep-together">Editor</span>.
@@ -46,23 +48,51 @@
                 :menu-props="{ contentClass: 'agent-panel-model-select-menu' }"
               />
 
+              <v-alert
+                v-if="usesMarkdownExport"
+                dense
+                outlined
+                type="info"
+                class="agent-panel-format-alert mb-3"
+              >
+                <strong>{{ selectedModel.label }}</strong>
+                does not accept
+                <code>.zip</code>
+                uploads. Neptune exports this prompt package as a single
+                <strong>.md</strong>
+                file instead.
+              </v-alert>
+
               <ol class="agent-panel-steps mb-3 pl-0">
                 <li>
-                  <strong>Export</strong> the prompt <strong>.zip</strong> for your model (includes
-                  <code>START_HERE.md</code>).
+                  <strong>Export</strong>
+                  the prompt package as
+                  <strong>{{ exportFormatLabel }}</strong>
+                  for your model
+                  <template v-if="usesMarkdownExport">
+                    (one Markdown file you can upload or open and copy from).
+                  </template>
+                  <template v-else>
+                    (includes
+                    <code>START_HERE.md</code>).
+                  </template>
                 </li>
                 <li>
-                  <strong>One-time setup:</strong> paste
-                  <code>en2lfr_system.txt</code>
+                  <strong>One-time setup:</strong>
+                  paste
+                  <code>en2lfr_system</code>
                   into that LLM’s system / custom instructions. No need to edit template files.
                 </li>
                 <li>
-                  <strong>Chat:</strong> write your design requirement in plain English in the message.
+                  <strong>Chat:</strong>
+                  write your design requirement in plain English in the message.
                 </li>
                 <li>
-                  <strong>Paste</strong> the returned
+                  <strong>Paste</strong>
+                  the returned
                   <code>```lfr</code>
-                  block here and <strong>Compile</strong>.
+                  block here and
+                  <strong>Compile</strong>.
                 </li>
               </ol>
 
@@ -86,9 +116,9 @@
                   small
                   block
                   class="agent-panel-export-btn mb-2"
-                  :loading="zipDownloading"
-                  :disabled="zipDownloading"
-                  @click="exportPromptZip"
+                  :loading="packDownloading"
+                  :disabled="packDownloading"
+                  @click="exportPromptPackage"
                 >
                   <v-icon
                     left
@@ -97,7 +127,7 @@
                   >
                     mdi-download
                   </v-icon>
-                  <span>{{ zipDownloading ? 'Preparing zip…' : 'Export prompt package (.zip)' }}</span>
+                  <span>{{ exportButtonLabel }}</span>
                 </v-btn>
 
                 <v-btn
@@ -140,13 +170,15 @@
     'START_HERE.md',
   ]
 
-  /* Alphabetical by label */
+  /* Alphabetical by label.
+   * exportFormat: 'zip' for providers that accept archives;
+   * 'md' for Qwen/DeepSeek (chat UIs do not support .zip uploads). */
   const LLM_MODELS = [
-    { id: 'claude', label: 'Claude', folder: 'anthropic', agentUrl: 'https://claude.ai/' },
-    { id: 'deepseek', label: 'DeepSeek', folder: 'deepseek', agentUrl: 'https://chat.deepseek.com/' },
-    { id: 'gemini', label: 'Gemini', folder: 'google_gemini', agentUrl: 'https://gemini.google.com/' },
-    { id: 'gpt', label: 'GPT', folder: 'openai', agentUrl: 'https://chatgpt.com/' },
-    { id: 'qwen', label: 'Qwen', folder: 'alibaba_qwen', agentUrl: 'https://chat.qwen.ai/' },
+    { id: 'claude', label: 'Claude', folder: 'anthropic', agentUrl: 'https://claude.ai/', exportFormat: 'zip' },
+    { id: 'deepseek', label: 'DeepSeek', folder: 'deepseek', agentUrl: 'https://chat.deepseek.com/', exportFormat: 'md' },
+    { id: 'gemini', label: 'Gemini', folder: 'google_gemini', agentUrl: 'https://gemini.google.com/', exportFormat: 'zip' },
+    { id: 'gpt', label: 'GPT', folder: 'openai', agentUrl: 'https://chatgpt.com/', exportFormat: 'zip' },
+    { id: 'qwen', label: 'Qwen', folder: 'alibaba_qwen', agentUrl: 'https://chat.qwen.ai/', exportFormat: 'md' },
   ]
 
   export default {
@@ -160,13 +192,27 @@
       return {
         llmModels: LLM_MODELS,
         selectedModel: LLM_MODELS[0], /* Claude — first alphabetically */
-        zipDownloading: false,
+        packDownloading: false,
       }
     },
 
     computed: {
       chatVisible () {
         return this.$route && this.$route.name === 'Editor'
+      },
+      usesMarkdownExport () {
+        return this.selectedModel && this.selectedModel.exportFormat === 'md'
+      },
+      exportFormatLabel () {
+        return this.usesMarkdownExport ? '.md' : '.zip'
+      },
+      exportButtonLabel () {
+        if (this.packDownloading) {
+          return this.usesMarkdownExport ? 'Preparing Markdown…' : 'Preparing zip…'
+        }
+        return this.usesMarkdownExport
+          ? 'Export prompt package (.md)'
+          : 'Export prompt package (.zip)'
       },
     },
 
@@ -175,65 +221,148 @@
         const base = (process.env.BASE_URL || '/').replace(/\/?$/, '/')
         return `${base}prompt`
       },
+      async fetchText (url) {
+        const res = await fetch(url)
+        if (!res.ok) return null
+        return res.text()
+      },
       async fetchGuideForZip (root) {
         const guideCandidates = ['USER_GUIDE.md', 'Steps.md']
         for (const name of guideCandidates) {
-          const res = await fetch(`${root}/${name}`)
-          if (res.ok) {
-            return {
-              name: 'USER_GUIDE.md',
-              text: await res.text(),
-            }
+          const text = await this.fetchText(`${root}/${name}`)
+          if (text != null) {
+            return { name: 'USER_GUIDE.md', text }
           }
         }
         return null
       },
-      async exportPromptZip () {
+      downloadBlob (blob, filename) {
+        const objectUrl = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = objectUrl
+        a.download = filename
+        a.rel = 'noopener'
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(objectUrl)
+      },
+      async exportPromptPackage () {
         const folder = this.selectedModel && this.selectedModel.folder
-        if (!folder || this.zipDownloading) return
-        this.zipDownloading = true
-        let objectUrl = ''
+        if (!folder || this.packDownloading) return
+        this.packDownloading = true
         try {
-          const zip = new JSZip()
-          const root = this.promptBasePath()
-          for (const name of PROMPT_FILE_NAMES) {
-            const res = await fetch(`${root}/${folder}/${name}`)
-            if (!res.ok) {
-              throw new Error(`Could not load ${folder}/${name} (${res.status})`)
-            }
-            const text = await res.text()
-            zip.file(`${folder}/${name}`, text)
+          if (this.usesMarkdownExport) {
+            await this.exportPromptMarkdown(folder)
+          } else {
+            await this.exportPromptZip(folder)
           }
-          for (const name of SUPPORT_DOC_FILE_NAMES) {
-            const res = await fetch(`${root}/${name}`)
-            if (!res.ok) continue
-            const text = await res.text()
-            zip.file(name, text)
-          }
-          const guideFile = await this.fetchGuideForZip(root)
-          if (guideFile) {
-            zip.file(guideFile.name, guideFile.text)
-          }
-          const blob = await zip.generateAsync({ type: 'blob' })
-          objectUrl = URL.createObjectURL(blob)
-          const a = document.createElement('a')
-          a.href = objectUrl
-          a.download = `${folder}-neptune-prompts.zip`
-          a.rel = 'noopener'
-          document.body.appendChild(a)
-          a.click()
-          document.body.removeChild(a)
         } catch (err) {
           console.error(err)
           window.alert(
             err && err.message
               ? err.message
-              : 'Failed to build the prompt zip. Rebuild the app and ensure src/Prompt files are present.'
+              : 'Failed to build the prompt package. Rebuild the app and ensure src/Prompt files are present.'
           )
         } finally {
-          if (objectUrl) URL.revokeObjectURL(objectUrl)
-          this.zipDownloading = false
+          this.packDownloading = false
         }
+      },
+      async exportPromptZip (folder) {
+        const zip = new JSZip()
+        const root = this.promptBasePath()
+        for (const name of PROMPT_FILE_NAMES) {
+          const text = await this.fetchText(`${root}/${folder}/${name}`)
+          if (text == null) {
+            throw new Error(`Could not load ${folder}/${name}`)
+          }
+          zip.file(`${folder}/${name}`, text)
+        }
+        for (const name of SUPPORT_DOC_FILE_NAMES) {
+          const text = await this.fetchText(`${root}/${name}`)
+          if (text == null) continue
+          zip.file(name, text)
+        }
+        const guideFile = await this.fetchGuideForZip(root)
+        if (guideFile) {
+          zip.file(guideFile.name, guideFile.text)
+        }
+        const blob = await zip.generateAsync({ type: 'blob' })
+        this.downloadBlob(blob, `${folder}-neptune-prompts.zip`)
+      },
+      async exportPromptMarkdown (folder) {
+        const root = this.promptBasePath()
+        const label = this.selectedModel.label
+        const required = [
+          ['en2lfr_system.txt', 'System instructions — English → LFR (paste into system / custom instructions)'],
+          ['lfr2en_system.txt', 'System instructions — LFR → English (optional)'],
+          ['README.txt', 'Provider setup note'],
+          ['en2lfr_user_template.txt', 'Optional example only — English → LFR (do not edit to use the package)'],
+          ['lfr2en_user_template.txt', 'Optional example only — LFR → English (do not edit to use the package)'],
+        ]
+        const optional = [
+          ['LFR_SYNTAX_MANUAL.txt', 'LFR syntax manual'],
+          ['MINT_SYNTAX_MANUAL.txt', 'MINT syntax manual'],
+          ['DEVELOPER_ENTRY_POINTS.txt', 'Developer entry points'],
+          ['START_HERE.md', 'Start here'],
+          ['USER_GUIDE.md', 'User guide'],
+        ]
+
+        const parts = []
+        parts.push(`# Neptune Prompt Package — ${label}`)
+        parts.push('')
+        parts.push(`> **Why Markdown?** ${label} chat does not accept \`.zip\` uploads.`)
+        parts.push('> This single \`.md\` file is the full prompt package for this provider.')
+        parts.push('')
+        parts.push('## How to use')
+        parts.push('')
+        parts.push('1. Upload this Markdown file to your chat (if the product accepts `.md`), **or** open it and copy sections.')
+        parts.push('2. Paste the **English → LFR** system section into system / custom / project instructions.')
+        parts.push('3. In chat, write your design requirement in plain English — do not edit template placeholders.')
+        parts.push('4. Copy the returned ` ```lfr ` block into Neptune Editor and Compile.')
+        parts.push('')
+        parts.push('Source folder in this repo: `' + folder + '/`.')
+        parts.push('')
+
+        for (const [name, title] of required) {
+          const text = await this.fetchText(`${root}/${folder}/${name}`)
+          if (text == null) {
+            throw new Error(`Could not load ${folder}/${name}`)
+          }
+          parts.push(`## ${title}`)
+          parts.push('')
+          parts.push(`<!-- source: ${folder}/${name} -->`)
+          parts.push('')
+          parts.push('```text')
+          parts.push(text.replace(/\r\n/g, '\n').replace(/\s+$/, ''))
+          parts.push('```')
+          parts.push('')
+        }
+
+        const sharedNames = new Set([
+          'LFR_SYNTAX_MANUAL.txt',
+          'MINT_SYNTAX_MANUAL.txt',
+          'DEVELOPER_ENTRY_POINTS.txt',
+          'START_HERE.md',
+          'USER_GUIDE.md',
+        ])
+        for (const [name, title] of optional) {
+          const url = sharedNames.has(name) ? `${root}/${name}` : `${root}/${folder}/${name}`
+          const text = await this.fetchText(url)
+          if (text == null) continue
+          parts.push(`## ${title}`)
+          parts.push('')
+          parts.push(`<!-- source: ${name} -->`)
+          parts.push('')
+          parts.push('```text')
+          parts.push(text.replace(/\r\n/g, '\n').replace(/\s+$/, ''))
+          parts.push('```')
+          parts.push('')
+        }
+
+        const markdown = parts.join('\n')
+        const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' })
+        this.downloadBlob(blob, `${folder}-neptune-prompts.md`)
       },
       openExternalAgent () {
         const url = this.selectedModel && this.selectedModel.agentUrl
@@ -301,6 +430,15 @@
 
 .theme--dark .agent-panel-subtitle code {
   background: rgba(255, 255, 255, 0.08);
+}
+
+.agent-panel-format-alert {
+  font-size: var(--neptune-fs-label, 13.25pt) !important;
+  line-height: 1.4;
+}
+
+.agent-panel-format-alert code {
+  font-size: 0.92em;
 }
 
 .agent-panel-steps {

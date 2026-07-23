@@ -5,5 +5,5 @@
   "env_var_api_key": "DEEPSEEK_API_KEY",
   "suggested_base_url": "https://api.deepseek.com/v1",
   "default_model": "deepseek-chat",
-  "notes": "OpenAI-compatible Chat API. deepseek-reasoner available for harder designs; may cost more output tokens. User brings own key (BYOK)."
+  "notes": "OpenAI-compatible Chat API. deepseek-reasoner available for harder designs; may cost more output tokens. User brings own key (BYOK). Neptune GUI exports this pack as a single .md file (not .zip) because DeepSeek chat does not accept zip uploads."
 }

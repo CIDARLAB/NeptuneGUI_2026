@@ -82,17 +82,28 @@ Current distribute condition scope (Neptune 2026):
 - // line comment
 - /* block comment */
 
-7) Cross-file imports (Neptune 2026)
+7) Cross-file imports (Neptune 2026 + NeptuneGUI Editor)
 Verilog-style backtick imports are supported:
 `import "Valve.lfr"
 `import "library/Valve.lfr"
 `import "/abs/path/Valve.lfr"
 
+In the NeptuneGUI Editor, import another workspace's LFR module with:
+`import "WorkspaceName/file.lfr"
+
+where WorkspaceName is the Dashboard workspace name and file.lfr is an LFR
+file stored in that workspace. Example:
+`import "Example/flow_only_demo.lfr"
+
+Before compile, the Editor extracts every `import path, checks that each file
+exists (including transitive imports), and sends only those files to the
+backend. Missing paths or circular imports stop compile with an error.
+
 Rules:
 - one import per line
 - quoted path must end with .lfr
 - transitive import is supported
-- circular import raises preprocessing error
+- circular import raises an error (Editor check + preprocessor)
 
 8) Authoring rules
 - Keep source ASCII when possible.
