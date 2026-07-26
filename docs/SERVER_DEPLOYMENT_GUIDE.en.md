@@ -273,7 +273,7 @@ Route: Dashboard → **Results / Jobs** (`Solutions.vue`).
 - Actions:
   - **Download** — download the JSON file
   - **Import to Component Library** — add as custom component
-  - **Open in 3DuF** — load routed `*_PR.json` at [v2.3duf.org](https://v2.3duf.org/)
+  - **Open in 3DuF** — load routed `*_PR.json` at [3duf.org](https://3duf.org/)
   - **Delete** — remove output from workspace and refresh jobs list
 
 ### 5.3 Evaluation scores and weight re-apply

@@ -51,37 +51,54 @@ Usage and billing are shown in the **cloud console**. Content handling follows *
 All commands below are run from the **project root** (the folder that contains `package.json`).
 
 ```bash
-# 1. Install dependencies
+# 1. Install dependencies (first clone only)
 npm ci
+npm run backend:install   # server/ has its own package.json; root npm ci does not cover it
 
-# 2. Start backend + frontend in one command
-#    (Ctrl+C to stop both processes)
-npm run server:install   # only needed once (or when server deps change)
+# 2. Start the GUI + its local data API
+#    (Ctrl+C to stop both)
 npm run start
 ```
 
 Then open **http://localhost:8081** in your browser.
+
+After the first setup, day-to-day use is just **`npm run start`**. Re-run `npm ci` / `backend:install` only when root or `server/` dependencies change (or after deleting `node_modules`).
+
+NeptuneGUI is a **browser frontend** (Vue on port **8081**), but the page cannot by itself read/write workspace files on disk or talk to Neptune_2026 for compile. A small **local data API** in `server/` (port **8080**) does that: guest/session, `Data/` workspaces, library JSON, and optional compile forwarding. **`npm run start`** launches both; you normally never start them separately.
+
+Optional — two terminals (only if you need to debug one side):
+
+```bash
+npm run backend    # local data API → http://localhost:8080
+npm run frontend   # Vue GUI → http://localhost:8081
+```
 
 Dependency install note:
 - Use `npm ci` for a clean, reproducible install.
 - You do **not** need to run `npm ci` every time you start the app.
 - Run `npm ci` on first setup, or after `package-lock.json`/dependencies change.
 
-How to stop running commands:
-- In the terminal where `npm run ...` is running, press `Ctrl + C` to stop it.
-- If both backend and frontend are running together (for example via `npm run start`), `Ctrl + C` stops the combined process.
+How to stop:
+- In the terminal where `npm run start` is running, press `Ctrl + C` (both processes stop).
 - If a process does not stop on the first try, press `Ctrl + C` again.
 
 ## Ports and conflicts
-- Backend/API (`npm run server`): `http://localhost:8080`
-- Frontend/GUI (`npm run serve`): `http://localhost:8081`
-- Optional: if you run the **3DuF** repo’s dev server locally, it often uses `http://localhost:8082` (not started by NeptuneGUI).
 
-If you see `EADDRINUSE: address already in use` when starting the server, it means one of these ports is already taken by another process. Stop the process using that port and restart (or run the services on different ports, if you adjusted the code/config).
+With `npm run start`, these ports are used:
+
+| Role | Port | URL |
+|------|------|-----|
+| Local data API (`server/`) | **8080** | `http://localhost:8080` |
+| Vue GUI (what you open) | **8081** | `http://localhost:8081` |
+| Optional local 3DuF (separate repo) | **8082** | `http://localhost:8082` — see below |
+
+If you see `EADDRINUSE: address already in use`, one of these ports is already taken. Stop that process and restart (or change ports in config).
 
 ## 3DuF visualization (one-click)
 
-NeptuneGUI opens **[https://3duf.org/](https://3duf.org/)** in a new tab and sends the design JSON with `postMessage` (`loadDeviceFromJSON`). The base URL lives in **[src/lib/open3DuFPostMessage.js](./src/lib/open3DuFPostMessage.js)** (`THREE_DUF_APP_URL`). Neptune sends that payload **three times** (0ms / 450ms / 900ms) so a stock 3DuF build does not need any Neptune-specific code.
+By default, NeptuneGUI opens the live site **[https://3duf.org/](https://3duf.org/)** in a new tab and sends the design JSON with `postMessage` (`loadDeviceFromJSON`). The base URL lives in **[src/lib/open3DuFPostMessage.js](./src/lib/open3DuFPostMessage.js)** (`THREE_DUF_APP_URL`).
+
+If 3DuF’s features do not meet your needs, fork **[CIDARLAB/3DuF](https://github.com/CIDARLAB/3DuF)** into your own GitHub account, customize it there, and point NeptuneGUI at your build (hosted or local) by changing `THREE_DUF_APP_URL`.
 
 ### Use one-click JSON → 3DuF
 1. Open NeptuneGUI: `http://localhost:8081` (or your deployed GUI URL)
@@ -89,9 +106,19 @@ NeptuneGUI opens **[https://3duf.org/](https://3duf.org/)** in a new tab and sen
 3. Click the **3DuF** control on a JSON file or library row
 4. Allow popups if the browser blocks the new tab
 
-### Optional: point NeptuneGUI at a local 3DuF dev server
+### Optional: local 3DuF development
 
-For development, temporarily set `THREE_DUF_APP_URL` in `src/lib/open3DuFPostMessage.js` to your local origin (for example `http://localhost:8082`), rebuild or refresh the GUI, then run 3DuF from a local clone (see [CIDARLAB/3DuF](https://github.com/CIDARLAB/3DuF), branch `webpack-build-2`).
+Prerequisites for the 3DuF app itself: **Node.js 16+** and **npm**.
+
+```bash
+git clone https://github.com/CIDARLAB/3DuF.git
+cd 3DuF
+npm run start3duf            # installs missing deps if needed, then starts the Vue dev server
+```
+
+Open the URL printed by Vue CLI (typically **`http://localhost:8082`**).
+
+Then point NeptuneGUI at that local origin: set `THREE_DUF_APP_URL` in `src/lib/open3DuFPostMessage.js` to `http://localhost:8082`, and refresh (or rebuild) the GUI. More detail: [3DuF README](https://github.com/CIDARLAB/3DuF).
 
 - **Accounts:** Neptune GUI is **online guest–only**. There is **no** in-app user registration; protected routes use a **local guest session** (see `src/main.js`). **We do not keep your work on the server for you.** Use **Export workspaces** (ZIP includes workspace files and `component_table.json` for the library cache), the sidebar **Export** button, or export-on-exit when offered. **Refreshing or reopening the site clears non-default data** (workspaces, uploads, imported library components, DIY overrides). Data loss from not exporting is **not** recoverable here.
 - **Server vs. GUI:** The bundled **`server/`** still implements **register/login** HTTP APIs for older deployments; **this GUI build does not use that flow.**

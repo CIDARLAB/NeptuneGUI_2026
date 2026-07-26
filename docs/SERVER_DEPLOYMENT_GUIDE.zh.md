@@ -272,7 +272,7 @@ Express 在 job 成功后应：
 - 下方按钮：
   - **Download** — 下载当前 JSON 文件
   - **Import to Component Library** — 作为 custom 组件导入
-  - **Open in 3DuF** — 打开 [v2.3duf.org](https://v2.3duf.org/) 并加载该 JSON（需使用 routed `*_PR.json`）
+  - **Open in 3DuF** — 打开 [3duf.org](https://3duf.org/) 并加载该 JSON（需使用 routed `*_PR.json`）
   - **Delete** — 从 workspace 删除该输出文件，并更新 jobs 列表
 
 ### 5.3 Evaluation Score 与权重重算
