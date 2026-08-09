@@ -17,13 +17,18 @@ For all `*/en2lfr_system.txt` files, keep these invariant blocks semantically co
 1. One fenced LFR-only output (no extra text, no MINT/JSON).
 2. Neptune LFR grammar essentials (module/ports/declarations/assign/distribute).
 3. Module port list uses commas between finput/foutput/control groups inside `module name( ... )` — never semicolons in the header.
-4. Benchmark-aligned generation rules:
+4. Hard syntax rules against common LLM invents:
+   - metering uses `%` only (never `@`),
+   - ports are only `finput`/`foutput`/`control` (never `cinput`),
+   - control routing uses `distribute@(ctrl)` (never ternary `?:`),
+   - `#MAP` is `#MAP "<TECH>" "<op>"` with both args quoted, or omitted (`~` alone is enough).
+5. Benchmark-aligned generation rules:
    - preserve interface counts and widths,
    - drive all outputs,
    - gate staged writes with `distribute@(ctrl)` and `<=` inside branches,
    - keep N-bit routing case coverage consistent,
    - prefer explicit intermediate flow nodes.
-5. Final self-check before responding.
+6. Final self-check before responding.
 
 For all `*/lfr2en_system.txt` files:
 - Do not invent ports/signals/behavior.
@@ -44,7 +49,10 @@ Upload-and-use workflow (all providers):
    - fan-out from one storage to multiple outputs,
    - N-bit demux routing with case branches,
    - staged control-gated storage loading,
-   - multi-stage aggregation pipeline.
+   - multi-stage aggregation pipeline,
+   - droplet metering with `%` (reject `@`),
+   - control mux via `distribute` (reject ternary/`cinput`),
+   - optional `#MAP "MIXER" "~"` vs bare `~` (reject `#MAP flow MIXER`).
 5. If one provider underperforms, add only a thin provider patch; do not fork core rules.
 
 ## File map

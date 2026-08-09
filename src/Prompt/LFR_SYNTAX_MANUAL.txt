@@ -47,9 +47,12 @@ assign <lhs> = <expression>;
 Common operators used in Neptune examples:
 - +   merge
 - -   branch/waste style
-- %   metering/sampling style
+- %   metering/sampling style (ONLY; never invent @)
 - /N  split style
 - ~   mapped primitive style
+
+Do not invent operators (for example `@`, ternary `?:`) or port kinds
+(for example `cinput`). Ports are only finput / foutput / control.
 
 4.2 distribute@(control)
 Use distribute blocks for control-sensitive routing:
@@ -61,6 +64,7 @@ begin
 end
 
 case(...) forms are also supported.
+Never replace distribute with C-style ternary (`cond ? a : b`).
 
 Current distribute condition scope (Neptune 2026):
 - Supported operators in if/else if:
@@ -78,32 +82,38 @@ Current distribute condition scope (Neptune 2026):
 - #CONSTRAIN
 - #MATERIAL
 
+#MAP exact form (both arguments quoted strings):
+#MAP "<TECHNOLOGY STRING>" "<operator-or-mode>"
+
+Valid examples:
+#MAP "MIXER" "~"
+#MAP "CHAMBER" "~"
+#MAP "PUMP" "pump"
+
+Invalid examples:
+#MAP incubated MIXER
+#MAP MIXER ~
+#MAP "MIXER" ~
+
+Prefer bare unary `~` without #MAP unless a concrete technology string
+is required. English phrases such as "tech-mapped to a MIXER" do not
+by themselves require emitting #MAP.
+
 6) Comments
 - // line comment
 - /* block comment */
 
-7) Cross-file imports (Neptune 2026 + NeptuneGUI Editor)
+7) Cross-file imports (Neptune 2026)
 Verilog-style backtick imports are supported:
 `import "Valve.lfr"
 `import "library/Valve.lfr"
 `import "/abs/path/Valve.lfr"
 
-In the NeptuneGUI Editor, import another workspace's LFR module with:
-`import "WorkspaceName/file.lfr"
-
-where WorkspaceName is the Dashboard workspace name and file.lfr is an LFR
-file stored in that workspace. Example:
-`import "Example/flow_only_demo.lfr"
-
-Before compile, the Editor extracts every `import path, checks that each file
-exists (including transitive imports), and sends only those files to the
-backend. Missing paths or circular imports stop compile with an error.
-
 Rules:
 - one import per line
 - quoted path must end with .lfr
 - transitive import is supported
-- circular import raises an error (Editor check + preprocessor)
+- circular import raises preprocessing error
 
 8) Authoring rules
 - Keep source ASCII when possible.
