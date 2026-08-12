@@ -19,6 +19,15 @@
         <p class="references-overview-text mt-2 mb-1">
           Naming alignment with Component Library: use lowercase <code>snake_case</code> in LFR/library context, and uppercase form for the same component name in MINT-facing displays.
         </p>
+        <p class="references-overview-text mt-2 mb-1">
+          Common pitfall: in LFR, <code>in % 100</code> means meter/dropletize with target volume parameter <code>100</code> — not “make 100 droplets,” and not arithmetic mod. Details:
+          <a
+            href="https://github.com/CIDARLAB/Neptune_2026/blob/main/docs/LFR-TestCases-wiki/Fluidic-Operations.md"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="references-link"
+          >Fluidic Operations (% metering FAQ)</a>.
+        </p>
       </div>
     </div>
 

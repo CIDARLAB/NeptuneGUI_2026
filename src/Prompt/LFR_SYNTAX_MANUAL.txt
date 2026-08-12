@@ -1,61 +1,98 @@
-Neptune 2026 - LFR Syntax Manual (Quick Reference)
+Neptune 2026 — LFR Syntax Manual (Quick Reference)
 
-Canonical implementation lives in:
-- Neptune_2026/docs/LFR_READABLE_SYNTAX_SPEC_V2.md
-- Neptune_2026/pylfr/lfrX.g4
+Aligned with Neptune GUI References and:
+  docs/LFR_READABLE_SYNTAX_SPEC_V2.md
+  docs/LFR-TestCases-wiki/ (Module Breakdown, Fluidic Operations,
+  Distribution Blocks, Imports and Module Reuse, Compiler Directives)
+Normative implementation: pylfr/lfrX.g4, pylfr/lfr/preprocessor.py
 
-1) Basic module form
+If this summary and the compiler disagree, the compiler is authoritative.
+
+------------------------------------------------------------------------
+1) Module form
+------------------------------------------------------------------------
 module <module_name>(<io_block>);
   <declarations and statements>
 endmodule
 
-2) IO declarations
-- finput
-- foutput
-- control
+Recommended convention: one module per .lfr file; module name equals file stem.
 
-Module port list (important):
-module name(
-    finput in_a, in_b,
-    foutput out_1
+------------------------------------------------------------------------
+2) IO (module header)
+------------------------------------------------------------------------
+Port kinds:
+  finput    fluid inputs
+  foutput   fluid outputs
+  control   control signals
+
+Example:
+module mux2(
+    finput a, b,
+    control sel,
+    foutput y
 );
 
-Use commas between port groups inside parentheses.
-Do not use semicolons between finput/foutput/control in the module header.
-Invalid: module bad(finput B, C; foutput A;);
+Module port list (header rules):
+- Separate port *groups* with commas inside module (...).
+- Do not put semicolons between finput / foutput / control inside the header.
+  Invalid: module bad(finput B, C; foutput A;);
 
-Vector form is supported, for example:
-finput [0:15] inputs
-control [0:3] route
+Vectors:
+  finput [0:15] inputs
+  control [0:3] route
 
-3) Common declarations
-- flow
-- storage
-- number
-- signal
-- pump
+------------------------------------------------------------------------
+3) Declarations
+------------------------------------------------------------------------
+flow ...;       intermediate fluid nets
+storage ...;    storage-like state nodes
+number id = value, ...;
+signal ...;
+pump ...;
 
 Examples:
 flow a_to_mix, mix_out;
 storage stage_1;
 number ratio = 2, gain = 10;
 
-4) Behavior statements
-4.1 assign
+------------------------------------------------------------------------
+4) assign and fluidic operators
+------------------------------------------------------------------------
 assign <lhs> = <expression>;
 
-Common operators used in Neptune examples:
-- +   merge
-- -   branch/waste style
-- %   metering/sampling style (ONLY; never invent @)
-- /N  split style
-- ~   mapped primitive style
+Common operators (see Fluidic Operations wiki):
+  +     merge / mix streams
+  -     branch / waste-style relation
+  %     metering / dropletize with a target-volume parameter
+  /N    equal split (often with brace LHS)
+  ~     mapped primitive step (often with optional #MAP)
 
-Do not invent operators (for example `@`, ternary `?:`) or port kinds
-(for example `cinput`). Ports are only finput / foutput / control.
+Mixing in English usually means operators, for example:
+  assign mid = a + b;
+  assign mid = ~(a + b);
 
-4.2 distribute@(control)
-Use distribute blocks for control-sensitive routing:
+Equal split:
+  assign {a, b} = stream / 2;
+  assign a = stream / 2; assign b = stream / 2;
+
+Kept vs discard / side-branch (common pattern):
+  assign discard = parent / 2;
+  assign kept = parent - discard;
+
+% metering (important):
+  assign droplets = aqueous % 100;
+means: meter/sample aqueous into droplets using 100 as the *target volume
+parameter*. It is NOT "make 100 droplets" and NOT arithmetic mod.
+The number is unitless in source; attach physical units with #CONSTRAIN when needed.
+Relative size still matters (% 200 asks for a larger target than % 100).
+
+Use the assign keyword for connections. Prefer Neptune port kinds
+(finput / foutput / control) and flow declarations for intermediates.
+
+------------------------------------------------------------------------
+5) distribute blocks (control-sensitive routing)
+------------------------------------------------------------------------
+Use distribute@(control_signals) with <= inside branches:
 
 distribute@(sel)
 begin
@@ -63,60 +100,96 @@ begin
   else out <= b;
 end
 
-case(...) forms are also supported.
-Never replace distribute with C-style ternary (`cond ? a : b`).
+case form:
+distribute@(route)
+begin
+  case(route)
+    2'b00: y <= in0;
+    2'b01: y <= in1;
+    default: y <= in0;
+  endcase
+end
 
-Current distribute condition scope (Neptune 2026):
-- Supported operators in if/else if:
+Condition operators currently supported:
   == != && || & | ^ ^~ ~^
-- Supports chained expressions and parentheses, for example:
-  if (c1 && c2 || c3)
-  if ((c1 && c2) || c3)
-- Precedence (high to low):
-  == !=, then &, then ^/^~/~^, then |, then &&, then ||
-- Signal-vs-signal ops with == != & | ^ ^~ ~^ require matching widths.
-- Prefer explicit parentheses when mixing logical and bitwise operators.
+Chaining and parentheses are supported.
+Precedence (high to low): == !=, then &, then ^/^~/~^, then |, then &&, then ||.
+Signal-vs-signal ops with == != & | ^ ^~ ~^ require matching widths.
 
-5) Directives
-- #MAP
-- #CONSTRAIN
-- #MATERIAL
+Use = in normal assign; use <= inside distribute branches.
+Prefer distribute@(…) for control-gated fluid routing rather than C-style ternary.
 
-#MAP exact form (both arguments quoted strings):
-#MAP "<TECHNOLOGY STRING>" "<operator-or-mode>"
+------------------------------------------------------------------------
+6) Directives
+------------------------------------------------------------------------
+#MAP
+#CONSTRAIN
+#MATERIAL
 
-Valid examples:
-#MAP "MIXER" "~"
-#MAP "CHAMBER" "~"
-#MAP "PUMP" "pump"
+#MAP form (both arguments quoted):
+  #MAP "<TECHNOLOGY STRING>" "<operator-or-mode>"
 
-Invalid examples:
-#MAP incubated MIXER
-#MAP MIXER ~
-#MAP "MIXER" ~
+Examples:
+  #MAP "MIXER" "~"
+  #MAP "CHAMBER" "~"
+  #MAP "NOZZLE DROPLET GENERATOR" "%"
 
-Prefer bare unary `~` without #MAP unless a concrete technology string
-is required. English phrases such as "tech-mapped to a MIXER" do not
-by themselves require emitting #MAP.
+#MAP placement (critical):
+- Put `#MAP "MIXER" "~"` inside the module body, immediately above the
+  `assign` that uses `~`.
+- Never place `#MAP` before `module` (invalid: file-top `#MAP` then
+  `module ...`).
 
-6) Comments
-- // line comment
-- /* block comment */
+Bare unary ~ is enough when English only names a mixer-style step and does
+not require a concrete technology string.
 
-7) Cross-file imports (Neptune 2026)
-Verilog-style backtick imports are supported:
-`import "Valve.lfr"
-`import "library/Valve.lfr"
-`import "/abs/path/Valve.lfr"
+------------------------------------------------------------------------
+7) Comments
+------------------------------------------------------------------------
+// line comment
+/* block comment */
+
+------------------------------------------------------------------------
+8) Imports and module reuse (Neptune 2026)
+------------------------------------------------------------------------
+Backtick import (one quoted .lfr path per line):
+  `import "Valve.lfr"
+  `import "library/Valve.lfr"
+  `import "/abs/path/Valve.lfr"
 
 Rules:
-- one import per line
-- quoted path must end with .lfr
-- transitive import is supported
-- circular import raises preprocessing error
+- path must end with .lfr
+- transitive imports are followed
+- circular imports are rejected
 
-8) Authoring rules
+Instantiation (ordered or named ports):
+  Child u0(a, b, y);
+  Child u1(.in0(a), .in1(b), .out(y));
+
+Named port maps are preferred for clarity. Port names should match the
+imported module's declared IO. If the library .lfr is available, copy names
+from its module header.
+
+------------------------------------------------------------------------
+9) English phrasing → LFR constructs
+------------------------------------------------------------------------
+input port / fluid input / input fluid     →  finput
+output port / fluid output / output fluid →  foutput
+(Header keywords are the single tokens finput / foutput — not "input fluid".)
+control / select             →  control
+mix / mixer / merge          →  assign mid = a + b;  (or ~(a + b))
+meter / dropletize volume N  →  assign d = in % N;
+control-gated route          →  distribute@(c) begin ... <= ... end
+reuse library module         →  `import "….lfr"  then  Mod u0(.port(net));
+
+Natural-language “mixer” means the merge/mix operators above, unless the
+English explicitly asks to import a named library module.
+
+------------------------------------------------------------------------
+10) Practical authoring guidance
+------------------------------------------------------------------------
 - Keep source ASCII when possible.
-- Drive declared outputs explicitly.
-- Use <= inside distribute branches; use = in assign.
-- Prefer explicit intermediate flow nodes for complex expressions.
+- Drive every declared foutput.
+- Prefer explicit intermediate flow nodes for multi-stage pipelines.
+- For route-selection, prefer full case coverage of control states.
+- Match module name and IO counts to the English specification.

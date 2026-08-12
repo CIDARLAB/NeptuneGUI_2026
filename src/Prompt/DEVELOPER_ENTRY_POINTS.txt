@@ -9,6 +9,8 @@ compiler behavior, and package-level data models.
 - Preprocessing/import rules: Neptune_2026/pylfr/lfr/preprocessor.py
 - Compiler entry API: Neptune_2026/pylfr/lfr/api.py
 - Human-readable syntax spec: Neptune_2026/docs/LFR_READABLE_SYNTAX_SPEC_V2.md
+- GUI References page: NeptuneGUI_2026/src/views/dashboard/References.vue
+  (links the V2 spec and LFR-TestCases-wiki sections used by prompt packs)
 
 2) MINT language behavior
 - pyMINT implementation: Neptune_2026/pylfr/pymint/

@@ -15,13 +15,17 @@ This file defines how to maintain multi-provider prompt packs in `Prompt/`.
 ## What must stay aligned across providers
 For all `*/en2lfr_system.txt` files, keep these invariant blocks semantically consistent:
 1. One fenced LFR-only output (no extra text, no MINT/JSON).
-2. Neptune LFR grammar essentials (module/ports/declarations/assign/distribute).
+2. Neptune LFR grammar essentials aligned with GUI References / `LFR_READABLE_SYNTAX_SPEC_V2.md` (module/ports/declarations/assign/distribute/imports), summarized in `LFR_SYNTAX_MANUAL.txt`.
 3. Module port list uses commas between finput/foutput/control groups inside `module name( ... )` — never semicolons in the header.
 4. Hard syntax rules against common LLM invents:
    - metering uses `%` only (never `@`),
    - ports are only `finput`/`foutput`/`control` (never `cinput`),
    - control routing uses `distribute@(ctrl)` (never ternary `?:`),
    - `#MAP` is `#MAP "<TECH>" "<op>"` with both args quoted, or omitted (`~` alone is enough).
+   - `#MAP` placement: inside the module body, immediately above the `assign` that uses `~` — never before `module`.
+   - dialect boundaries (`finput`/`foutput`/`control` + `assign` only; no helper functions),
+   - brace-split / no tautological assigns,
+   - backtick-import + named `.port(net)` maps when reusing modules.
 5. Benchmark-aligned generation rules:
    - preserve interface counts and widths,
    - drive all outputs,
@@ -45,7 +49,11 @@ Upload-and-use workflow (all providers):
 1. Edit one provider first (usually `openai/en2lfr_system.txt`) as reference.
 2. Propagate invariant rule updates to the other four providers.
 3. Keep provider-specific notes intact.
-4. Smoke-test with at least these cases:
+4. **In the same edit pass**, keep these three locations aligned (source of truth: `Neptune_2026/Prompt/`):
+   - `Neptune_2026/Prompt/`
+   - `NeptuneGUI_2026/src/Prompt/`
+   - `Neptune_2026/prompt_test/` exported packs (`.zip` for Claude/GPT/Gemini, `.md` for Qwen/DeepSeek)
+5. Smoke-test with at least these cases:
    - fan-out from one storage to multiple outputs,
    - N-bit demux routing with case branches,
    - staged control-gated storage loading,
@@ -53,7 +61,10 @@ Upload-and-use workflow (all providers):
    - droplet metering with `%` (reject `@`),
    - control mux via `distribute` (reject ternary/`cinput`),
    - optional `#MAP "MIXER" "~"` vs bare `~` (reject `#MAP flow MIXER`).
-5. If one provider underperforms, add only a thin provider patch; do not fork core rules.
+   - brace-split (`{a,b} = s / 2`) and reject `assign a, b = ...` / `assign x = x`.
+   - backtick-import + named port maps; reject bare `import` and hierarchical `u.port=`.
+   - dialect boundaries: reject `fluid`/`output fluid` and bare assignments.
+6. If one provider underperforms, add only a thin provider patch; do not fork core rules.
 
 ## File map
 - `Prompt/buttons.json`: button-to-folder mapping used by UI.
@@ -76,12 +87,12 @@ Upload-and-use workflow (all providers):
 
 ## Wiki/docs sync checklist
 When Neptune docs or compiler behavior changes, update prompt package in the same pass:
-1. `docs/LFR_READABLE_SYNTAX_SPEC_V2.md` and/or `docs/LFR_MINT_LANGUAGE_MANUAL.md`
+1. `docs/LFR_READABLE_SYNTAX_SPEC_V2.md` and/or `docs/LFR_MINT_LANGUAGE_MANUAL.md` (GUI References links here)
 2. `docs/LFR-TestCases-wiki/` and/or `docs/MINT-TestCases-wiki/` companion pages
-3. `Prompt/LFR_SYNTAX_MANUAL.txt` and `Prompt/MINT_SYNTAX_MANUAL.txt`
-4. `Prompt/DEVELOPER_ENTRY_POINTS.txt` (wiki paths and entry points)
-5. Shared invariant blocks in all five `*/en2lfr_system.txt` files
-6. Keep `Neptune_2026/Prompt/` and `NeptuneGUI_2026/src/Prompt/` aligned
+3. `Prompt/LFR_SYNTAX_MANUAL.txt` and `Prompt/MINT_SYNTAX_MANUAL.txt` (distill References/V2 for LLM packs)
+4. Shared **LFR syntax norms** block in all five `*/en2lfr_system.txt` files
+5. `Prompt/DEVELOPER_ENTRY_POINTS.txt` (wiki paths and entry points)
+6. Keep `Neptune_2026/Prompt/`, `NeptuneGUI_2026/src/Prompt/`, and `prompt_test/` packs aligned in the same edit pass
 
 ## Versioning notes
 - Treat benchmark-aligned blocks as "shared contract".

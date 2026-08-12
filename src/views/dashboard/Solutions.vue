@@ -127,6 +127,7 @@
           </div>
 
           <v-data-table
+            :key="'results-weights-' + evaluationWeightsRevision"
             :headers="tableHeaders"
             :items="displayRows"
             :items-per-page="10"
@@ -301,6 +302,8 @@ export default {
         symmetry: 0.1,
         fragmentation: 0.1,
       },
+      // Bumped on Apply so Results Total cells always rebuild with new weights.
+      evaluationWeightsRevision: 0,
       evaluationWeightInputs: {
         area: '0.2',
         connectionLength: '0.2',
@@ -341,6 +344,8 @@ export default {
       return Math.abs(this.currentInputWeightSum - 1) < 1e-6
     },
     displayRows () {
+      // Read revision so Apply always invalidates this computed (and table :key).
+      const weightsRevision = this.evaluationWeightsRevision
       const rows = []
       for (const ex of this.staticExampleRows) {
         rows.push(this.buildExampleRow(ex))
@@ -348,7 +353,19 @@ export default {
       for (const job of this.jobs) {
         rows.push(this.buildJobRow(job))
       }
-      return rows
+      // Recompute Total here from applied weights so Results stays in sync after Apply.
+      return rows.map((row) => ({
+        ...row,
+        overallScore: this.computeWeightedTotal({
+          areaScore: row.areaScore,
+          compactScore: row.compactScore,
+          connectionLengthScore: row.connectionLengthScore,
+          bendScore: row.bendScore,
+          symmetryScore: row.symmetryScore,
+          fragmentationScore: row.fragmentationScore,
+        }),
+        weightsRevision,
+      }))
     },
     jsonDialogTitle () {
       if (!this.jsonDialogRow) return 'Output JSON'
@@ -396,18 +413,31 @@ export default {
       if (n == null) return '—'
       return n.toFixed(3)
     },
-    computeWeightedTotal (metrics) {
+    computeWeightedTotal (metrics, weights = null) {
       if (!metrics) return null
       const parts = METRIC_KEYS.map((k) => this.toFiniteNumber(metrics[k]))
       if (parts.some(v => v == null)) return null
+      const w = weights || this.evaluationWeights
       return (
-        parts[0] * this.evaluationWeights.area +
-        parts[1] * this.evaluationWeights.compact +
-        parts[2] * this.evaluationWeights.connectionLength +
-        parts[3] * this.evaluationWeights.bend +
-        parts[4] * this.evaluationWeights.symmetry +
-        parts[5] * this.evaluationWeights.fragmentation
+        parts[0] * w.area +
+        parts[1] * w.compact +
+        parts[2] * w.connectionLength +
+        parts[3] * w.bend +
+        parts[4] * w.symmetry +
+        parts[5] * w.fragmentation
       )
+    },
+    recomputeCachedOverallScores (weights) {
+      const applied = weights || this.evaluationWeights
+      Object.keys(this.computedMetricsByFileId || {}).forEach((fid) => {
+        const cached = this.computedMetricsByFileId[fid]
+        if (!cached || typeof cached !== 'object') return
+        const nextTotal = this.computeWeightedTotal(cached, applied)
+        this.$set(this.computedMetricsByFileId, fid, {
+          ...cached,
+          overallScore: nextTotal,
+        })
+      })
     },
     applyEvaluationWeights () {
       const nextWeights = {
@@ -427,7 +457,10 @@ export default {
         )
         if (!shouldContinue) return
       }
+      // Apply weights, then refresh every Results-row Total with the new formula.
       this.evaluationWeights = nextWeights
+      this.recomputeCachedOverallScores(nextWeights)
+      this.evaluationWeightsRevision += 1
     },
     async refreshResults () {
       this.jobs = []
