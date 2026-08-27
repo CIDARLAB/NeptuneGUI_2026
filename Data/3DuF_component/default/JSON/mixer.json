@@ -1,22 +1,4 @@
 {
-  "_LFR_filename": "mixer.lfr",
-  "_LFR_source": [
-    "// Minimal LFR case corresponding to a basic MIXER.",
-    "module mixer(",
-    "    finput in_1, in_2,",
-    "    foutput out_1",
-    ");",
-    "    assign out_1 = in_1 + in_2;",
-    "endmodule"
-  ],
-  "_MINT_filename": "mixer.mint",
-  "_MINT_source": [
-    "DEVICE mixer",
-    "",
-    "LAYER FLOW",
-    "MIXER mixer_1 componentSpacing=1000.0 channelWidth=800.0 bendSpacing=1230.0 numberOfBends=1.0 rotation=0.0 bendLength=2460.0 height=250.0;",
-    "END LAYER"
-  ],
   "name": "mixer",
   "params": {
     "width": 135000,

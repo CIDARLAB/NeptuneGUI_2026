@@ -1,24 +1,4 @@
 {
-  "_LFR_filename": "channel.lfr",
-  "_LFR_source": [
-    "// Minimal LFR case corresponding to a single CHANNEL between two ports.",
-    "module channel(",
-    "    finput src,",
-    "    foutput dst",
-    ");",
-    "    assign dst = src;",
-    "endmodule"
-  ],
-  "_MINT_filename": "channel.mint",
-  "_MINT_source": [
-    "DEVICE channel",
-    "",
-    "LAYER FLOW",
-    "PORT port_1 componentSpacing=1000.0 portRadius=700.0 height=1100.0;",
-    "PORT port_2 componentSpacing=1000.0 portRadius=700.0 height=1100.0;",
-    "CHANNEL channel_1 from port_1 1 to port_2 1 connectionSpacing=1600 channelWidth=800 height=250;",
-    "END LAYER"
-  ],
   "name": "channel",
   "params": {
     "width": 135000,
@@ -41,7 +21,7 @@
               20000
             ],
             "componentSpacing": 1000,
-            "portRadius": 700,
+            "portRadius": 1000,
             "height": 1100
           },
           "type": "XY",
@@ -59,7 +39,7 @@
               40000
             ],
             "componentSpacing": 1000,
-            "portRadius": 700,
+            "portRadius": 1000,
             "height": 1100
           },
           "type": "XY",
@@ -173,7 +153,7 @@
               20000
             ],
             "componentSpacing": 1000,
-            "portRadius": 700,
+            "portRadius": 1000,
             "height": 1100
           },
           "type": "XY",
@@ -191,7 +171,7 @@
               40000
             ],
             "componentSpacing": 1000,
-            "portRadius": 700,
+            "portRadius": 1000,
             "height": 1100
           },
           "type": "XY",
@@ -297,15 +277,15 @@
       "entity": "PORT",
       "params": {
         "position": [
-          39300,
-          19300
+          40000,
+          20000
         ],
         "componentSpacing": 1000,
-        "portRadius": 700,
+        "portRadius": 1000,
         "height": 1100
       },
-      "x-span": 1400,
-      "y-span": 1400,
+      "x-span": 2000,
+      "y-span": 2000,
       "ports": [
         {
           "x": 0,
@@ -324,15 +304,15 @@
       "entity": "PORT",
       "params": {
         "position": [
-          39300,
-          39300
+          40000,
+          40000
         ],
         "componentSpacing": 1000,
-        "portRadius": 700,
+        "portRadius": 1000,
         "height": 1100
       },
-      "x-span": 1400,
-      "y-span": 1400,
+      "x-span": 2000,
+      "y-span": 2000,
       "ports": [
         {
           "x": 0,

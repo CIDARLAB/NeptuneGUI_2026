@@ -137,7 +137,7 @@
           If you leave now, your current workspaces and component library cache may not be saved.
           <br><br>
           Please export your current workspaces and component library cache to a local zip file before exiting.
-          Later, you can restore both from Dashboard using “Import zip”.
+          Later, you can restore both from the sidebar using Import.
           <br><br>
           <v-checkbox
             v-model="dontShowLogoutPromptWeek"
@@ -178,6 +178,7 @@
   import axios from 'axios'
   import guestStore, { fileContentForZipExport } from '@/lib/guestStore'
   import JSZip from 'jszip'
+  import { exportFilenameStamp } from '../../../../utils'
 
   let self = this
   export default {
@@ -372,16 +373,7 @@
           } catch (_) {}
 
           const blob = await zip.generateAsync({ type: 'blob' })
-          const date = new Date()
-          const stamp = [
-            date.getFullYear(),
-            String(date.getMonth() + 1).padStart(2, '0'),
-            String(date.getDate()).padStart(2, '0'),
-            '-',
-            String(date.getHours()).padStart(2, '0'),
-            String(date.getMinutes()).padStart(2, '0'),
-          ].join('')
-          const filename = `neptune_guest_workspace_${stamp}.zip`
+          const filename = `neptune_${exportFilenameStamp()}.zip`
           const url = URL.createObjectURL(blob)
           const a = document.createElement('a')
           a.href = url

@@ -194,10 +194,20 @@ function deleteFile (workspaceId, fileId) {
   save(data)
 }
 
+function upsertFileByName (workspaceId, fileName, content) {
+  const existing = (getFiles(workspaceId) || []).find(f => f && f.name === fileName)
+  if (existing) {
+    return updateFile(workspaceId, existing.id, content)
+  }
+  const ext = (String(fileName).match(/\.[^.]+$/) || [''])[0]
+  const created = createFile(workspaceId, fileName, ext)
+  if (!created) return null
+  return updateFile(workspaceId, created.id, content)
+}
+
 const UPLOAD_WORKSPACE_NAME = 'uploaded files'
 
 /** Seeded demo file names; used to pick which duplicate "Example" row to keep when merging. */
-const EXAMPLE_OLD_MINT_FILENAME = 'flow_and_control_demo_fromLFR.mint'
 const EXAMPLE_SEED_FILE_NAMES = new Set(EXAMPLE_SEED_SPECS.map(s => s.name))
 
 /**
@@ -286,18 +296,6 @@ function getOrCreateUploadWorkspace () {
   return createWorkspace(UPLOAD_WORKSPACE_NAME, '')
 }
 
-function migrateExampleMintFilename () {
-  const data = load()
-  const ex = data.workspaces.find(w => String(w.name || '').trim() === EXAMPLE_WORKSPACE_NAME)
-  if (!ex || !ex.files) return
-  const oldF = ex.files.find(f => f.name === EXAMPLE_OLD_MINT_FILENAME)
-  const newF = ex.files.find(f => f.name === 'flow_and_control_demo.mint')
-  if (oldF && !newF) {
-    oldF.name = 'flow_and_control_demo.mint'
-    save(data)
-  }
-}
-
 function migrateDxJsonSeedFilenames () {
   const data = load()
   const renamePairs = [
@@ -349,35 +347,33 @@ function syncExampleDemoFiles (wid) {
 
   const now = new Date().toISOString()
   const desiredByName = new Map(EXAMPLE_SEED_SPECS.map(s => [s.name, s]))
-  const nextFiles = []
-  const seen = new Set()
+  const existingByName = new Map()
   let changed = false
 
   for (const f of ws.files) {
-    if (!f || !f.name) {
+    if (!f || !f.name || !desiredByName.has(f.name) || existingByName.has(f.name)) {
       changed = true
       continue
     }
-    const spec = desiredByName.get(f.name)
-    if (!spec) {
-      // Keep Example workspace in one-to-one sync with Data/example filenames.
-      changed = true
-      continue
-    }
-    if (seen.has(f.name)) {
-      changed = true
-      continue
-    }
-    seen.add(f.name)
-    if (!f.ext && spec.ext) {
-      f.ext = spec.ext
-      changed = true
-    }
-    nextFiles.push(f)
+    existingByName.set(f.name, f)
   }
 
+  const nextFiles = []
   for (const spec of EXAMPLE_SEED_SPECS) {
-    if (seen.has(spec.name)) continue
+    const existing = existingByName.get(spec.name)
+    if (existing) {
+      if (!existing.ext && spec.ext) {
+        existing.ext = spec.ext
+        changed = true
+      }
+      if (existing.content !== spec.content) {
+        existing.content = spec.content
+        existing.updated_at = now
+        changed = true
+      }
+      nextFiles.push(existing)
+      continue
+    }
     const id = String(data.nextFileId++)
     nextFiles.push({
       id,
@@ -426,7 +422,6 @@ function repairCorruptedKnownJsonSeeds () {
  */
 function ensureExampleWorkspace () {
   dedupeNamedExampleWorkspaces()
-  migrateExampleMintFilename()
   migrateDxJsonSeedFilenames()
   let ex = load().workspaces.find(w => String(w.name || '').trim() === EXAMPLE_WORKSPACE_NAME)
   if (!ex) {
@@ -476,6 +471,7 @@ export default {
   getFile,
   createFile,
   updateFile,
+  upsertFileByName,
   deleteFile,
   load,
   save,

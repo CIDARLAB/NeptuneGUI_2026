@@ -179,14 +179,44 @@
             </template>
 
             <template v-slot:item.jsonActions="{ item }">
+              <span v-if="!canShowResultActions(item)">-</span>
               <v-btn
+                v-else
                 small
                 outlined
                 color="primary"
                 :disabled="!item.hasJson"
                 @click="openJsonDialog(item)"
               >
-                View JSON
+                View
+              </v-btn>
+            </template>
+
+            <template v-slot:item.logActions="{ item }">
+              <span v-if="item.status === 'processing'">-</span>
+              <v-btn
+                v-else-if="item.hasLog"
+                small
+                outlined
+                color="primary"
+                @click="openLogDialog(item)"
+              >
+                View
+              </v-btn>
+              <span v-else>-</span>
+            </template>
+
+            <template v-slot:item.threedufActions="{ item }">
+              <span v-if="!canShowResultActions(item)">-</span>
+              <v-btn
+                v-else
+                small
+                outlined
+                color="primary"
+                :disabled="!item.hasJson"
+                @click="openRowIn3DuF(item)"
+              >
+                Open in 3DuF
               </v-btn>
             </template>
 
@@ -238,14 +268,36 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+    <v-dialog v-model="logDialogOpen" max-width="900px" scrollable>
+      <v-card class="component-library-file-dialog solutions-json-dialog">
+        <v-card-title class="headline component-library-dialog-title">
+          {{ logDialogTitle }}
+        </v-card-title>
+        <v-card-text>
+          <v-textarea
+            :value="logDialogText"
+            readonly
+            outlined
+            rows="18"
+            hide-details="auto"
+            class="readonly-file-textarea"
+          />
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn text color="success" @click="downloadLogDialog">Export</v-btn>
+          <v-btn text color="error" @click="logDialogOpen = false">Close</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
 <script>
 import axios from 'axios'
 import * as Utils from '../../utils'
-import dx2JsonText from '!!raw-loader!../../../Data/example/dx/dx2_PRfromLFR.json'
-import dx3JsonText from '!!raw-loader!../../../Data/example/dx/dx3_PRfromLFR.json'
+import flowOnlyPrJson from '../../../Data/example/flow_only_demo/flow_only_demo_fromLFR_PR.json'
+import flowControlPrJson from '../../../Data/example/flow_and_control_demo/flow_and_control_demo_fromLFR_PR.json'
 import { EVALUATION_METRIC_SPEC_URL } from '@/lib/evaluationMetricSpec'
 import guestStore, { EXAMPLE_WORKSPACE_NAME } from '@/lib/guestStore'
 import { validateAndNormalizeLfrName } from '@/lib/lfrNaming'
@@ -270,28 +322,28 @@ export default {
       evaluationFetchStateByFileId: {},
       staticExampleRows: [
         {
-          inputFile: 'dx2.lfr',
-          outputFile: 'dx2_PRfromLFR.json',
-          jsonText: dx2JsonText,
+          inputFile: 'flow_only_demo.lfr',
+          outputFile: 'flow_only_demo_fromLFR_PR.json',
+          jsonText: typeof flowOnlyPrJson === 'string' ? flowOnlyPrJson : JSON.stringify(flowOnlyPrJson),
           status: 'done',
-          areaScore: 0.6455377634135614,
-          compactScore: 0.31353925484425815,
-          connectionLengthScore: 0.8329158481882727,
-          bendScore: 0.4074074074074074,
-          symmetryScore: 0.25,
+          areaScore: 0.17541309816827944,
+          compactScore: 0.5876708791012953,
+          connectionLengthScore: 0.8613152033002893,
+          bendScore: 0.6,
+          symmetryScore: 0.5,
           fragmentationScore: 1.0,
         },
         {
-          inputFile: 'dx3.lfr',
-          outputFile: 'dx3_PRfromLFR.json',
-          jsonText: dx3JsonText,
+          inputFile: 'flow_and_control_demo.lfr',
+          outputFile: 'flow_and_control_demo_fromLFR_PR.json',
+          jsonText: typeof flowControlPrJson === 'string' ? flowControlPrJson : JSON.stringify(flowControlPrJson),
           status: 'done',
-          areaScore: 0.6663971142964921,
-          compactScore: 0.41507288096673967,
-          connectionLengthScore: 0.8755375387352308,
-          bendScore: 0.5555555555555556,
-          symmetryScore: 0.3181818181818182,
-          fragmentationScore: 1.0,
+          areaScore: 0.24710052460786117,
+          compactScore: 0.5282077176766525,
+          connectionLengthScore: 0.865696792593593,
+          bendScore: 0.6,
+          symmetryScore: 0.2222222222222222,
+          fragmentationScore: 0.3333333333333333,
         },
       ],
       evaluationWeights: {
@@ -316,6 +368,9 @@ export default {
       jsonDialogOpen: false,
       jsonDialogRow: null,
       jsonDialogText: '',
+      logDialogOpen: false,
+      logDialogRow: null,
+      logDialogText: '',
       tableHeaders: [
         { text: 'Input File', value: 'inputFile', sortable: true },
         { text: 'Modified', value: 'lastUpdatedDisplay', sortable: true },
@@ -328,6 +383,8 @@ export default {
         { text: 'Fragment.', value: 'fragmentationScore', sortable: false, align: 'end' },
         { text: 'Total', value: 'overallScore', sortable: false, align: 'end' },
         { text: 'JSON', value: 'jsonActions', sortable: false, align: 'center' },
+        { text: 'Log', value: 'logActions', sortable: false, align: 'center' },
+        { text: 'Visualization', value: 'threedufActions', sortable: false, align: 'center' },
         { text: 'Status', value: 'status', sortable: false, align: 'end' },
       ],
     }
@@ -371,13 +428,18 @@ export default {
       if (!this.jsonDialogRow) return 'Output JSON'
       return this.jsonDialogRow.outputFileName || 'Output JSON'
     },
+    logDialogTitle () {
+      if (!this.logDialogRow) return 'Compile log'
+      return this.logDialogRow.logFileName || 'Compile log'
+    },
   },
   mounted () {
     this.refreshResults()
   },
   methods: {
     rowClass (item) {
-      return `results-row results-row--${item.status || 'ongoing'}`
+      const status = item && item.status === 'ongoing' ? 'processing' : (item && item.status) || 'processing'
+      return `results-row results-row--${status}`
     },
     customTableSort (items, sortBy, sortDesc) {
       if (!sortBy) return items
@@ -648,24 +710,42 @@ export default {
         status: 'done',
         hasJson: !!row.jsonText,
         jsonText: row.jsonText,
+        hasLog: false,
+        logText: '',
+        logFileName: '',
         metricExplanation: 'Static example scores from Neptune benchmark outputs.',
         ...componentScores,
         overallScore: this.computeWeightedTotal(componentScores),
       }
     },
     buildJobRow (job) {
+      const status = this.getJobActionStatus(job)
+      const failedOrProcessing = status === 'fail' || status === 'processing'
       const primaryFileId = this.getPrimaryOutputFileId(job)
       const fileData = primaryFileId ? this.fileDataById[primaryFileId] : null
-      const outputFileName = primaryFileId
-        ? (this.fileNameById[primaryFileId] || 'output.json')
-        : '—'
+      const outputFileName = job.outputFileName ||
+        (primaryFileId ? (this.fileNameById[primaryFileId] || 'output.json') : '—')
       const workspaceId = job.workspaceId || job.workspace_id ||
         (fileData && (fileData.workspaceid || fileData.workspace_id)) || null
       const workspaceName = job.workspaceName ||
         (workspaceId && this.workspaceNameById[workspaceId]) ||
         (workspaceId ? `Workspace ${workspaceId}` : '—')
-      const breakdown = this.resolveEvaluationScoreBreakdown(job)
+      const breakdown = failedOrProcessing
+        ? {
+          areaScore: null,
+          compactScore: null,
+          connectionLengthScore: null,
+          bendScore: null,
+          symmetryScore: null,
+          fragmentationScore: null,
+          overallScore: null,
+          explanation: status === 'fail'
+            ? 'Compile failed. See the log column for details.'
+            : 'Compile is still running.',
+        }
+        : this.resolveEvaluationScoreBreakdown(job)
       const updatedRaw = job.created_at || job.updated_at || (fileData && fileData.updated_at) || null
+      const logText = this.getJobLogText(job)
       return {
         rowKey: `job-${job.id || primaryFileId || Math.random()}`,
         rowKind: 'job',
@@ -677,9 +757,12 @@ export default {
         workspaceName,
         fileId: primaryFileId,
         jobRef: job,
-        status: this.getJobActionStatus(job),
-        hasJson: !!primaryFileId,
-        jsonText: null,
+        status,
+        hasJson: !failedOrProcessing && !!(job.jsonText || primaryFileId),
+        jsonText: failedOrProcessing ? null : (job.jsonText || null),
+        hasLog: status !== 'processing' && (!!logText || status === 'fail'),
+        logText,
+        logFileName: job.logFileName || this.defaultLogFileName(job),
         metricExplanation: breakdown.explanation,
         areaScore: breakdown.areaScore,
         compactScore: breakdown.compactScore,
@@ -690,16 +773,23 @@ export default {
         overallScore: breakdown.overallScore,
       }
     },
+    canShowResultActions (row) {
+      if (!row) return false
+      return row.status === 'done'
+    },
     formatMetricCell (row, key) {
-      if (row.status === 'fail' || row.status === 'ongoing') return '-'
+      if (!row || row.status === 'fail' || row.status === 'processing' || row.status === 'ongoing') return '-'
       return this.toPercentDisplay(row[key])
     },
     mapOutputToInputFile (outputFileName) {
       if (!outputFileName) return '—'
       const knownReplacements = [
         { suffix: '_PRfromLFR.json', replacement: '.lfr' },
-        { suffix: '_PR.json', replacement: '.lfr' },
+        { suffix: '_fromLFR_PR.json', replacement: '.lfr' },
+        { suffix: '_fromMINT_PR.json', replacement: '.mint' },
         { suffix: '_fromLFR.json', replacement: '.lfr' },
+        { suffix: '_fromMINT.json', replacement: '.mint' },
+        { suffix: '_PR.json', replacement: '.lfr' },
         { suffix: '.json', replacement: '.lfr' },
       ]
       for (const item of knownReplacements) {
@@ -883,17 +973,36 @@ export default {
       ].filter(Boolean)
       const normalized = String(candidates[0] || '').toLowerCase()
       if (/fail|error/.test(normalized)) return 'fail'
-      if (/ongoing|running|pending|progress/.test(normalized)) return 'ongoing'
+      if (/ongoing|running|pending|progress|processing/.test(normalized)) return 'processing'
       if (/done|success|completed|complete/.test(normalized)) return 'done'
+      if (job && (job.jsonText || job.evaluation)) return 'done'
       const fid = this.getPrimaryOutputFileId(job)
       if (fid && this.computedMetricsByFileId[fid]) return 'done'
-      if (job && job.evaluation) return 'done'
-      return 'ongoing'
+      return 'processing'
     },
     formatStatusLabel (status) {
       const value = String(status || '').trim().toLowerCase()
+      if (value === 'processing' || value === 'ongoing') return 'Processing'
+      if (value === 'fail' || value === 'error') return 'Fail'
+      if (value === 'done' || value === 'success') return 'Done'
       if (!value) return 'Unknown'
       return value.charAt(0).toUpperCase() + value.slice(1)
+    },
+    getJobLogText (job) {
+      if (!job) return ''
+      if (job.log && String(job.log).trim()) return String(job.log)
+      const parts = []
+      if (job.stdout) parts.push(String(job.stdout))
+      if (job.stderr) parts.push(String(job.stderr))
+      if (job.error) parts.push(String(job.error))
+      return parts.join('\n\n').trim()
+    },
+    defaultLogFileName (job) {
+      const src = (job && job.sourceFilename) || 'design'
+      const stem = String(src).replace(/\.[^.]+$/, '') || 'design'
+      const compileType = String((job && job.compileType) || '').toLowerCase()
+      if (compileType === 'mint' || /\.mint$/i.test(src)) return `${stem}_fromMINT.log`
+      return `${stem}_fromLFR.log`
     },
     formattimestamp (datestring) {
       return Utils.getprettytimestamp(datestring)
@@ -906,9 +1015,9 @@ export default {
       })
     },
     async openJsonDialog (row) {
-      if (!row) return
+      if (!row || !this.canShowResultActions(row)) return
       this.jsonDialogRow = row
-      let text = row.jsonText || ''
+      let text = row.jsonText || (row.jobRef && row.jobRef.jsonText) || ''
       if (!text && row.fileId) {
         text = await this.loadJsonTextForFile(row.fileId, row.workspaceId)
       }
@@ -925,6 +1034,50 @@ export default {
         this.jsonDialogText = ''
       }
       this.jsonDialogOpen = true
+    },
+    openLogDialog (row) {
+      if (!row) return
+      this.logDialogRow = row
+      this.logDialogText = row.logText || this.getJobLogText(row.jobRef) || ''
+      this.logDialogOpen = true
+    },
+    downloadLogDialog () {
+      const row = this.logDialogRow
+      if (!row) return
+      const name = row.logFileName || 'compile.log'
+      const blob = new Blob([this.logDialogText || ''], { type: 'text/plain;charset=utf-8' })
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', name)
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+    },
+    async openRowIn3DuF (row) {
+      if (!row || !this.canShowResultActions(row)) return
+      let text = row.jsonText || (row.jobRef && row.jobRef.jsonText) || ''
+      if (!text && row.fileId) {
+        text = await this.loadJsonTextForFile(row.fileId, row.workspaceId)
+      }
+      let parsed = null
+      if (text && typeof text === 'object') parsed = text
+      else {
+        try { parsed = JSON.parse(text || '') } catch (_) { parsed = null }
+      }
+      if (!parsed) {
+        alert('Cannot open invalid JSON in 3DuF.')
+        return
+      }
+      const result = openAndLoadDeviceIn3DuF(parsed)
+      if (!result.ok) {
+        if (result.reason === 'popup_blocked') {
+          alert('Popup blocked. Please allow popups to open 3DuF.')
+        } else {
+          alert('Cannot open invalid JSON in 3DuF.')
+        }
+      }
     },
     async loadJsonTextForFile (fileId, workspaceId) {
       if (this.$store.getters.isGuest && workspaceId) {
@@ -1069,6 +1222,7 @@ export default {
             .catch(() => null)
         )
         const allJobs = (await Promise.all(jobRequests)).filter(Boolean)
+        this.persistGuestJobOutputs(allJobs)
         this.jobs = allJobs
         this.jobobjects = {}
         allJobs.forEach((job) => {
@@ -1077,12 +1231,33 @@ export default {
         const fileIdLists = allJobs.map(j => j.files).filter(Boolean)
         await Promise.all(fileIdLists.map((files) => this.prefetchFileData(files)))
         await Promise.all(allJobs.map((job) => {
+          if (job && job.evaluation) return null
+          if (this.getJobActionStatus(job) !== 'done') return null
           const fid = this.getPrimaryOutputFileId(job)
           return fid ? this.ensureEvaluationMetricForFile(fid) : null
         }))
       } catch (error) {
         console.log(error)
       }
+    },
+    persistGuestJobOutputs (jobs) {
+      if (!this.$store.getters.isGuest || !Array.isArray(jobs)) return
+      jobs.forEach((job) => {
+        const workspaceId = job.workspaceId || job.workspace_id
+        if (!workspaceId || !guestStore.getWorkspace(workspaceId)) return
+        const status = this.getJobActionStatus(job)
+        if (status === 'done' && job.jsonText && job.outputFileName) {
+          guestStore.upsertFileByName(workspaceId, job.outputFileName, job.jsonText)
+        }
+        const logText = this.getJobLogText(job)
+        if (logText && (status === 'done' || status === 'fail')) {
+          guestStore.upsertFileByName(
+            workspaceId,
+            job.logFileName || this.defaultLogFileName(job),
+            logText,
+          )
+        }
+      })
     },
   },
 }
@@ -1134,8 +1309,9 @@ export default {
   ::v-deep .solutions-jobs-table .results-row--fail td
     background: rgba(244, 67, 54, 0.12)
 
+  ::v-deep .solutions-jobs-table .results-row--processing td,
   ::v-deep .solutions-jobs-table .results-row--ongoing td
-    background: rgba(255, 193, 7, 0.12)
+    background: rgba(255, 152, 0, 0.18)
 
   .solutions-path-link
     background: none
@@ -1199,9 +1375,10 @@ export default {
     background: rgba(244, 67, 54, 0.18)
     color: #b71c1c
 
+  .results-status--processing,
   .results-status--ongoing
-    background: rgba(255, 193, 7, 0.18)
-    color: #795548
+    background: rgba(255, 152, 0, 0.22)
+    color: #e65100
 
   .solutions-json-dialog.component-library-file-dialog .v-card__text,
   .solutions-json-dialog.component-library-file-dialog .v-card__actions

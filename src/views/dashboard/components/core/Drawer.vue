@@ -97,8 +97,63 @@
         <div class="drawer-export-text text-center mt-3">
           Tip: export regularly to back up both workspaces and component library cache.
         </div>
+        <v-tooltip right>
+          <template v-slot:activator="{ on, attrs }">
+            <v-btn
+              depressed
+              small
+              block
+              class="drawer-export-rect-btn drawer-import-rect-btn mt-4"
+              aria-label="Import workspaces from zip"
+              v-bind="attrs"
+              v-on="on"
+              @click="triggerImportZip"
+            >
+              <v-icon
+                left
+                small
+                color="white"
+              >
+                mdi-upload
+              </v-icon>
+              <span>Import</span>
+            </v-btn>
+          </template>
+          <span>Restore workspaces and component library cache from a previously exported .zip backup.</span>
+        </v-tooltip>
+        <div class="drawer-export-text text-center mt-3">
+          Tip: import a previous .zip backup to restore workspaces and component library cache.
+        </div>
       </div>
     </div>
+    <input
+      ref="importZipInput"
+      type="file"
+      accept=".zip,application/zip"
+      style="display: none"
+      @change="onImportZip"
+    >
+    <v-dialog v-model="importConflictDialog" max-width="560px">
+      <v-card>
+        <v-card-title>Workspace conflicts detected</v-card-title>
+        <v-card-text>
+          The imported zip contains workspaces that already exist in your online account. Choose whether to overwrite them with the imported content.
+          <v-list dense class="mt-3">
+            <v-list-item v-for="(c, idx) in importConflicts" :key="idx">
+              <v-list-item-content>
+                <v-list-item-title>{{ c.name }}</v-list-item-title>
+              </v-list-item-content>
+            </v-list-item>
+          </v-list>
+          <v-checkbox v-model="importOverwriteConfirmed" label="Overwrite these workspaces using the imported zip" class="mt-2" />
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn text color="primary" @click="closeImportConflictDialog">Cancel</v-btn>
+          <v-btn :disabled="!importOverwriteConfirmed" color="primary" @click="confirmImportOverwrite">Import and overwrite</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-navigation-drawer>
 </template>
 
@@ -111,12 +166,17 @@
   import JSZip from 'jszip'
   import guestStore, { fileContentForZipExport } from '@/lib/guestStore'
   import axios from 'axios'
+  import { exportFilenameStamp } from '../../../../utils'
 
   export default {
     name: 'DashboardCoreDrawer',
 
     data: () => ({
       logo: require('@/assets/Neptune2026_logo_white_text.png'),
+      importConflictDialog: false,
+      importConflicts: [],
+      importOverwriteConfirmed: false,
+      _pendingImportZipFile: null,
       items: [
         {
           icon: 'mdi-view-dashboard',
@@ -311,6 +371,9 @@
       computedItems () {
         return this.items.map(this.mapItem)
       },
+      isGuest () {
+        return this.$store.getters.isGuest
+      },
       profile () {
         return {
           avatar: true,
@@ -335,7 +398,30 @@
     },
 
     methods: {
+      notifyBackupImported () {
+        this.$root.$emit('neptune-backup-imported')
+      },
       async exportWorkspacesZip () {
+        if (!this.isGuest) {
+          try {
+            const res = await axios.get('/api/v1/exportWorkspacesZip', {
+              withCredentials: true,
+              responseType: 'blob',
+            })
+            const blob = new Blob([res.data], { type: 'application/zip' })
+            const a = document.createElement('a')
+            a.href = URL.createObjectURL(blob)
+            a.download = `neptune_${exportFilenameStamp()}.zip`
+            document.body.appendChild(a)
+            a.click()
+            document.body.removeChild(a)
+            URL.revokeObjectURL(a.href)
+          } catch (_) {
+            alert('Failed to export zip')
+          }
+          return
+        }
+
         const data = guestStore.exportData()
         const zip = new JSZip()
 
@@ -376,20 +462,183 @@
         const blob = await zip.generateAsync({ type: 'blob' })
         const a = document.createElement('a')
         a.href = URL.createObjectURL(blob)
-        const date = new Date()
-        const stamp = [
-          date.getFullYear(),
-          String(date.getMonth() + 1).padStart(2, '0'),
-          String(date.getDate()).padStart(2, '0'),
-          '-',
-          String(date.getHours()).padStart(2, '0'),
-          String(date.getMinutes()).padStart(2, '0'),
-        ].join('')
-        a.download = `neptune_guest_workspace_${stamp}.zip`
+        a.download = `neptune_${exportFilenameStamp()}.zip`
         document.body.appendChild(a)
         a.click()
         document.body.removeChild(a)
         URL.revokeObjectURL(a.href)
+      },
+      triggerImportZip () {
+        const el = this.$refs.importZipInput
+        if (el) el.click()
+      },
+      closeImportConflictDialog () {
+        this.importConflictDialog = false
+        this.importOverwriteConfirmed = false
+        this.importConflicts = []
+        this._pendingImportZipFile = null
+      },
+      async confirmImportOverwrite () {
+        if (!this._pendingImportZipFile) return
+        await this.importZipToServer(this._pendingImportZipFile, { overwrite: true })
+        this.closeImportConflictDialog()
+        this.notifyBackupImported()
+      },
+      async onImportZip (e) {
+        const file = e.target.files && e.target.files[0]
+        if (!file) return
+        try { e.target.value = '' } catch (_) {}
+
+        if (this.isGuest) {
+          await this.importGuestZip(file)
+          return
+        }
+
+        await this.importZipToServer(file, { overwrite: false })
+      },
+      async importZipToServer (file, { overwrite }) {
+        try {
+          const buf = await file.arrayBuffer()
+          const url = `/api/v1/importWorkspacesZip${overwrite ? '?overwrite=1' : '?dryRun=1'}`
+          await axios.post(url, buf, {
+            withCredentials: true,
+            headers: { 'Content-Type': 'application/zip' },
+          })
+
+          if (!overwrite) {
+            await axios.post('/api/v1/importWorkspacesZip', buf, {
+              withCredentials: true,
+              headers: { 'Content-Type': 'application/zip' },
+            })
+            this.notifyBackupImported()
+          }
+        } catch (err) {
+          const status = err && err.response && err.response.status
+          const data = err && err.response && err.response.data
+          if (status === 409 && data && data.conflicts) {
+            this.importConflicts = data.conflicts
+            this.importOverwriteConfirmed = false
+            this._pendingImportZipFile = file
+            this.importConflictDialog = true
+            return
+          }
+          alert('Failed to import zip')
+        }
+      },
+      async importGuestZip (file) {
+        try {
+          const zip = await JSZip.loadAsync(file)
+          const workspaces = []
+          let nextWorkspaceId = 1
+          let nextFileId = 1
+
+          if (zip.files['index.json']) {
+            try {
+              const indexStr = await zip.files['index.json'].async('string')
+              const index = JSON.parse(indexStr)
+              if (index.nextWorkspaceId) nextWorkspaceId = index.nextWorkspaceId
+              if (index.nextFileId) nextFileId = index.nextFileId
+            } catch (_) {}
+          }
+
+          let componentTable = null
+          if (zip.files['component_table.json']) {
+            try {
+              const tableStr = await zip.files['component_table.json'].async('string')
+              componentTable = JSON.parse(tableStr)
+            } catch (_) {
+              componentTable = null
+            }
+          }
+
+          const folderNames = Object.keys(zip.files)
+            .filter(name => name.endsWith('/'))
+            .filter(name => name.startsWith('workspace_'))
+
+          for (const folderName of folderNames) {
+            const metaFile = zip.file(`${folderName}metadata.json`)
+            if (!metaFile) continue
+            let meta
+            try {
+              const metaStr = await metaFile.async('string')
+              meta = JSON.parse(metaStr)
+            } catch (err) {
+              // eslint-disable-next-line no-console
+              console.error('Failed to parse workspace metadata', err)
+              continue
+            }
+
+            const files = []
+            Object.keys(zip.files)
+              .filter(name => name.startsWith(folderName) && name !== `${folderName}metadata.json` && !name.endsWith('/'))
+              .forEach((name, idx) => {
+                const entry = zip.files[name]
+                const short = name.substring(folderName.length)
+                const dot = short.lastIndexOf('.')
+                const fileBase = dot > 0 ? short.substring(0, dot) : short
+                const ext = dot > 0 ? short.substring(dot) : ''
+                files.push({
+                  id: String(nextFileId++),
+                  name: fileBase,
+                  ext,
+                  content: null,
+                  _entry: entry,
+                })
+              })
+
+            for (const f of files) {
+              try {
+                // eslint-disable-next-line no-await-in-loop
+                f.content = await f._entry.async('string')
+              } catch (err) {
+                f.content = ''
+              }
+              delete f._entry
+            }
+
+            workspaces.push({
+              _id: meta._id != null ? meta._id : String(nextWorkspaceId++),
+              name: meta.name || 'Guest Workspace',
+              notes: meta.notes || '',
+              files,
+              updated_at: meta.updated_at || new Date().toISOString(),
+              created_at: meta.created_at || undefined,
+            })
+          }
+
+          const payload = {
+            workspaces,
+            nextWorkspaceId,
+            nextFileId,
+          }
+
+          if (guestStore.importData(payload)) {
+            this.$store.commit('SET_WORKSPACE', null)
+          }
+
+          if (componentTable && Array.isArray(componentTable.components)) {
+            const customRows = componentTable.components.filter(c => c && c.showLfrMint === false && c.jsonScript)
+            for (const row of customRows) {
+              try {
+                // eslint-disable-next-line no-await-in-loop
+                await axios.post('/api/v1/componentFiles/upload', {
+                  name: row.name || row.syntax || 'component',
+                  jsonText: row.jsonScript,
+                  syntax: row.syntax || undefined,
+                }, {
+                  withCredentials: true,
+                  headers: { 'Content-Type': 'application/json' },
+                })
+              } catch (_) {}
+            }
+          }
+
+          this.notifyBackupImported()
+        } catch (err) {
+          // eslint-disable-next-line no-console
+          console.error('Import failed', err)
+          alert('Failed to import zip')
+        }
       },
       mapItem (item) {
         return {
@@ -468,6 +717,11 @@
         font-weight: 400 !important
         text-transform: none !important
         letter-spacing: normal !important
+
+      .drawer-import-rect-btn
+        background-color: #006994 !important
+        border-color: #006994 !important
+        color: #ffffff !important
 
       .drawer-export-text
         font-size: 14pt !important

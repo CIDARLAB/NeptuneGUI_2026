@@ -65,11 +65,29 @@ Common operators (see Fluidic Operations wiki):
   -     branch / waste-style relation
   %     metering / dropletize with a target-volume parameter
   /N    equal split (often with brace LHS)
-  ~     mapped primitive step (often with optional #MAP)
+  ~     unary mapped primitive / process step (optional #MAP), NOT default mix
 
-Mixing in English usually means operators, for example:
+Mixing default (prefer this):
   assign mid = a + b;
-  assign mid = ~(a + b);
+  assign mid = a + b + c;
+
+Do NOT wrap ordinary mixes as ~(a + b) / #MAP "MIXER" "~" unless English
+explicitly asks for a named technology map or an extra unary process on an
+already-merged stream. Unary ~ is for process steps on one stream (e.g.
+chamber/incubate/DIY/#MAP), not for replacing binary +.
+
+#MAP (same unit as mix / unary ~ — both arguments quoted):
+  #MAP "<TECHNOLOGY STRING>" "<operator-or-mode>"
+  #MAP "MIXER" "~"
+  #MAP "CHAMBER" "~"
+  #MAP "NOZZLE DROPLET GENERATOR" "%"
+
+#MAP placement (critical; only when English requires #MAP):
+- Put `#MAP "MIXER" "~"` inside the module body, immediately above the
+  `assign` that uses `~`.
+- Never place `#MAP` before `module` (invalid: file-top `#MAP` then
+  `module ...`).
+Ordinary mix does not need #MAP or unary ~ — use binary +.
 
 Equal split:
   assign {a, b} = stream / 2;
@@ -122,26 +140,12 @@ Prefer distribute@(…) for control-gated fluid routing rather than C-style tern
 ------------------------------------------------------------------------
 6) Directives
 ------------------------------------------------------------------------
-#MAP
+#MAP          (form and placement: see section 4, next to mix / unary ~)
 #CONSTRAIN
 #MATERIAL
 
-#MAP form (both arguments quoted):
-  #MAP "<TECHNOLOGY STRING>" "<operator-or-mode>"
-
-Examples:
-  #MAP "MIXER" "~"
-  #MAP "CHAMBER" "~"
-  #MAP "NOZZLE DROPLET GENERATOR" "%"
-
-#MAP placement (critical):
-- Put `#MAP "MIXER" "~"` inside the module body, immediately above the
-  `assign` that uses `~`.
-- Never place `#MAP` before `module` (invalid: file-top `#MAP` then
-  `module ...`).
-
-Bare unary ~ is enough when English only names a mixer-style step and does
-not require a concrete technology string.
+Use #MAP / unary ~ only when English names a concrete technology or an
+extra unary process step on one stream. Do not invent file-top #MAP.
 
 ------------------------------------------------------------------------
 7) Comments
@@ -161,6 +165,10 @@ Rules:
 - path must end with .lfr
 - transitive imports are followed
 - circular imports are rejected
+- import line carries only the path — never `from` and never a module name
+- Wrong (common LLM invent): import Name from "library/Name.lfr";
+  or backtick-import Name from "library/Name.lfr";
+- Correct shape: backtick-import "library/Name.lfr" then instantiate Name ...
 
 Instantiation (ordered or named ports):
   Child u0(a, b, y);
@@ -177,7 +185,7 @@ input port / fluid input / input fluid     →  finput
 output port / fluid output / output fluid →  foutput
 (Header keywords are the single tokens finput / foutput — not "input fluid".)
 control / select             →  control
-mix / mixer / merge          →  assign mid = a + b;  (or ~(a + b))
+mix / mixer / merge          →  assign mid = a + b;   (default; no ~ wrap)
 meter / dropletize volume N  →  assign d = in % N;
 control-gated route          →  distribute@(c) begin ... <= ... end
 reuse library module         →  `import "….lfr"  then  Mod u0(.port(net));

@@ -1,30 +1,4 @@
 {
-  "_LFR_filename": "tree.lfr",
-  "_LFR_source": [
-    "// Minimal LFR case corresponding to a 1-to-8 fanout TREE.",
-    "// Matches the MINT primitive `TREE ... in=1 out=8` in QuickTest/default/MINT/tree.mint.",
-    "// The single input is broadcast to an intermediate 8-wide flow bus and then",
-    "// routed to eight outputs. The LFR compiler realizes the 1->N broadcast as a",
-    "// physical TREE splitter during technology mapping.",
-    "module tree(",
-    "    finput in_1,",
-    "    foutput [0:7] outputs",
-    ");",
-    "    flow [0:7] temp;",
-    "    assign temp[0:7] = in_1;",
-    "    assign outputs[0:7] = temp[0:7];",
-    "endmodule"
-  ],
-  "_MINT_filename": "tree.mint",
-  "_MINT_source": [
-    "DEVICE tree",
-    "",
-    "LAYER FLOW",
-    "",
-    "TREE tree componentSpacing=1000 flowChannelWidth=800 rotation=0 spacing=4000 in=1 out=8 width=2460 height=250 stageLength=4000;",
-    "",
-    "END LAYER"
-  ],
   "name": "tree",
   "params": {
     "width": 135000,
@@ -153,7 +127,7 @@
       "entity": "TREE",
       "params": {
         "position": [
-          22100,
+          40000,
           20000
         ],
         "componentSpacing": 1000,

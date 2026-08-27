@@ -1,19 +1,17 @@
 /**
- * Build Example workspace seed list from Data/example at compile time.
- * This avoids hardcoding file names in code.
+ * Example workspace seed: only flow_only_demo and flow_and_control_demo.
+ * Sources and PR JSON come from Microfluidics-Benchmarks via Data/example/.
  */
-import { EXAMPLE_LFR_SCRIPT, EXAMPLE_MINT_SCRIPT } from './exampleScripts'
-import { EXAMPLE_DX_SEED_SPECS } from './exampleDxSeed'
-
-const EXAMPLE_TEXT_FILE_REGEX = /\.(lfr|mint|json|dot|txt|md|cfg|ini|uf|v)$/i
-let rawExampleContext = null
-try {
-  rawExampleContext = require.context(
-    '!!raw-loader!../../Data/example',
-    true,
-    EXAMPLE_TEXT_FILE_REGEX
-  )
-} catch (_) {}
+import flowOnlyLfr from '!!raw-loader!../../Data/example/flow_only_demo/flow_only_demo.lfr'
+import flowOnlyMint from '!!raw-loader!../../Data/example/flow_only_demo/flow_only_demo.mint'
+import flowOnlyFromLfrMint from '!!raw-loader!../../Data/example/flow_only_demo/flow_only_demo_fromLFR.mint'
+import flowOnlyPrJson from '../../Data/example/flow_only_demo/flow_only_demo_fromLFR_PR.json'
+import flowOnlyFromMintPrJson from '../../Data/example/flow_only_demo/flow_only_demo_fromMINT_PR.json'
+import flowControlLfr from '!!raw-loader!../../Data/example/flow_and_control_demo/flow_and_control_demo.lfr'
+import flowControlMint from '!!raw-loader!../../Data/example/flow_and_control_demo/flow_and_control_demo.mint'
+import flowControlFromLfrMint from '!!raw-loader!../../Data/example/flow_and_control_demo/flow_and_control_demo_fromLFR.mint'
+import flowControlFromLfrPrJson from '../../Data/example/flow_and_control_demo/flow_and_control_demo_fromLFR_PR.json'
+import flowControlFromMintPrJson from '../../Data/example/flow_and_control_demo/flow_and_control_demo_fromMINT_PR.json'
 
 function raw (m) {
   if (m == null) return ''
@@ -26,41 +24,15 @@ function raw (m) {
   return String(m)
 }
 
-function extFromName (name) {
-  const m = String(name || '').match(/\.[^.]+$/)
-  return m ? m[0].toLowerCase() : ''
-}
-
-function basenameFromContextKey (key) {
-  const normalized = String(key || '').replace(/^\.\//, '')
-  const parts = normalized.split('/')
-  return parts[parts.length - 1] || normalized
-}
-
-function buildFromContext () {
-  if (!rawExampleContext) return []
-  const byName = new Map()
-  rawExampleContext.keys().sort((a, b) => a.localeCompare(b)).forEach((key) => {
-    const name = basenameFromContextKey(key)
-    if (!name || byName.has(name)) return
-    const content = raw(rawExampleContext(key))
-    byName.set(name, {
-      name,
-      ext: extFromName(name),
-      content,
-    })
-  })
-  return Array.from(byName.values())
-}
-
-function buildFallbackSpecs () {
-  return [
-    { name: 'flow_and_control_demo.lfr', ext: '.lfr', content: EXAMPLE_LFR_SCRIPT },
-    { name: 'flow_and_control_demo.mint', ext: '.mint', content: EXAMPLE_MINT_SCRIPT },
-    ...EXAMPLE_DX_SEED_SPECS,
-  ]
-}
-
-const scanned = buildFromContext()
-export const EXAMPLE_SEED_SPECS = scanned.length > 0 ? scanned : buildFallbackSpecs()
-
+export const EXAMPLE_SEED_SPECS = [
+  { name: 'flow_only_demo.lfr', ext: '.lfr', content: raw(flowOnlyLfr) },
+  { name: 'flow_only_demo.mint', ext: '.mint', content: raw(flowOnlyMint) },
+  { name: 'flow_only_demo_fromLFR.mint', ext: '.mint', content: raw(flowOnlyFromLfrMint) },
+  { name: 'flow_only_demo_fromLFR_PR.json', ext: '.json', content: raw(flowOnlyPrJson) },
+  { name: 'flow_only_demo_fromMINT_PR.json', ext: '.json', content: raw(flowOnlyFromMintPrJson) },
+  { name: 'flow_and_control_demo.lfr', ext: '.lfr', content: raw(flowControlLfr) },
+  { name: 'flow_and_control_demo.mint', ext: '.mint', content: raw(flowControlMint) },
+  { name: 'flow_and_control_demo_fromLFR.mint', ext: '.mint', content: raw(flowControlFromLfrMint) },
+  { name: 'flow_and_control_demo_fromLFR_PR.json', ext: '.json', content: raw(flowControlFromLfrPrJson) },
+  { name: 'flow_and_control_demo_fromMINT_PR.json', ext: '.json', content: raw(flowControlFromMintPrJson) },
+]

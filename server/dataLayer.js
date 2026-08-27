@@ -132,15 +132,24 @@ function loadComponentJson (syntax) {
       return null
     }
   }
+  const stripCommentKeys = (obj) => {
+    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return obj
+    const next = { ...obj }
+    delete next._LFR_filename
+    delete next._LFR_source
+    delete next._MINT_filename
+    delete next._MINT_source
+    return next
+  }
   if (tmpPath && fs.existsSync(tmpPath)) {
     const tmpJson = tryReadJson(tmpPath)
     if (tmpJson) {
-      return { syntax: safeSyntax, source: 'tmp', path: tmpPath, json: tmpJson }
+      return { syntax: safeSyntax, source: 'tmp', path: tmpPath, json: stripCommentKeys(tmpJson) }
     }
   }
   const defJson = tryReadJson(defPath)
   if (!defJson) return null
-  return { syntax: safeSyntax, source: 'default', path: defPath, json: defJson }
+  return { syntax: safeSyntax, source: 'default', path: defPath, json: stripCommentKeys(defJson) }
 }
 
 function getComponentDefaultLfrPath (syntax) {
@@ -407,7 +416,7 @@ function createFile (session, workspaceId, fileName, ext) {
   const ws = workspaces.find(w => String(w._id) === String(workspaceId))
   if (!ws) return null
   const fileList = getFiles(session, workspaceId)
-  const id = String(Date.now())
+  const id = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
   const now = new Date().toISOString()
   const file = { id, name: fileName, ext: ext || '', content: '', created_at: now, updated_at: now }
   fileList.push(file)

@@ -1,29 +1,4 @@
 {
-  "_LFR_filename": "reaction_chamber.lfr",
-  "_LFR_source": [
-    "// Minimal LFR case corresponding to a REACTION CHAMBER.",
-    "// Matches the MINT primitive `CHAMBER ...` in QuickTest/default/MINT/reaction_chamber.mint.",
-    "// Fluid flows into the chamber, undergoes an incubation / reaction step",
-    "// (mapped to the `~` operator), and flows out. #MAP directs the technology",
-    "// mapper to realize `~` as a physical reaction chamber.",
-    "module reaction_chamber(",
-    "    finput in_1,",
-    "    foutput out_1",
-    ");",
-    "    #MAP \"CHAMBER\" \"~\"",
-    "    assign out_1 = ~in_1;",
-    "endmodule"
-  ],
-  "_MINT_filename": "reaction_chamber.mint",
-  "_MINT_source": [
-    "DEVICE reaction_chamber",
-    "",
-    "LAYER FLOW",
-    "",
-    "CHAMBER reaction_chamber_1 componentSpacing=1000 width=5000 length=5000 height=1100 cornerRadius=200 rotation=0;",
-    "",
-    "END LAYER"
-  ],
   "name": "reaction_chamber",
   "params": {
     "width": 135000,
@@ -146,8 +121,8 @@
       "entity": "REACTION CHAMBER",
       "params": {
         "position": [
-          37500,
-          17500
+          40000,
+          20000
         ],
         "componentSpacing": 1000,
         "width": 5000,

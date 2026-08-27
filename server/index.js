@@ -20,8 +20,14 @@ const {
   normalizeWorkspaceLfrBundle,
   normalizeImportLfr,
 } = require('./componentBundle')
+const {
+  runLocalCompile,
+  pickPrimaryPrJson,
+  collectLogText,
+  logFileNameFor,
+} = require('./compileRunner')
 
-// Optional: forward compile to Neptune_2026 (e.g. http://localhost:5000)
+// Optional: forward compile to Modal. If unset, run fluigi locally via Neptune_2026.
 const NEPTUNE_COMPILE_URL = process.env.NEPTUNE_COMPILE_URL || ''
 
 const app = express()
@@ -336,9 +342,11 @@ app.get('/api/v1/exportWorkspacesZip', requireAuth, async (req, res) => {
     zip.file('component_library.json', JSON.stringify(componentLibrary, null, 2))
 
     const buf = await zip.generateAsync({ type: 'nodebuffer' })
-    const stamp = new Date().toISOString().replace(/[:.]/g, '-')
+    const d = new Date()
+    const p = (n) => String(n).padStart(2, '0')
+    const stamp = `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}${p(d.getHours())}${p(d.getMinutes())}`
     res.setHeader('Content-Type', 'application/zip')
-    res.setHeader('Content-Disposition', `attachment; filename="neptune_workspaces_${stamp}.zip"`)
+    res.setHeader('Content-Disposition', `attachment; filename="neptune_${stamp}.zip"`)
     res.send(buf)
   } catch (err) {
     res.status(500).json({ error: 'Failed to export workspaces zip' })
@@ -508,13 +516,15 @@ function listComponentFilePayloads (session) {
   return [...defaults, ...custom]
 }
 
-// Per-session compile job IDs. The Modal job store can't be listed per-user,
-// so we track which jobs each session started and serve those from /api/v1/jobs
-// (avoids exposing other users' jobs). In-memory: results are transient.
+// Per-session compile jobs. IDs are listed from /api/v1/jobs; details live in
+// jobRecords (local fluigi) and are merged with Modal results when configured.
 const sessionJobs = new Map()
+const jobRecords = new Map()
+
 function sessionKey (session) {
   return session ? `${session.type}:${session.id}` : 'anon'
 }
+
 function recordSessionJob (session, jobId) {
   if (!jobId || typeof jobId !== 'string') return
   const key = sessionKey(session)
@@ -525,25 +535,163 @@ function recordSessionJob (session, jobId) {
   }
 }
 
-// Compile: proxy to Modal compute endpoint (NEPTUNE_COMPILE_URL).
-// Enriches the request with script content, a component-library snapshot
-// (JSON + LFR/MINT), and importLfr (only files referenced by `` `import ``).
-function proxyCompile (req, res, routePath) {
-  if (!NEPTUNE_COMPILE_URL) {
-    return res.status(501).json({ error: 'Compile not configured. Set NEPTUNE_COMPILE_URL to the Modal endpoint URL.' })
+function publicJobRecord (record) {
+  if (!record || typeof record !== 'object') return { status: 'unknown' }
+  return {
+    id: record.id,
+    status: record.status || 'running',
+    returncode: record.returncode,
+    sourceFilename: record.sourceFilename || '',
+    workspaceId: record.workspaceId || null,
+    workspaceName: record.workspaceName || '',
+    compileType: record.compileType || '',
+    created_at: record.created_at,
+    updated_at: record.updated_at,
+    files: Array.isArray(record.files) ? record.files : [],
+    evaluation: record.evaluation || null,
+    log: record.log || '',
+    jsonText: record.jsonText || '',
+    outputFileName: record.outputFileName || '',
+    logFileName: record.logFileName || '',
+    error: record.error || '',
+    fluigiCmd: record.fluigiCmd || [],
+    backend: record.backend || '',
   }
+}
+
+function upsertWorkspaceFile (session, workspaceId, fileName, content) {
+  if (!session || !workspaceId || !fileName) return null
+  const existingList = data.getFiles(session, workspaceId) || []
+  const existing = existingList.find(f => f && f.name === fileName)
+  if (existing) {
+    return data.updateFileContent(session, workspaceId, existing.id, content) || existing
+  }
+  const ext = path.extname(fileName) || ''
+  const created = data.createFile(session, workspaceId, fileName, ext)
+  if (!created) return null
+  return data.updateFileContent(session, workspaceId, created.id, content) || created
+}
+
+function toJobEvaluation (metrics) {
+  if (!metrics || typeof metrics !== 'object') return null
+  const areaScore = Number(metrics.area_score ?? metrics.areaScore)
+  const compactScore = Number(metrics.compact_score ?? metrics.compactScore)
+  const connectionLengthScore = Number(metrics.connection_length_score ?? metrics.connectionLengthScore)
+  const bendScore = Number(metrics.bend_score ?? metrics.bendScore)
+  const symmetryScore = Number(metrics.symmetry_score ?? metrics.symmetryScore)
+  const fragmentationScore = Number(metrics.fragmentation_score ?? metrics.fragmentationScore)
+  const overallScore = Number(metrics.overall_score ?? metrics.overallScore ?? metrics.total_score)
+  if (![areaScore, compactScore, connectionLengthScore, bendScore, symmetryScore, fragmentationScore]
+    .every(Number.isFinite)) {
+    return null
+  }
+  return {
+    areaScore,
+    compactScore,
+    connectionLengthScore,
+    bendScore,
+    symmetryScore,
+    fragmentationScore,
+    overallScore: Number.isFinite(overallScore) ? overallScore : null,
+    area_score: areaScore,
+    compact_score: compactScore,
+    connection_length_score: connectionLengthScore,
+    bend_score: bendScore,
+    symmetry_score: symmetryScore,
+    fragmentation_score: fragmentationScore,
+    overall_score: Number.isFinite(overallScore) ? overallScore : null,
+  }
+}
+
+function createPendingJob (session, meta) {
+  const id = uuidv4()
+  const now = new Date().toISOString()
+  const ws = meta.workspaceId ? data.getWorkspace(session, meta.workspaceId) : null
+  const record = {
+    id,
+    status: 'running',
+    sourceFilename: meta.sourceFilename || '',
+    workspaceId: meta.workspaceId || null,
+    workspaceName: meta.workspaceName || (ws && ws.name) || '',
+    compileType: meta.compileType || '',
+    created_at: now,
+    updated_at: now,
+    files: [],
+    evaluation: null,
+    log: '',
+    jsonText: '',
+    outputFileName: '',
+    logFileName: logFileNameFor(meta.sourceFilename, meta.compileType),
+    error: '',
+    fluigiCmd: [],
+    backend: meta.backend || 'local',
+    session,
+  }
+  jobRecords.set(id, record)
+  recordSessionJob(session, id)
+  return record
+}
+
+function applyCompileResult (record, result, session) {
+  const now = new Date().toISOString()
+  record.updated_at = now
+  record.returncode = result.returncode
+  record.fluigiCmd = result.fluigiCmd || record.fluigiCmd
+  record.log = result.log || collectLogText(result.outputs || {}, result.stdout, result.stderr, result.error)
+  record.error = result.error || ''
+  const success = result.returncode === 0 && result.primaryJson && result.primaryJson.text
+  record.status = success ? 'done' : 'error'
+  if (success) {
+    record.jsonText = result.primaryJson.text
+    record.outputFileName = result.primaryJson.basename || path.basename(result.primaryJson.name)
+  }
+  const fileIds = []
+  if (session && record.workspaceId) {
+    if (success && record.outputFileName && record.jsonText) {
+      const jsonFile = upsertWorkspaceFile(session, record.workspaceId, record.outputFileName, record.jsonText)
+      if (jsonFile && jsonFile.id) fileIds.push(jsonFile.id)
+    }
+    if (record.log) {
+      const logName = record.logFileName || logFileNameFor(record.sourceFilename, record.compileType)
+      record.logFileName = logName
+      const logFile = upsertWorkspaceFile(session, record.workspaceId, logName, record.log)
+      if (logFile && logFile.id) fileIds.push(logFile.id)
+    }
+  }
+  record.files = fileIds
+  return record
+}
+
+async function attachEvaluation (record) {
+  if (!record || record.status !== 'done' || !record.jsonText) return record
+  try {
+    const design = JSON.parse(record.jsonText)
+    const metrics = await computeEvaluationMetricWithNeptune(design)
+    record.evaluation = toJobEvaluation(metrics)
+  } catch (err) {
+    if (!record.log) record.log = ''
+    const msg = err && err.message ? err.message : String(err)
+    record.log = `${record.log}\n\n[evaluation] ${msg}`.trim()
+  }
+  return record
+}
+
+function enrichCompileRequest (req) {
+  const body = req.body || {}
   const {
     sourcefileid,
     configfileid,
     workspace: workspaceId,
+    workspaceName,
+    sourcefilename,
+    configfilename,
     componentBundle: clientBundle,
     sourceContent: clientSourceContent,
     importLfr: clientImportLfr,
     workspaceLfrBundle: clientWorkspaceLfr,
-  } = req.body || {}
+  } = body
   let sourceContent = ''
   let configContent = ''
-  // Prefer the Editor buffer when present (guest browser store + latest edits).
   if (typeof clientSourceContent === 'string' && clientSourceContent.length > 0) {
     sourceContent = clientSourceContent
   } else if (sourcefileid && workspaceId) {
@@ -557,10 +705,8 @@ function proxyCompile (req, res, routePath) {
   const serverComponents = listComponentFilePayloads(req.session)
   const mergedComponents = mergeComponentBundles(serverComponents, clientBundle)
   const componentBundle = toCompileComponentBundle(mergedComponents)
-  // Prefer explicitly resolved imports from the Editor; do not ship the whole workspace.
   let importLfr = normalizeImportLfr(clientImportLfr)
   if (!importLfr.length) {
-    // Backward-compatible fallback for older clients that still send workspaceLfrBundle.
     importLfr = normalizeImportLfr(
       normalizeWorkspaceLfrBundle(clientWorkspaceLfr).map((e) => ({
         path: `${e.workspaceName}/${e.fileName}`,
@@ -568,38 +714,169 @@ function proxyCompile (req, res, routePath) {
       }))
     )
   }
-  const enrichedBody = {
-    ...req.body,
+  const ws = workspaceId ? data.getWorkspace(req.session, workspaceId) : null
+  return {
     sourceContent,
     configContent,
     componentBundle,
     importLfr,
+    sourcefilename: sourcefilename || '',
+    configfilename: configfilename || '',
+    workspaceId: workspaceId || null,
+    workspaceName: workspaceName || (ws && ws.name) || '',
   }
-  // Avoid re-sending a stale full-workspace tree to the compute backend.
+}
+
+function startLocalCompileJob (req, compileType) {
+  const enriched = enrichCompileRequest(req)
+  const record = createPendingJob(req.session, {
+    sourceFilename: enriched.sourcefilename,
+    workspaceId: enriched.workspaceId,
+    workspaceName: enriched.workspaceName,
+    compileType,
+    backend: 'local',
+  })
+  runLocalCompile({
+    neptuneRoot: NEPTUNE_2026_ROOT,
+    compileType,
+    sourceContent: enriched.sourceContent,
+    sourceFilename: enriched.sourcefilename,
+    configContent: enriched.configContent,
+    configFilename: enriched.configfilename,
+    componentBundle: enriched.componentBundle,
+    importLfr: enriched.importLfr,
+  }).then(async (result) => {
+    applyCompileResult(record, result, req.session)
+    await attachEvaluation(record)
+    record.updated_at = new Date().toISOString()
+    jobRecords.set(record.id, record)
+    const cmd = (result.fluigiCmd || []).join(' ')
+    console.log(`[compile ${record.id}] ${record.status} rc=${result.returncode} ${cmd}`)
+  }).catch((err) => {
+    record.status = 'error'
+    record.error = err && err.message ? err.message : String(err)
+    record.log = record.error
+    record.updated_at = new Date().toISOString()
+    jobRecords.set(record.id, record)
+    console.error(`[compile ${record.id}] failed`, err)
+  })
+  return record.id
+}
+
+function startModalCompileJob (req, res, routePath, compileType) {
+  const enriched = enrichCompileRequest(req)
+  const record = createPendingJob(req.session, {
+    sourceFilename: enriched.sourcefilename,
+    workspaceId: enriched.workspaceId,
+    workspaceName: enriched.workspaceName,
+    compileType,
+    backend: 'modal',
+  })
+  const enrichedBody = {
+    ...req.body,
+    sourceContent: enriched.sourceContent,
+    configContent: enriched.configContent,
+    componentBundle: enriched.componentBundle,
+    importLfr: enriched.importLfr,
+    workspaceName: enriched.workspaceName,
+  }
   delete enrichedBody.workspaceLfrBundle
   const url = NEPTUNE_COMPILE_URL.replace(/\/$/, '') + routePath
   axios.post(url, enrichedBody, { timeout: 60000, validateStatus: () => true })
     .then((axRes) => {
-      // Modal returns the job id (a string) on success — record it for this session.
       if (axRes.status >= 200 && axRes.status < 300 && typeof axRes.data === 'string') {
-        recordSessionJob(req.session, axRes.data)
+        record.remoteJobId = axRes.data
+        jobRecords.set(record.id, record)
+        return res.status(axRes.status).json(record.id)
       }
+      record.status = 'error'
+      record.error = (axRes.data && (axRes.data.error || axRes.data.message)) || `compile HTTP ${axRes.status}`
+      record.log = typeof axRes.data === 'string' ? axRes.data : JSON.stringify(axRes.data || record.error)
+      record.updated_at = new Date().toISOString()
+      jobRecords.set(record.id, record)
       res.status(axRes.status).json(axRes.data)
     })
-    .catch((err) => res.status(502).json({ error: 'Neptune compute error', message: err.message }))
+    .catch((err) => {
+      record.status = 'error'
+      record.error = err.message || 'Neptune compute error'
+      record.log = record.error
+      record.updated_at = new Date().toISOString()
+      jobRecords.set(record.id, record)
+      res.status(502).json({ error: 'Neptune compute error', message: err.message })
+    })
 }
-app.post('/api/v1/fluigi', requireAuth, (req, res) => proxyCompile(req, res, '/api/v1/fluigi'))
-app.post('/api/v1/mushroommapper', requireAuth, (req, res) => proxyCompile(req, res, '/api/v1/mushroommapper'))
+
+function ingestRemoteJobPayload (record, payload, session) {
+  if (!record || !payload || typeof payload !== 'object') return record
+  const remoteStatus = String(payload.status || '').toLowerCase()
+  if (remoteStatus === 'running' || remoteStatus === 'pending' || remoteStatus === 'unknown') {
+    record.status = 'running'
+    return record
+  }
+  const outputs = payload.outputs && typeof payload.outputs === 'object' ? payload.outputs : {}
+  const primaryJson = payload.primaryJsonName && payload.primaryJsonText
+    ? { name: payload.primaryJsonName, basename: path.basename(payload.primaryJsonName), text: payload.primaryJsonText }
+    : pickPrimaryPrJson(outputs)
+  const result = {
+    returncode: payload.returncode == null
+      ? (remoteStatus === 'done' || remoteStatus === 'success' ? 0 : 1)
+      : payload.returncode,
+    stdout: payload.stdout || '',
+    stderr: payload.stderr || '',
+    log: payload.log || '',
+    outputs,
+    primaryJson,
+    fluigiCmd: payload.fluigiCmd || [],
+    error: payload.error || '',
+  }
+  applyCompileResult(record, result, session)
+  if (payload.evaluation) {
+    record.evaluation = toJobEvaluation(payload.evaluation) || record.evaluation
+  }
+  return record
+}
+
+async function refreshModalJob (record) {
+  if (!record || record.backend !== 'modal' || record.status !== 'running') return record
+  if (!NEPTUNE_COMPILE_URL || !record.remoteJobId) return record
+  const base = NEPTUNE_COMPILE_URL.replace(/\/$/, '')
+  try {
+    const axRes = await axios.get(base + '/api/v1/job', {
+      params: { id: record.remoteJobId },
+      timeout: 15000,
+      validateStatus: () => true,
+    })
+    ingestRemoteJobPayload(record, axRes.data || { status: 'unknown' }, record.session)
+    if (record.status === 'done' && !record.evaluation) {
+      await attachEvaluation(record)
+    }
+    record.updated_at = new Date().toISOString()
+    jobRecords.set(record.id, record)
+  } catch (_) {}
+  return record
+}
+
+function proxyCompile (req, res, routePath, compileType) {
+  if (NEPTUNE_COMPILE_URL) {
+    return startModalCompileJob(req, res, routePath, compileType)
+  }
+  const jobId = startLocalCompileJob(req, compileType)
+  res.json(jobId)
+}
+
+app.post('/api/v1/fluigi', requireAuth, (req, res) => proxyCompile(req, res, '/api/v1/fluigi', 'mint'))
+app.post('/api/v1/mushroommapper', requireAuth, (req, res) => proxyCompile(req, res, '/api/v1/mushroommapper', 'lfr'))
 app.get('/api/v1/jobs', requireAuth, (req, res) => {
-  // Return the job ids this session started; Solutions.vue fetches each via /api/v1/job.
   res.json(sessionJobs.get(sessionKey(req.session)) || [])
 })
-app.get('/api/v1/job', requireAuth, (req, res) => {
-  if (!NEPTUNE_COMPILE_URL) return res.json({ status: 'unknown' })
-  const base = NEPTUNE_COMPILE_URL.replace(/\/$/, '')
-  axios.get(base + '/api/v1/job', { params: req.query, timeout: 10000, validateStatus: () => true })
-    .then((axRes) => res.json(axRes.data || { status: 'unknown' }))
-    .catch(() => res.json({ status: 'unknown' }))
+app.get('/api/v1/job', requireAuth, async (req, res) => {
+  const jobId = String(req.query.id || req.query.jobid || '')
+  const record = jobRecords.get(jobId)
+  if (!record) return res.json({ status: 'unknown' })
+  if (record.backend === 'modal' && record.status === 'running') {
+    await refreshModalJob(record)
+  }
+  res.json(publicJobRecord(record))
 })
 
 function runCmd (cmd, args, options = {}) {
@@ -780,35 +1057,6 @@ app.put('/api/v1/componentLibrary', requireAuth, (req, res) => {
   res.json({ ok: true })
 })
 
-function buildJsonViewScript (jsonScript, lfrText, mintText) {
-  const sections = []
-  if (lfrText) {
-    sections.push(
-      '// LFR reference (read-only)',
-      ...String(lfrText).split('\n').map(line => `// ${line}`)
-    )
-  }
-  if (mintText) {
-    sections.push(
-      '// MINT reference (read-only)',
-      ...String(mintText).split('\n').map(line => `// ${line}`)
-    )
-  }
-  if (sections.length) sections.push('// JSON payload used by 3DuF')
-  return [...sections, String(jsonScript || '')].join('\n')
-}
-
-// Locate the single "primary" component-or-connection node in `jsonObj` for
-// the given DIY syntax. The match rule is entirely structure-driven and
-// works for any JSON file a user drops into Data/3DuF_component/default/JSON —
-// there is no hardcoded list of known syntaxes:
-//   1. Prefer a `components[*]` whose `entity` (case-insensitive) starts with
-//      the syntax name (so `Valve.json` → VALVE3D, `Port.json` → PORT, etc.).
-//   2. Otherwise prefer a `connections[*]` whose `entity` starts with the
-//      syntax name (so `Channel.json` → CHANNEL).
-//   3. Fall back to the first `components[0]` / `connections[0]` with params.
-// Returns the actual node reference, so callers can both read its params and
-// mutate them in place without re-walking the tree.
 function findDiySourceNode (syntax, jsonObj) {
   if (!jsonObj || typeof jsonObj !== 'object') return null
   const upper = data.sanitizeComponentSyntax(syntax).toUpperCase()
@@ -1021,34 +1269,56 @@ function formatScalar (v) {
   return JSON.stringify(v)
 }
 
-function buildLfrText (syntax, params) {
-  const safe = data.sanitizeComponentSyntax(syntax)
-  const upper = String(safe || 'component').toUpperCase()
-  const entries = Object.keys(params).sort().map(k => `${k}=${formatScalar(params[k])}`)
-  return [
-    '// Auto-generated from component DIY parameters.',
-    `${upper} ${safe || 'component'}_1 ${entries.join(' ')};`,
-    '',
-  ].join('\n')
-}
-
 function buildMintText (syntax, params) {
   const safe = data.sanitizeComponentSyntax(syntax)
   const lines = Object.keys(params).sort().map(k => `  ${k}: ${formatScalar(params[k])};`)
   return [
-    '// Auto-generated from component DIY parameters.',
-    `device ${safe || 'component'}_1 {`,
+    `DEVICE ${safe || 'component'}`,
+    '',
+    'LAYER FLOW',
     ...lines,
-    '}',
+    'END LAYER',
     '',
   ].join('\n')
 }
 
+function stripLibraryCommentKeys (jsonObj) {
+  if (!jsonObj || typeof jsonObj !== 'object' || Array.isArray(jsonObj)) return jsonObj
+  const skip = new Set(['_LFR_filename', '_LFR_source', '_MINT_filename', '_MINT_source'])
+  const next = {}
+  Object.keys(jsonObj).forEach((k) => {
+    if (!skip.has(k)) next[k] = jsonObj[k]
+  })
+  return next
+}
+
+function escapeRegExp (s) {
+  return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+/**
+ * Rewrite `key=value` tokens in a MINT snippet to match current DIY params.
+ * LFR is topology-only and is never patched this way.
+ */
+function applyParamsToMintText (mintText, params) {
+  let out = String(mintText || '')
+  if (!out.trim() || !params || typeof params !== 'object') return out
+  Object.keys(params).forEach((key) => {
+    const n = params[key]
+    if (!Number.isFinite(n) || !key) return
+    const re = new RegExp(`(\\b${escapeRegExp(key)}\\s*=\\s*)(-?\\d+(?:\\.\\d+)?)`, 'gi')
+    out = out.replace(re, `$1${formatScalar(n)}`)
+  })
+  return out
+}
+
 function buildComponentPayload (syntax, jsonObj, source) {
-  const params = pickEditableParams(syntax, jsonObj)
+  const cleaned = stripLibraryCommentKeys(jsonObj)
+  const params = pickEditableParams(syntax, cleaned)
   const lfrText = data.readTextIfExists(data.getComponentDefaultLfrPath(syntax))
-  const mintText = data.readTextIfExists(data.getComponentDefaultMintPath(syntax))
-  const jsonScript = JSON.stringify(jsonObj, null, 2)
+  const rawMint = data.readTextIfExists(data.getComponentDefaultMintPath(syntax))
+  const mintText = rawMint ? applyParamsToMintText(rawMint, params) : ''
+  const jsonScript = JSON.stringify(cleaned, null, 2)
   return {
     syntax: data.sanitizeComponentSyntax(syntax),
     name: data.sanitizeComponentSyntax(syntax),
@@ -1056,10 +1326,10 @@ function buildComponentPayload (syntax, jsonObj, source) {
     sourceType: 'default',
     showLfrMint: true,
     params,
-    lfrScript: lfrText || buildLfrText(syntax, params),
+    lfrScript: lfrText || '',
     mintScript: mintText || buildMintText(syntax, params),
     jsonScript,
-    jsonViewScript: buildJsonViewScript(jsonScript, lfrText, mintText),
+    jsonViewScript: jsonScript,
   }
 }
 
@@ -1280,4 +1550,10 @@ console.log('Bundled seed root:', data.SEED_ROOT, fs.existsSync(data.SEED_ROOT) 
 app.listen(PORT, () => {
   console.log('Neptune Data server running at http://localhost:' + PORT)
   console.log('Data folder:', data.DATA_ROOT)
+  console.log(
+    'Compile backend:',
+    NEPTUNE_COMPILE_URL
+      ? `Modal ${NEPTUNE_COMPILE_URL}`
+      : `local fluigi (${NEPTUNE_2026_ROOT})`,
+  )
 })

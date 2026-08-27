@@ -288,7 +288,10 @@ export default {
         guestStore.ensureExampleWorkspace()
         const ws = guestStore.getWorkspacesSortedForDashboard().find(w => String(w.name || '').trim() === EXAMPLE_WORKSPACE_NAME)
         if (ws && ws.files && ws.files.length) {
-          const f = ws.files.find(x => /\.lfr$/i.test(x.name)) || ws.files[0]
+          const f = ws.files.find(x => x.name === 'flow_and_control_demo.lfr')
+            || ws.files.find(x => x.name === 'flow_only_demo.lfr')
+            || ws.files.find(x => /\.lfr$/i.test(x.name))
+            || ws.files[0]
           const fullWs = guestStore.getWorkspace(ws._id) || ws
           this.$store.commit('SET_WORKSPACE', fullWs)
           this.$store.commit('SET_CURRENT_FILE', f.id)
@@ -993,13 +996,16 @@ export default {
         return
       }
 
+      const currentWorkspace = this.$store.getters.currentWorkspace || {}
+      const currentUser = this.$store.getters.currentUser || {}
       const data = {
         sourcefileid: this.fileobject.id,
         sourcefilename: this.fileobject.name,
-        configfileid: this.selectedconfig.id,
-        configfilename: this.selectedconfig.name,
-        workspace: this.$store.getters.currentWorkspace._id,
-        user: this.$store.getters.currentUser.email,
+        configfileid: this.selectedconfig && this.selectedconfig.id,
+        configfilename: this.selectedconfig && this.selectedconfig.name,
+        workspace: currentWorkspace._id,
+        workspaceName: currentWorkspace.name || '',
+        user: currentUser.email,
         componentBundle,
         sourceContent: this.code || '',
       }

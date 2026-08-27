@@ -58,72 +58,14 @@
           <div class="mt-1 workspace-section-title neptune-section-heading">
             Workspaces
           </div>
-          <v-spacer />
-          <v-tooltip v-if="isGuest" bottom>
-            <template v-slot:activator="{ on, attrs }">
-              <v-btn
-                small
-                color="success"
-                depressed
-                dark
-                class="mt-1 dashboard-guest-export-btn"
-                v-bind="attrs"
-                v-on="on"
-                @click="exportGuestWorkspace"
-              >
-                <v-icon left small color="white">mdi-download</v-icon>
-                Export workspaces
-              </v-btn>
-            </template>
-            <span>Export all workspaces and component library cache as a .zip backup.</span>
-          </v-tooltip>
-          <v-tooltip bottom>
-            <template v-slot:activator="{ on, attrs }">
-              <v-btn
-                small
-                depressed
-                dark
-                class="mt-1 ml-2 dashboard-guest-import-btn"
-                v-bind="attrs"
-                v-on="on"
-                @click="triggerImportZip"
-              >
-                <v-icon left small color="white">mdi-upload</v-icon>
-                Import workspaces
-              </v-btn>
-            </template>
-            <span>Restore workspaces and component library cache from a previously exported .zip file.</span>
-          </v-tooltip>
         </div>
         <div v-if="isGuest" class="guest-storage-hint mt-2">
           <span class="guest-storage-text text-no-wrap">
-            Guest data is stored in this browser. Export to a cache file and later restore both workspaces and component library from that file.
+            Guest data is stored in this browser. Use the sidebar Export / Import to back up and restore workspaces and the component library.
           </span>
         </div>
-        <input ref="importZipInput" type="file" accept=".zip,application/zip" style="display: none" @change="onImportZip">
       </v-col>
 
-      <v-dialog v-model="importConflictDialog" max-width="560px">
-        <v-card>
-          <v-card-title>Workspace conflicts detected</v-card-title>
-          <v-card-text>
-            The imported zip contains workspaces that already exist in your online account. Choose whether to overwrite them with the imported content.
-            <v-list dense class="mt-3">
-              <v-list-item v-for="(c, idx) in importConflicts" :key="idx">
-                <v-list-item-content>
-                  <v-list-item-title>{{ c.name }}</v-list-item-title>
-                </v-list-item-content>
-              </v-list-item>
-            </v-list>
-            <v-checkbox v-model="importOverwriteConfirmed" label="Overwrite these workspaces using the imported zip" class="mt-2" />
-          </v-card-text>
-          <v-card-actions>
-            <v-spacer />
-            <v-btn text color="primary" @click="closeImportConflictDialog">Cancel</v-btn>
-            <v-btn :disabled="!importOverwriteConfirmed" color="primary" @click="confirmImportOverwrite">Import and overwrite</v-btn>
-          </v-card-actions>
-        </v-card>
-      </v-dialog>
       <v-dialog v-model="namingDialog" max-width="520px" persistent>
         <v-card class="dashboard-naming-dialog">
           <v-card-title class="headline">Apply LFR naming convention?</v-card-title>
@@ -543,13 +485,16 @@
   import guestStore, { fileContentForZipExport } from '@/lib/guestStore'
   import { openAndLoadDeviceIn3DuF } from '@/lib/open3DuFPostMessage'
   import { validateAndNormalizeLfrName } from '@/lib/lfrNaming'
-  import JSZip from 'jszip'
 
   export default {
     name: 'DashboardDashboard',
 
     mounted: async function() {
         this.refreshworkspacedata()
+        this.$root.$on('neptune-backup-imported', this.refreshworkspacedata)
+    },
+    beforeDestroy () {
+      this.$root.$off('neptune-backup-imported', this.refreshworkspacedata)
     },
     activated () {
       this.refreshworkspacedata()
@@ -591,10 +536,6 @@
         ],
         exts: ['.mint', '.lfr']
         ,
-        importConflictDialog: false,
-        importConflicts: [],
-        importOverwriteConfirmed: false,
-        _pendingImportZipFile: null,
         /** When set, the Files section shows this workspace's files; null = collapsed (default on load / after leaving Dashboard). */
         dashboardFilesWorkspaceId: null,
         namingDialog: false,
@@ -761,248 +702,6 @@
           name: this.getFileDisplayName(file),
           workspaceid: (this.selectedworkspace && this.selectedworkspace._id) || undefined,
         })
-      },
-      triggerImportZip () {
-        const el = this.$refs.importZipInput
-        if (el) el.click()
-      },
-      closeImportConflictDialog () {
-        this.importConflictDialog = false
-        this.importOverwriteConfirmed = false
-        this.importConflicts = []
-        this._pendingImportZipFile = null
-      },
-      async confirmImportOverwrite () {
-        if (!this._pendingImportZipFile) return
-        await this.importZipToServer(this._pendingImportZipFile, { overwrite: true })
-        this.closeImportConflictDialog()
-        this.refreshworkspacedata()
-      },
-      async onImportZip (e) {
-        const file = e.target.files && e.target.files[0]
-        if (!file) return
-        // allow picking same file again later
-        try { e.target.value = '' } catch (_) {}
-
-        if (this.isGuest) {
-          // Reuse local guest import implementation
-          return this.onImportGuestFile({ target: { files: [file] } })
-        }
-
-        await this.importZipToServer(file, { overwrite: false })
-      },
-      async importZipToServer (file, { overwrite }) {
-        try {
-          const buf = await file.arrayBuffer()
-          const url = `/api/v1/importWorkspacesZip${overwrite ? '?overwrite=1' : '?dryRun=1'}`
-          await axios.post(url, buf, {
-            withCredentials: true,
-            headers: { 'Content-Type': 'application/zip' },
-          })
-
-          // dryRun with no conflicts, now apply (unless we already overwrote)
-          if (!overwrite) {
-            await axios.post('/api/v1/importWorkspacesZip', buf, {
-              withCredentials: true,
-              headers: { 'Content-Type': 'application/zip' },
-            })
-            this.refreshworkspacedata()
-          }
-        } catch (err) {
-          const status = err && err.response && err.response.status
-          const data = err && err.response && err.response.data
-          if (status === 409 && data && data.conflicts) {
-            this.importConflicts = data.conflicts
-            this.importOverwriteConfirmed = false
-            this._pendingImportZipFile = file
-            this.importConflictDialog = true
-            return
-          }
-          alert('Failed to import zip')
-        }
-      },
-      async exportGuestWorkspace () {
-        const data = guestStore.exportData()
-        const zip = new JSZip()
-
-        // Global index for IDs etc.
-        zip.file('index.json', JSON.stringify({
-          nextWorkspaceId: data.nextWorkspaceId,
-          nextFileId: data.nextFileId,
-        }, null, 2))
-
-        // Workspaces: each workspace in its own folder
-        data.workspaces.forEach((w, idx) => {
-          const safeName = (w.name || `workspace_${w._id || idx + 1}`).replace(/[^a-zA-Z0-9_-]/g, '_')
-          const folderName = `workspace_${w._id || (idx + 1)}_${safeName}`
-          const folder = zip.folder(folderName)
-          if (!folder) return
-
-          const meta = {
-            _id: w._id,
-            name: w.name,
-            notes: w.notes,
-            updated_at: w.updated_at,
-            created_at: w.created_at,
-          }
-          folder.file('metadata.json', JSON.stringify(meta, null, 2))
-
-          ;(w.files || []).forEach((f, fi) => {
-            const base = (f.name || `file_${fi + 1}`).replace(/[^a-zA-Z0-9_-]/g, '_')
-            const ext = f.ext && f.ext.startsWith('.') ? f.ext : (f.ext ? `.${f.ext}` : '')
-            const filename = `${base}${ext || '.txt'}`
-            folder.file(filename, fileContentForZipExport(f.content))
-          })
-        })
-
-        try {
-          const compRes = await axios.get('/api/v1/componentFiles', {
-            withCredentials: true,
-            headers: { 'Content-Type': 'application/json' },
-          })
-          zip.file('component_table.json', JSON.stringify(compRes.data || { components: [] }, null, 2))
-        } catch (_) {}
-
-        const blob = await zip.generateAsync({ type: 'blob' })
-        const a = document.createElement('a')
-        a.href = URL.createObjectURL(blob)
-        const date = new Date()
-        const stamp = [
-          date.getFullYear(),
-          String(date.getMonth() + 1).padStart(2, '0'),
-          String(date.getDate()).padStart(2, '0'),
-          '-',
-          String(date.getHours()).padStart(2, '0'),
-          String(date.getMinutes()).padStart(2, '0'),
-        ].join('')
-        a.download = `neptune_guest_workspace_${stamp}.zip`
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
-        URL.revokeObjectURL(a.href)
-      },
-      triggerImportGuestFile () {
-        this.$refs.guestImportInput && this.$refs.guestImportInput.click()
-      },
-      async onImportGuestFile (e) {
-        const file = e.target.files && e.target.files[0]
-        if (!file) return
-        try {
-          const zip = await JSZip.loadAsync(file)
-          const workspaces = []
-          let nextWorkspaceId = 1
-          let nextFileId = 1
-
-          // Read global index if present
-          if (zip.files['index.json']) {
-            try {
-              const indexStr = await zip.files['index.json'].async('string')
-              const index = JSON.parse(indexStr)
-              if (index.nextWorkspaceId) nextWorkspaceId = index.nextWorkspaceId
-              if (index.nextFileId) nextFileId = index.nextFileId
-            } catch (_) {}
-          }
-
-          let componentTable = null
-          if (zip.files['component_table.json']) {
-            try {
-              const tableStr = await zip.files['component_table.json'].async('string')
-              componentTable = JSON.parse(tableStr)
-            } catch (_) {
-              componentTable = null
-            }
-          }
-
-          const folderNames = Object.keys(zip.files)
-            .filter(name => name.endsWith('/'))
-            .filter(name => name.startsWith('workspace_'))
-
-          for (const folderName of folderNames) {
-            const metaFile = zip.file(`${folderName}metadata.json`)
-            if (!metaFile) continue
-            let meta
-            try {
-              const metaStr = await metaFile.async('string')
-              meta = JSON.parse(metaStr)
-            } catch (err) {
-              // eslint-disable-next-line no-console
-              console.error('Failed to parse workspace metadata', err)
-              continue
-            }
-
-            const files = []
-            Object.keys(zip.files)
-              .filter(name => name.startsWith(folderName) && name !== `${folderName}metadata.json` && !name.endsWith('/'))
-              .forEach((name, idx) => {
-                const entry = zip.files[name]
-                const short = name.substring(folderName.length)
-                const dot = short.lastIndexOf('.')
-                const fileBase = dot > 0 ? short.substring(0, dot) : short
-                const ext = dot > 0 ? short.substring(dot) : ''
-                files.push({
-                  id: String(nextFileId++),
-                  name: fileBase,
-                  ext,
-                  content: null,
-                  _entry: entry,
-                })
-              })
-
-            // Load file contents
-            for (const f of files) {
-              try {
-                // All workspace files are text-based
-                // eslint-disable-next-line no-await-in-loop
-                f.content = await f._entry.async('string')
-              } catch (err) {
-                f.content = ''
-              }
-              delete f._entry
-            }
-
-            workspaces.push({
-              _id: meta._id != null ? meta._id : String(nextWorkspaceId++),
-              name: meta.name || 'Guest Workspace',
-              notes: meta.notes || '',
-              files,
-              updated_at: meta.updated_at || new Date().toISOString(),
-              created_at: meta.created_at || undefined,
-            })
-          }
-
-          const payload = {
-            workspaces,
-            nextWorkspaceId,
-            nextFileId,
-          }
-
-          if (guestStore.importData(payload)) {
-            this.refreshworkspacedata()
-            this.$store.commit('SET_WORKSPACE', null)
-          }
-
-          // Restore custom component-library rows from cache zip.
-          if (componentTable && Array.isArray(componentTable.components)) {
-            const customRows = componentTable.components.filter(c => c && c.showLfrMint === false && c.jsonScript)
-            for (const row of customRows) {
-              try {
-                // eslint-disable-next-line no-await-in-loop
-                await axios.post('/api/v1/componentFiles/upload', {
-                  name: row.name || row.syntax || 'component',
-                  jsonText: row.jsonScript,
-                  syntax: row.syntax || undefined,
-                }, {
-                  withCredentials: true,
-                  headers: { 'Content-Type': 'application/json' },
-                })
-              } catch (_) {}
-            }
-          }
-        } catch (err) {
-          console.error('Import failed', err)
-        } finally {
-          e.target.value = ''
-        }
       },
       askToNormalizeLfrName (originalName, normalizedName) {
         return new Promise((resolve) => {
@@ -1585,27 +1284,6 @@
     #dashboard {
         font-size: var(--neptune-fs-body, 14pt);
     }
-    /* Workspace card action buttons: ensure icons are visible */
-    /* Match v-btn small (~13px) and keep both guest toolbar buttons visually identical */
-    #dashboard .dashboard-guest-export-btn,
-    #dashboard .dashboard-guest-import-btn {
-        font-weight: 600 !important;
-        text-transform: none !important;
-        letter-spacing: normal !important;
-        font-size: var(--neptune-fs-body, 14pt) !important;
-    }
-
-    #dashboard .dashboard-guest-import-btn {
-        background-color: #006994 !important;
-        border-color: #006994 !important;
-        color: #ffffff !important;
-    }
-
-    .theme--dark #dashboard .dashboard-guest-import-btn {
-        background-color: #00838f !important;
-        border-color: #00838f !important;
-    }
-
     /* "Workspaces" section heading: match Solutions "Jobs" card title size */
     #dashboard .workspace-section-title.neptune-section-heading {
         font-size: var(--neptune-fs-below-page-title) !important;
@@ -1880,11 +1558,6 @@
     @media (max-width: 1200px) {
         #dashboard .d-flex.align-center.flex-wrap {
             row-gap: 8px;
-        }
-
-        #dashboard .dashboard-guest-export-btn,
-        #dashboard .dashboard-guest-import-btn {
-            margin-left: 0 !important;
         }
     }
 

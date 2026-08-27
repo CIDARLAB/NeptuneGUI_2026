@@ -362,6 +362,53 @@ def build_fluigi_cmd(
     return cmd
 
 
+def _pick_primary_pr_json(outputs: dict) -> tuple[str, str] | None:
+    ranked: list[tuple[int, str]] = []
+    for name in outputs:
+        base = Path(name).name
+        if base == "component_library.json":
+            continue
+        if re.search(r"_from(LFR|MINT)_PR\.json$", base, re.I):
+            ranked.append((0, name))
+        elif re.search(r"_PR\.json$", base, re.I):
+            ranked.append((1, name))
+        elif base.lower().endswith(".json"):
+            ranked.append((2, name))
+    if not ranked:
+        return None
+    ranked.sort(key=lambda item: (item[0], item[1]))
+    name = ranked[0][1]
+    return name, outputs[name]
+
+
+def _collect_log_text(outputs: dict, stdout: str, stderr: str, extra_error: str = "") -> str:
+    parts: list[str] = []
+    for name in sorted(n for n in outputs if n.lower().endswith(".log")):
+        body = str(outputs.get(name) or "").strip()
+        if body:
+            parts.append(f"--- {Path(name).name} ---\n{body}")
+    std = str(stdout or "").strip()
+    err = str(stderr or "").strip()
+    if std:
+        parts.append(std)
+    if err:
+        parts.append(err)
+    if extra_error:
+        parts.append(str(extra_error))
+    text = "\n\n".join(parts)
+    return text[-400000:] if len(text) > 400000 else text
+
+
+def _compute_evaluation(pr_json_text: str, json_name: str) -> dict | None:
+    try:
+        from fluigi.evaluation_metric import _compute_metrics_from_design
+
+        design = json.loads(pr_json_text)
+        return _compute_metrics_from_design(design, json_name)
+    except Exception:
+        return None
+
+
 # ---------------------------------------------------------------------------
 # Compute function — spawned once per compile request
 # Runs in its own container with a long timeout
@@ -439,8 +486,9 @@ def run_compile(
 
             # Collect output files (JSON layout results)
             outputs: dict = {}
+            text_suffixes = {".json", ".log", ".mint", ".txt", ".csv", ".dot", ".lfr"}
             for f in output_dir.rglob("*"):
-                if f.is_file():
+                if f.is_file() and f.suffix.lower() in text_suffixes:
                     try:
                         outputs[str(f.relative_to(output_dir))] = f.read_text(encoding="utf-8")
                     except Exception:
@@ -454,12 +502,23 @@ def run_compile(
                 except Exception:
                     pass
 
+            primary = _pick_primary_pr_json(outputs)
+            log_text = _collect_log_text(outputs, result.stdout, result.stderr)
+            evaluation = None
+            if result.returncode == 0 and primary:
+                evaluation = _compute_evaluation(primary[1], Path(primary[0]).name)
+
+            success = result.returncode == 0 and primary is not None
             job_store[job_id] = {
-                "status": "done" if result.returncode == 0 else "error",
+                "status": "done" if success else "error",
                 "returncode": result.returncode,
                 "stdout": result.stdout[-20000:],
                 "stderr": result.stderr[-5000:],
+                "log": log_text,
                 "outputs": outputs,
+                "primaryJsonName": primary[0] if primary else "",
+                "primaryJsonText": primary[1] if primary else "",
+                "evaluation": evaluation,
                 "componentCount": len(component_bundle or []),
                 "componentJsonCount": (component_paths or {}).get("json_count", 0),
                 "componentLfrCount": (component_paths or {}).get("lfr_count", 0),
@@ -470,9 +529,13 @@ def run_compile(
             }
 
     except subprocess.TimeoutExpired:
-        job_store[job_id] = {"status": "error", "error": "compile timed out"}
+        job_store[job_id] = {
+            "status": "error",
+            "error": "compile timed out",
+            "log": "compile timed out",
+        }
     except Exception as exc:
-        job_store[job_id] = {"status": "error", "error": str(exc)}
+        job_store[job_id] = {"status": "error", "error": str(exc), "log": str(exc)}
 
 
 # ---------------------------------------------------------------------------
@@ -488,7 +551,13 @@ def api():
 
     def _spawn(body: dict, compile_type: str) -> str:
         job_id = str(uuid.uuid4())
-        job_store[job_id] = {"status": "running"}
+        job_store[job_id] = {
+            "status": "running",
+            "sourceFilename": body.get("sourcefilename") or "",
+            "workspaceId": body.get("workspace") or "",
+            "workspaceName": body.get("workspaceName") or "",
+            "compileType": compile_type,
+        }
         ext = "lfr" if compile_type == "lfr" else "mint"
         run_compile.spawn(
             job_id,

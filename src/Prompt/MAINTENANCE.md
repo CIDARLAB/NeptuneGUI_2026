@@ -17,7 +17,10 @@ For all `*/en2lfr_system.txt` files, keep these invariant blocks semantically co
 1. One fenced LFR-only output (no extra text, no MINT/JSON).
 2. Neptune LFR grammar essentials aligned with GUI References / `LFR_READABLE_SYNTAX_SPEC_V2.md` (module/ports/declarations/assign/distribute/imports), summarized in `LFR_SYNTAX_MANUAL.txt`.
 3. Module port list uses commas between finput/foutput/control groups inside `module name( ... )` — never semicolons in the header.
-4. Hard syntax rules against common LLM invents:
+4. Hard syntax rules against common LLM invents — place each rule
+   **next to the feature it constrains** (mix/`#MAP` together in LFR
+   reference; backtick-import form inside Imports, immediately after
+   How users send requests). Do not append them only at Final self-check:
    - metering uses `%` only (never `@`),
    - ports are only `finput`/`foutput`/`control` (never `cinput`),
    - control routing uses `distribute@(ctrl)` (never ternary `?:`),
@@ -25,7 +28,11 @@ For all `*/en2lfr_system.txt` files, keep these invariant blocks semantically co
    - `#MAP` placement: inside the module body, immediately above the `assign` that uses `~` — never before `module`.
    - dialect boundaries (`finput`/`foutput`/`control` + `assign` only; no helper functions),
    - brace-split / no tautological assigns,
-   - backtick-import + named `.port(net)` maps when reusing modules.
+   - backtick-import + named `.port(net)` maps when reusing modules;
+     import line is only `` `import "<path>.lfr" `` (no `from`, no module name);
+     reject `import Name from "…"` and `` `import Name from "…" ``.
+   - ordinary mix uses binary `+` only; do not default to `~(a+b)` /
+     `#MAP "MIXER" "~"` unless English asks for a named technology / unary process.
 5. Benchmark-aligned generation rules:
    - preserve interface counts and widths,
    - drive all outputs,
@@ -52,7 +59,7 @@ Upload-and-use workflow (all providers):
 4. **In the same edit pass**, keep these three locations aligned (source of truth: `Neptune_2026/Prompt/`):
    - `Neptune_2026/Prompt/`
    - `NeptuneGUI_2026/src/Prompt/`
-   - `Neptune_2026/prompt_test/` exported packs (`.zip` for Claude/GPT/Gemini, `.md` for Qwen/DeepSeek)
+   - `Quick_Examples/prompt_test/prompt_packages/` exported packs (`.zip` for Claude/GPT/Gemini, `.md` for Qwen/DeepSeek)
 5. Smoke-test with at least these cases:
    - fan-out from one storage to multiple outputs,
    - N-bit demux routing with case branches,
@@ -60,9 +67,10 @@ Upload-and-use workflow (all providers):
    - multi-stage aggregation pipeline,
    - droplet metering with `%` (reject `@`),
    - control mux via `distribute` (reject ternary/`cinput`),
-   - optional `#MAP "MIXER" "~"` vs bare `~` (reject `#MAP flow MIXER`).
+   - ordinary mix via `+` only; reject decorative `~(a+b)` / invented `#MAP "MIXER" "~"`.
+   - when `#MAP` is required: quoted form + body placement (reject `#MAP flow MIXER`, file-top `#MAP`).
    - brace-split (`{a,b} = s / 2`) and reject `assign a, b = ...` / `assign x = x`.
-   - backtick-import + named port maps; reject bare `import` and hierarchical `u.port=`.
+   - backtick-import path-only lines; reject bare `import`, `import Name from`, and hierarchical `u.port=`.
    - dialect boundaries: reject `fluid`/`output fluid` and bare assignments.
 6. If one provider underperforms, add only a thin provider patch; do not fork core rules.
 
@@ -92,7 +100,7 @@ When Neptune docs or compiler behavior changes, update prompt package in the sam
 3. `Prompt/LFR_SYNTAX_MANUAL.txt` and `Prompt/MINT_SYNTAX_MANUAL.txt` (distill References/V2 for LLM packs)
 4. Shared **LFR syntax norms** block in all five `*/en2lfr_system.txt` files
 5. `Prompt/DEVELOPER_ENTRY_POINTS.txt` (wiki paths and entry points)
-6. Keep `Neptune_2026/Prompt/`, `NeptuneGUI_2026/src/Prompt/`, and `prompt_test/` packs aligned in the same edit pass
+6. Keep `Neptune_2026/Prompt/`, `NeptuneGUI_2026/src/Prompt/`, and `Quick_Examples/prompt_test/prompt_packages/` aligned in the same edit pass
 
 ## Versioning notes
 - Treat benchmark-aligned blocks as "shared contract".

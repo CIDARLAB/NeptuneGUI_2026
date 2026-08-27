@@ -72,7 +72,7 @@
                 </div>
               </template>
               <template v-slot:item.jsonScript="{ item }">
-                <v-btn small text color="primary" @click="openFileView(item, 'json')">View</v-btn>
+                <v-btn small text color="primary" @click="openFileView(item, 'lfr')">View</v-btn>
               </template>
 
               <template v-slot:item.threeDuF="{ item }">
@@ -106,26 +106,6 @@
                     </v-btn>
                   </template>
                   <span>DIY this component — edit numeric parameters</span>
-                </v-tooltip>
-              </template>
-
-              <template v-slot:item.export="{ item }">
-                <v-tooltip bottom>
-                  <template v-slot:activator="{ on, attrs }">
-                    <v-btn
-                      small
-                      class="export-files-btn white--text"
-                      color="success"
-                      depressed
-                      dark
-                      v-bind="attrs"
-                      v-on="on"
-                      @click="exportAllFiles(item)"
-                    >
-                      Yes
-                    </v-btn>
-                  </template>
-                  <span>Export this component’s JSON as a .json file</span>
                 </v-tooltip>
               </template>
 
@@ -175,7 +155,22 @@
             class="readonly-file-textarea"
           />
         </v-card-text>
-        <v-card-actions>
+        <v-card-actions class="component-library-file-dialog-actions">
+          <v-btn
+            text
+            :color="fileDialogKind === 'lfr' ? 'primary' : 'grey darken-1'"
+            @click="setFileDialogKind('lfr')"
+          >LFR</v-btn>
+          <v-btn
+            text
+            :color="fileDialogKind === 'mint' ? 'primary' : 'grey darken-1'"
+            @click="setFileDialogKind('mint')"
+          >MINT</v-btn>
+          <v-btn
+            text
+            :color="fileDialogKind === 'json' ? 'primary' : 'grey darken-1'"
+            @click="setFileDialogKind('json')"
+          >JSON</v-btn>
           <v-spacer />
           <v-btn text color="success" @click="exportCurrentFile">Export</v-btn>
           <v-btn text color="error" @click="closeFileDialog">Close</v-btn>
@@ -270,10 +265,35 @@
 <script>
 import axios from 'axios'
 import { openAndLoadDeviceIn3DuF } from '@/lib/open3DuFPostMessage'
+import { exportFilenameStamp } from '../../utils'
 import {
   LFR_NAMING_SPEC_URL,
   validateAndNormalizeLfrName,
 } from '@/lib/lfrNaming'
+
+const LIBRARY_JSON_COMMENT_KEYS = ['_LFR_filename', '_LFR_source', '_MINT_filename', '_MINT_source']
+
+function cleanLibraryJsonText (raw) {
+  let text = ''
+  if (raw && typeof raw === 'object') {
+    try { text = JSON.stringify(raw, null, 2) } catch (_) { text = '' }
+  } else {
+    text = String(raw == null ? '' : raw)
+  }
+  if (!text) return ''
+  const withoutLineComments = text
+    .split('\n')
+    .filter(line => !String(line).trim().startsWith('//'))
+    .join('\n')
+  try {
+    const obj = JSON.parse(withoutLineComments)
+    if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
+      LIBRARY_JSON_COMMENT_KEYS.forEach((k) => { delete obj[k] })
+      return JSON.stringify(obj, null, 2)
+    }
+  } catch (_) {}
+  return withoutLineComments.trim() || text
+}
 
 export default {
   name: 'Library',
@@ -285,16 +305,17 @@ export default {
       snackbarColor: 'success',
       tableHeaders: [
         { text: 'Component Syntax', value: 'name', sortable: true, width: '220px' },
-        { text: 'JSON file', value: 'jsonScript', sortable: false, width: '120px', align: 'center' },
+        { text: 'LFR/MINT/JSON', value: 'jsonScript', sortable: false, width: '150px', align: 'center' },
         { text: '3DuF visualization', value: 'threeDuF', sortable: false, width: '180px', align: 'center' },
         { text: 'DIY this component', value: 'diy', sortable: false, width: '200px', align: 'center' },
-        { text: 'Export JSON', value: 'export', sortable: false, width: '150px', align: 'center' },
         { text: 'Remove', value: 'remove', sortable: false, width: '110px', align: 'center' },
       ],
       fileDialog: false,
       fileDialogTitle: '',
       fileDialogContent: '',
       fileDialogFileName: '',
+      fileDialogItem: null,
+      fileDialogKind: '',
       diyDialog: false,
       diyBusy: false,
       diyComponent: null,
@@ -361,6 +382,10 @@ export default {
   },
   mounted () {
     this.loadComponents()
+    this.$root.$on('neptune-backup-imported', this.loadComponents)
+  },
+  beforeDestroy () {
+    this.$root.$off('neptune-backup-imported', this.loadComponents)
   },
   methods: {
     apiConfig () {
@@ -397,7 +422,11 @@ export default {
       try {
         const res = await axios.get('/api/v1/componentFiles', this.apiConfig())
         const list = (res.data && Array.isArray(res.data.components)) ? res.data.components : []
-        this.components = list
+        this.components = list.map((c) => {
+          if (!c) return c
+          const jsonScript = cleanLibraryJsonText(c.jsonScript || c.jsonViewScript || '')
+          return Object.assign({}, c, { jsonScript, jsonViewScript: jsonScript })
+        })
       } catch (err) {
         const status = err && err.response && err.response.status
         if (status === 401 && !this.guestSessionBootstrapped) {
@@ -435,22 +464,34 @@ export default {
       }
     },
     openFileView (item, type) {
+      this.fileDialogItem = item
+      this.fileDialogKind = type || 'lfr'
+      this.syncFileDialogFromItem()
+      this.fileDialog = true
+    },
+    setFileDialogKind (kind) {
+      this.fileDialogKind = kind
+      this.syncFileDialogFromItem()
+    },
+    syncFileDialogFromItem () {
+      const item = this.fileDialogItem
+      if (!item) return
       const syntax = item.syntax || 'component'
       const displayName = item.name || syntax
-      if (type === 'lfr') {
-        this.fileDialogTitle = `LFR file (${syntax})`
-        this.fileDialogContent = item.lfrScript || ''
-        this.fileDialogFileName = `${syntax}.lfr`
-      } else if (type === 'mint') {
-        this.fileDialogTitle = `MINT file (${syntax})`
-        this.fileDialogContent = item.mintScript || ''
+      const kind = this.fileDialogKind || 'lfr'
+      if (kind === 'mint') {
+        this.fileDialogTitle = `MINT file (${displayName})`
+        this.fileDialogContent = item.mintScript || '// No MINT for this component.'
         this.fileDialogFileName = `${syntax}.mint`
-      } else {
+      } else if (kind === 'json') {
         this.fileDialogTitle = `JSON file (${displayName})`
-        this.fileDialogContent = item.jsonViewScript || item.jsonScript || ''
+        this.fileDialogContent = cleanLibraryJsonText(item.jsonScript || item.jsonViewScript || '')
         this.fileDialogFileName = `${syntax}.json`
+      } else {
+        this.fileDialogTitle = `LFR file (${displayName})`
+        this.fileDialogContent = item.lfrScript || '// No LFR for this component.'
+        this.fileDialogFileName = `${syntax}.lfr`
       }
-      this.fileDialog = true
     },
     triggerJsonImport () {
       const el = this.$refs.jsonImportInput
@@ -547,6 +588,8 @@ export default {
       this.fileDialogTitle = ''
       this.fileDialogContent = ''
       this.fileDialogFileName = ''
+      this.fileDialogItem = null
+      this.fileDialogKind = ''
     },
     saveBlobAsFile (filename, blob) {
       const url = URL.createObjectURL(blob)
@@ -563,15 +606,33 @@ export default {
       this.saveBlobAsFile(filename, blob)
     },
     exportCurrentFile () {
+      const item = this.fileDialogItem
+      const kind = this.fileDialogKind || 'json'
+      if (item) {
+        this.exportLibraryFile(item, kind)
+        return
+      }
       if (!this.fileDialogFileName) return
       const isJson = /\.json$/i.test(this.fileDialogFileName)
-      this.exportTextFile(this.fileDialogFileName, this.fileDialogContent, isJson ? 'application/json' : 'text/plain')
+      const content = isJson ? cleanLibraryJsonText(this.fileDialogContent) : this.fileDialogContent
+      this.exportTextFile(this.fileDialogFileName, content, isJson ? 'application/json' : 'text/plain')
     },
-    exportAllFiles (item) {
-      const syntax = item.syntax || 'component'
-      const content = item.jsonScript || ''
-      const stamp = new Date().toISOString().replace(/[:.]/g, '-')
-      this.exportTextFile(`${syntax}_${stamp}.json`, content, 'application/json')
+    exportLibraryFile (item, kind) {
+      const syntax = (item && item.syntax) || 'component'
+      const stamp = exportFilenameStamp()
+      if (kind === 'mint') {
+        this.exportTextFile(`${syntax}_${stamp}.mint`, (item && item.mintScript) || '', 'text/plain')
+        return
+      }
+      if (kind === 'lfr') {
+        this.exportTextFile(`${syntax}_${stamp}.lfr`, (item && item.lfrScript) || '', 'text/plain')
+        return
+      }
+      this.exportTextFile(
+        `${syntax}_${stamp}.json`,
+        cleanLibraryJsonText((item && (item.jsonScript || item.jsonViewScript)) || ''),
+        'application/json'
+      )
     },
     openDiyDialog (item) {
       this.diyComponent = item
@@ -589,6 +650,8 @@ export default {
     },
     updateComponentInList (nextComponent) {
       if (!nextComponent || !nextComponent.syntax) return
+      const jsonScript = cleanLibraryJsonText(nextComponent.jsonScript || nextComponent.jsonViewScript || '')
+      nextComponent = Object.assign({}, nextComponent, { jsonScript, jsonViewScript: jsonScript })
       const idx = this.components.findIndex(c => String(c.syntax).toLowerCase() === String(nextComponent.syntax).toLowerCase())
       if (idx === -1) return
       this.$set(this.components, idx, nextComponent)
@@ -597,6 +660,14 @@ export default {
       const src = (nextComponent.params && typeof nextComponent.params === 'object') ? nextComponent.params : {}
       Object.keys(src).forEach((k) => { next[k] = String(src[k]) })
       this.diyForm = next
+      if (
+        this.fileDialog &&
+        this.fileDialogItem &&
+        String(this.fileDialogItem.syntax).toLowerCase() === String(nextComponent.syntax).toLowerCase()
+      ) {
+        this.fileDialogItem = nextComponent
+        this.syncFileDialogFromItem()
+      }
     },
     buildNumericParamsFromForm () {
       const params = {}
@@ -625,7 +696,7 @@ export default {
         .then((res) => {
           if (res.data && res.data.component) {
             this.updateComponentInList(res.data.component)
-            this.showSnack('DIY parameters saved. LFR/MINT/JSON refreshed from tmp values.', 'success')
+            this.showSnack('DIY parameters saved. JSON and MINT updated; LFR is unchanged.', 'success')
           }
         })
         .catch((err) => {
@@ -1104,11 +1175,6 @@ export default {
 
 .diy-btn >>> .v-btn__content {
   font-size: var(--neptune-fs-body, 14pt) !important;
-  text-transform: none !important;
-  letter-spacing: normal !important;
-}
-
-.export-files-btn {
   text-transform: none !important;
   letter-spacing: normal !important;
 }
