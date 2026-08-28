@@ -35,7 +35,7 @@ const PORT = process.env.PORT || 8080
 const NEPTUNE_2026_ROOT = process.env.NEPTUNE_2026_ROOT || path.resolve(__dirname, '..', '..', 'Neptune_2026')
 
 app.use(cookieParser())
-app.use(express.json({ limit: '10mb' }))
+app.use(express.json({ limit: '50mb' }))
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*')
   res.setHeader('Access-Control-Allow-Credentials', 'true')
@@ -306,45 +306,69 @@ app.get('/api/v1/exportWorkspacesZip', requireAuth, async (req, res) => {
     const zip = new JSZip()
     const workspaces = data.getWorkspaces(req.session) || []
     const componentLibrary = data.getComponentLibrary(req.session) || { customComponents: [] }
+    const jobs = sessionJobRecords(req.session)
+    const withFiles = workspaces.map((w) => ({
+      ...w,
+      files: data.getFiles(req.session, w._id) || [],
+    }))
+
+    const merged = (() => {
+      const list = withFiles.map((w) => ({ ...w, files: [...(w.files || [])] }))
+      const byId = new Map(list.map((w) => [String(w._id), w]))
+      const byName = new Map(list.map((w) => [String(w.name || '').trim().toLowerCase(), w]))
+      jobs.forEach((job) => {
+        const w = byId.get(String(job.workspaceId || '')) ||
+          byName.get(String(job.workspaceName || '').trim().toLowerCase())
+        if (!w) return
+        const names = new Set((w.files || []).map((f) => f && f.name).filter(Boolean))
+        const extras = []
+        if (Array.isArray(job.generatedFiles)) extras.push(...job.generatedFiles)
+        if (job.outputFileName && job.jsonText) extras.push({ name: job.outputFileName, content: job.jsonText })
+        if (job.logFileName && job.log) extras.push({ name: job.logFileName, content: job.log })
+        extras.forEach((f) => {
+          if (!f || !f.name || names.has(f.name)) return
+          names.add(f.name)
+          w.files.push({ name: f.name, content: f.content, ext: path.extname(f.name) })
+        })
+      })
+      return list
+    })()
 
     zip.file('index.json', JSON.stringify({
       exportedAt: new Date().toISOString(),
       user: req.session && req.session.id ? String(req.session.id) : undefined,
-      workspaceCount: workspaces.length,
+      workspaceCount: merged.length,
     }, null, 2))
+    zip.file('jobs.json', JSON.stringify(jobs, null, 2))
+    zip.file('component_library.json', JSON.stringify(componentLibrary, null, 2))
+    try {
+      zip.file('component_table.json', JSON.stringify({
+        components: listComponentFilePayloads(req.session),
+      }, null, 2))
+    } catch (_) {}
 
-    const safe = (s) => String(s || '').replace(/[^a-zA-Z0-9_-]/g, '_')
-
-    for (let i = 0; i < workspaces.length; i++) {
-      const w = workspaces[i]
+    merged.forEach((w, i) => {
       const wid = w && w._id != null ? String(w._id) : String(i + 1)
-      const folderName = `workspace_${wid}_${safe(w && w.name ? w.name : 'Workspace')}`
-      const folder = zip.folder(folderName)
-      if (!folder) continue
-
+      const raw = (w && w.name) || 'Workspace'
+      const safe = String(raw).replace(/[/\\]/g, '_').replace(/[^a-zA-Z0-9._-]/g, '_')
+      const folder = zip.folder(`workspace_${wid}_${safe || 'Workspace'}`)
+      if (!folder) return
       folder.file('metadata.json', JSON.stringify({
         _id: wid,
         name: w && w.name ? w.name : 'Workspace',
         notes: w && w.notes ? w.notes : '',
         updated_at: w && w.updated_at ? w.updated_at : null,
       }, null, 2))
-
-      const files = data.getFiles(req.session, wid) || []
-      for (let j = 0; j < files.length; j++) {
-        const f = files[j]
-        const base = safe(f && f.name ? f.name : `file_${j + 1}`)
-        const ext = f && f.ext ? (String(f.ext).startsWith('.') ? String(f.ext) : `.${String(f.ext)}`) : ''
-        folder.file(`${base}${ext || '.txt'}`, (f && f.content) ? String(f.content) : '')
-      }
-    }
-
-    // Keep component library table state in workspace export cache.
-    zip.file('component_library.json', JSON.stringify(componentLibrary, null, 2))
+      ;(w.files || []).forEach((f, j) => {
+        const name = zipSafeFileName(f && f.name ? f.name : `file_${j + 1}`)
+        if (!name || name === 'metadata.json') return
+        const kind = backupFolderForFile(name)
+        folder.file(`${kind}/${name}`, f && f.content != null ? String(f.content) : '')
+      })
+    })
 
     const buf = await zip.generateAsync({ type: 'nodebuffer' })
-    const d = new Date()
-    const p = (n) => String(n).padStart(2, '0')
-    const stamp = `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}${p(d.getHours())}${p(d.getMinutes())}`
+    const stamp = filenameStamp(new Date())
     res.setHeader('Content-Type', 'application/zip')
     res.setHeader('Content-Disposition', `attachment; filename="neptune_${stamp}.zip"`)
     res.send(buf)
@@ -383,9 +407,16 @@ app.post(
         }
       }
 
-      const folderNames = Object.keys(zip.files)
-        .filter(name => name.endsWith('/'))
-        .filter(name => name.startsWith('workspace_'))
+      let importedJobs = []
+      if (zip.files['jobs.json']) {
+        try {
+          importedJobs = JSON.parse(await zip.files['jobs.json'].async('string'))
+        } catch (_) {
+          importedJobs = []
+        }
+      }
+
+      const folderNames = listWorkspaceFolderNames(zip)
 
       const imported = []
       for (const folderName of folderNames) {
@@ -444,10 +475,10 @@ app.post(
           const entry = zip.file(`${w.folderName}${rel}`)
           if (!entry) continue
           const content = await entry.async('string')
-          const dot = rel.lastIndexOf('.')
-          const base = dot > 0 ? rel.substring(0, dot) : rel
-          const ext = dot > 0 ? rel.substring(dot) : ''
-          const f = data.createFile(req.session, newWs._id, base, ext)
+          const fileName = fileNameFromZipRel(rel)
+          if (!fileName || fileName === 'metadata.json') continue
+          const ext = path.extname(fileName)
+          const f = data.createFile(req.session, newWs._id, fileName, ext)
           if (!f) continue
           data.updateFileContent(req.session, newWs._id, f.id, content)
         }
@@ -455,6 +486,10 @@ app.post(
 
       if (importedComponentLibrary && typeof importedComponentLibrary === 'object') {
         data.saveComponentLibrary(req.session, importedComponentLibrary)
+      }
+
+      if (Array.isArray(importedJobs) && importedJobs.length) {
+        restoreSessionJobs(req.session, importedJobs, { replace: true })
       }
 
       return res.json({ ok: true, importedCount: created.length, overwritten, created })
@@ -553,10 +588,145 @@ function publicJobRecord (record) {
     jsonText: record.jsonText || '',
     outputFileName: record.outputFileName || '',
     logFileName: record.logFileName || '',
+    generatedFiles: Array.isArray(record.generatedFiles) ? record.generatedFiles : [],
     error: record.error || '',
     fluigiCmd: record.fluigiCmd || [],
     backend: record.backend || '',
   }
+}
+
+function filenameStamp (date = new Date()) {
+  const d = date instanceof Date ? date : new Date(date)
+  const p = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}${p(d.getHours())}${p(d.getMinutes())}`
+}
+
+function stampGeneratedFilename (filename, stamp) {
+  const baseName = path.basename(String(filename || 'output'))
+  const ext = path.extname(baseName)
+  const stem = ext ? baseName.slice(0, -ext.length) : baseName
+  if (/\(\d{12}\)$/.test(stem)) return baseName
+  return `${stem}(${stamp})${ext}`
+}
+
+function evaluationFileNameFromPr (outputFileName, stamp) {
+  const base = String(outputFileName || 'design').replace(/\.json$/i, '')
+  const m = base.match(/^(.*)\((\d{12})\)$/)
+  if (m) return `${m[1]}_evaluation(${m[2]}).json`
+  return `${base}_evaluation(${stamp}).json`
+}
+
+function listWorkspaceFolderNames (zip) {
+  const folders = new Set()
+  Object.keys((zip && zip.files) || {}).forEach((name) => {
+    const m = String(name).match(/^(workspace_[^/]+)\/?/)
+    if (m) folders.add(`${m[1]}/`)
+  })
+  return [...folders]
+}
+
+function sessionJobRecords (session) {
+  const ids = sessionJobs.get(sessionKey(session)) || []
+  return ids.map((id) => jobRecords.get(id)).filter(Boolean).map(publicJobRecord)
+}
+
+function relinkJobFiles (session, workspaceId, job) {
+  if (!session || !workspaceId) return []
+  const files = data.getFiles(session, workspaceId) || []
+  const ids = []
+  const wanted = new Set()
+  ;(job.generatedFiles || []).forEach((f) => { if (f && f.name) wanted.add(f.name) })
+  if (job.outputFileName) wanted.add(job.outputFileName)
+  if (job.logFileName) wanted.add(job.logFileName)
+  files.forEach((f) => {
+    if (f && wanted.has(f.name) && f.id) ids.push(f.id)
+  })
+  return ids
+}
+
+function restoreSessionJobs (session, jobs, { replace } = { replace: true }) {
+  const key = sessionKey(session)
+  if (replace) {
+    const oldIds = sessionJobs.get(key) || []
+    oldIds.forEach((id) => jobRecords.delete(id))
+    sessionJobs.set(key, [])
+  }
+  const workspaces = data.getWorkspaces(session) || []
+  const byName = new Map(workspaces.map((w) => [String(w.name || '').trim().toLowerCase(), w]))
+  const restored = []
+  ;(Array.isArray(jobs) ? jobs : []).forEach((job) => {
+    if (!job || typeof job !== 'object') return
+    const name = String(job.workspaceName || '').trim()
+    const hit = name ? byName.get(name.toLowerCase()) : null
+    const workspaceId = hit ? hit._id : (job.workspaceId || null)
+    const generatedFiles = Array.isArray(job.generatedFiles) ? job.generatedFiles : []
+    generatedFiles.forEach((f) => {
+      if (!f || !f.name || f.content == null || !workspaceId) return
+      upsertWorkspaceFile(session, workspaceId, f.name, f.content)
+    })
+    if (job.outputFileName && job.jsonText && workspaceId) {
+      upsertWorkspaceFile(session, workspaceId, job.outputFileName, job.jsonText)
+    }
+    if (job.logFileName && job.log && workspaceId) {
+      upsertWorkspaceFile(session, workspaceId, job.logFileName, job.log)
+    }
+    const id = uuidv4()
+    const record = {
+      id,
+      status: job.status || 'done',
+      returncode: job.returncode,
+      sourceFilename: job.sourceFilename || '',
+      workspaceId,
+      workspaceName: job.workspaceName || (hit && hit.name) || '',
+      compileType: job.compileType || '',
+      created_at: job.created_at || new Date().toISOString(),
+      updated_at: job.updated_at || new Date().toISOString(),
+      evaluation: job.evaluation || null,
+      log: job.log || '',
+      jsonText: job.jsonText || '',
+      outputFileName: job.outputFileName || '',
+      logFileName: job.logFileName || '',
+      generatedFiles,
+      error: job.error || '',
+      fluigiCmd: Array.isArray(job.fluigiCmd) ? job.fluigiCmd : [],
+      backend: job.backend || 'imported',
+      session,
+    }
+    record.files = relinkJobFiles(session, workspaceId, record)
+    jobRecords.set(id, record)
+    recordSessionJob(session, id)
+    restored.push(id)
+  })
+  return restored
+}
+
+function backupFolderForFile (fileName) {
+  const n = String(fileName || '')
+  const lower = n.toLowerCase()
+  if (/evaluation/i.test(n) && lower.endsWith('.json')) return 'evaluation'
+  if (lower.endsWith('.lfr')) return 'LFR'
+  if (lower.endsWith('.mint')) return 'MINT'
+  if (lower.endsWith('.json')) return 'JSON'
+  if (lower.endsWith('.log')) return 'log'
+  return 'other'
+}
+
+function zipSafeFileName (name) {
+  const base = String(name == null ? 'file' : name).split(/[/\\]/).pop() || 'file'
+  return base.replace(/\0/g, '')
+}
+
+function fileNameFromZipRel (rel) {
+  const parts = String(rel || '').split('/').filter(Boolean)
+  return zipSafeFileName(parts[parts.length - 1] || rel || 'file')
+}
+
+function shouldSaveCompileOutput (relPath) {
+  const base = path.basename(String(relPath || ''))
+  const ext = path.extname(base).toLowerCase()
+  if (base === 'component_library.json') return false
+  if (ext === '.dot') return false
+  return ['.json', '.mint', '.log', '.txt'].includes(ext)
 }
 
 function upsertWorkspaceFile (session, workspaceId, fileName, content) {
@@ -634,6 +804,7 @@ function createPendingJob (session, meta) {
 
 function applyCompileResult (record, result, session) {
   const now = new Date().toISOString()
+  const stamp = filenameStamp(new Date())
   record.updated_at = now
   record.returncode = result.returncode
   record.fluigiCmd = result.fluigiCmd || record.fluigiCmd
@@ -641,24 +812,47 @@ function applyCompileResult (record, result, session) {
   record.error = result.error || ''
   const success = result.returncode === 0 && result.primaryJson && result.primaryJson.text
   record.status = success ? 'done' : 'error'
+  const generatedFiles = []
   if (success) {
     record.jsonText = result.primaryJson.text
-    record.outputFileName = result.primaryJson.basename || path.basename(result.primaryJson.name)
+    const rawJsonName = result.primaryJson.basename || path.basename(result.primaryJson.name)
+    record.outputFileName = stampGeneratedFilename(rawJsonName, stamp)
   }
-  const fileIds = []
-  if (session && record.workspaceId) {
-    if (success && record.outputFileName && record.jsonText) {
-      const jsonFile = upsertWorkspaceFile(session, record.workspaceId, record.outputFileName, record.jsonText)
-      if (jsonFile && jsonFile.id) fileIds.push(jsonFile.id)
-    }
-    if (record.log) {
-      const logName = record.logFileName || logFileNameFor(record.sourceFilename, record.compileType)
-      record.logFileName = logName
-      const logFile = upsertWorkspaceFile(session, record.workspaceId, logName, record.log)
-      if (logFile && logFile.id) fileIds.push(logFile.id)
-    }
+  record.logFileName = stampGeneratedFilename(
+    record.logFileName || logFileNameFor(record.sourceFilename, record.compileType),
+    stamp
+  )
+
+  const seen = new Set()
+  const saveNamed = (fileName, content) => {
+    if (!fileName || content == null) return
+    if (seen.has(fileName)) return
+    seen.add(fileName)
+    generatedFiles.push({ name: fileName, content: String(content) })
+    if (!session || !record.workspaceId) return
+    const saved = upsertWorkspaceFile(session, record.workspaceId, fileName, content)
+    if (saved && saved.id) record.files = [...(record.files || []), saved.id]
   }
-  record.files = fileIds
+
+  record.files = []
+  if (success && record.outputFileName && record.jsonText) {
+    saveNamed(record.outputFileName, record.jsonText)
+  }
+  Object.keys(result.outputs || {}).forEach((rel) => {
+    if (!shouldSaveCompileOutput(rel)) return
+    const ext = path.extname(rel).toLowerCase()
+    if (ext === '.log') return
+    const base = path.basename(rel)
+    if (success && record.outputFileName && ext === '.json') {
+      const unstamped = record.outputFileName.replace(/\(\d{12}\)(?=\.[^.]+$)/, '')
+      if (base === unstamped || base === record.outputFileName) return
+    }
+    saveNamed(stampGeneratedFilename(base, stamp), result.outputs[rel])
+  })
+  if (record.log) {
+    saveNamed(record.logFileName, record.log)
+  }
+  record.generatedFiles = generatedFiles
   return record
 }
 
@@ -668,6 +862,22 @@ async function attachEvaluation (record) {
     const design = JSON.parse(record.jsonText)
     const metrics = await computeEvaluationMetricWithNeptune(design)
     record.evaluation = toJobEvaluation(metrics)
+    if (record.evaluation && record.outputFileName) {
+      const stampMatch = String(record.outputFileName).match(/\((\d{12})\)\.[^.]+$/)
+      const stamp = stampMatch ? stampMatch[1] : filenameStamp(new Date())
+      const evalName = evaluationFileNameFromPr(record.outputFileName, stamp)
+      const evalText = JSON.stringify(record.evaluation, null, 2)
+      record.generatedFiles = Array.isArray(record.generatedFiles) ? record.generatedFiles : []
+      if (!record.generatedFiles.some((f) => f && f.name === evalName)) {
+        record.generatedFiles.push({ name: evalName, content: evalText })
+      }
+      if (record.session && record.workspaceId) {
+        const saved = upsertWorkspaceFile(record.session, record.workspaceId, evalName, evalText)
+        if (saved && saved.id && !(record.files || []).includes(saved.id)) {
+          record.files = [...(record.files || []), saved.id]
+        }
+      }
+    }
   } catch (err) {
     if (!record.log) record.log = ''
     const msg = err && err.message ? err.message : String(err)
@@ -857,17 +1067,29 @@ async function refreshModalJob (record) {
 }
 
 function proxyCompile (req, res, routePath, compileType) {
-  if (NEPTUNE_COMPILE_URL) {
-    return startModalCompileJob(req, res, routePath, compileType)
+  try {
+    if (NEPTUNE_COMPILE_URL) {
+      return startModalCompileJob(req, res, routePath, compileType)
+    }
+    const jobId = startLocalCompileJob(req, compileType)
+    res.json(jobId)
+  } catch (err) {
+    console.error('[compile] failed to start job', err)
+    res.status(500).json({
+      error: 'Failed to start compile job',
+      message: err && err.message ? err.message : String(err),
+    })
   }
-  const jobId = startLocalCompileJob(req, compileType)
-  res.json(jobId)
 }
 
 app.post('/api/v1/fluigi', requireAuth, (req, res) => proxyCompile(req, res, '/api/v1/fluigi', 'mint'))
 app.post('/api/v1/mushroommapper', requireAuth, (req, res) => proxyCompile(req, res, '/api/v1/mushroommapper', 'lfr'))
 app.get('/api/v1/jobs', requireAuth, (req, res) => {
-  res.json(sessionJobs.get(sessionKey(req.session)) || [])
+  const ids = sessionJobs.get(sessionKey(req.session)) || []
+  if (String(req.query.full || '') === '1') {
+    return res.json(ids.map((id) => jobRecords.get(id)).filter(Boolean).map(publicJobRecord))
+  }
+  res.json(ids)
 })
 app.get('/api/v1/job', requireAuth, async (req, res) => {
   const jobId = String(req.query.id || req.query.jobid || '')
@@ -877,6 +1099,11 @@ app.get('/api/v1/job', requireAuth, async (req, res) => {
     await refreshModalJob(record)
   }
   res.json(publicJobRecord(record))
+})
+app.post('/api/v1/restoreSessionJobs', requireAuth, (req, res) => {
+  const jobs = req.body && Array.isArray(req.body.jobs) ? req.body.jobs : []
+  const ids = restoreSessionJobs(req.session, jobs, { replace: true })
+  res.json({ ok: true, restored: ids.length, ids })
 })
 
 function runCmd (cmd, args, options = {}) {

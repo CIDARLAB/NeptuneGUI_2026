@@ -16,7 +16,7 @@ import axios from "axios";
 import App from "./App.vue";
 import router from "./router";
 import store from "./store";
-import { resetGuestLocalStoreToDefaultsOnly, syncServerEphemeralStateAfterGuiPageLoad } from "@/lib/guestStore";
+import { resetGuestLocalStoreToDefaultsOnly, syncServerEphemeralStateAfterGuiPageLoad, ensureServerGuestSession } from "@/lib/guestStore";
 import "@mdi/font/css/materialdesignicons.css";
 import "./plugins/base";
 
@@ -74,15 +74,15 @@ router.beforeEach(async (to, from, next) => {
   }
 
   const authRequired = to.matched.some(route => route.meta.requiresAuth);
-  const canAccess = store.getters.canAccessApp;
 
-  if (canAccess && (to.path === '' || to.path === '/')) {
-    next('/dashboard');
-    return;
+  if (authRequired) {
+    if (!store.getters.canAccessApp) {
+      store.commit('setGuest');
+    }
+    await ensureServerGuestSession(axios);
   }
-  if (authRequired && !canAccess) {
-    // Guest-only product mode: no registered login; local Vuex guest session.
-    store.commit('setGuest');
+
+  if (store.getters.canAccessApp && (to.path === '' || to.path === '/')) {
     next('/dashboard');
     return;
   }

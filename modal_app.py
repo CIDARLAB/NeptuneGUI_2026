@@ -345,15 +345,8 @@ def build_fluigi_cmd(
     if not component_paths:
         return cmd
 
-    # Geometry / defaults / terminals (overrides repo user_components/ on clash).
-    if component_paths.get("json_count"):
-        cmd.extend(["--component-library", str(component_paths["json_dir"])])
-
-    # LFR module import search (only used by synthesize / compile_lfr).
-    if compile_type == "lfr" and component_paths.get("lfr_count"):
-        cmd.extend(["--pre-load", str(component_paths["lfr_dir"])])
-
-    # Editor workspace imports: `` `import "WorkspaceName/file.lfr" ``
+    # 3DuF visualization JSON is not a fluigi entity library.
+    # Default LFR modules already live in pylfr/library.
     if compile_type == "lfr" and component_paths.get("import_lfr_root"):
         cmd.extend(["--pre-load", str(component_paths["import_lfr_root"])])
     elif compile_type == "lfr" and component_paths.get("workspace_lfr_root"):
@@ -368,9 +361,9 @@ def _pick_primary_pr_json(outputs: dict) -> tuple[str, str] | None:
         base = Path(name).name
         if base == "component_library.json":
             continue
-        if re.search(r"_from(LFR|MINT)_PR\.json$", base, re.I):
+        if re.search(r"_from(LFR|MINT)_PR(?:\(\d{12}\))?\.json$", base, re.I):
             ranked.append((0, name))
-        elif re.search(r"_PR\.json$", base, re.I):
+        elif re.search(r"_PR(?:\(\d{12}\))?\.json$", base, re.I):
             ranked.append((1, name))
         elif base.lower().endswith(".json"):
             ranked.append((2, name))

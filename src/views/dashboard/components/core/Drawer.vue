@@ -164,9 +164,18 @@
   } from 'vuex'
 
   import JSZip from 'jszip'
-  import guestStore, { fileContentForZipExport } from '@/lib/guestStore'
+  import guestStore from '@/lib/guestStore'
   import axios from 'axios'
   import { exportFilenameStamp } from '../../../../utils'
+  import {
+    fillBackupZip,
+    readWorkspacesFromZip,
+    readJsonFromZip,
+    fetchJobsForBackup,
+    fetchComponentTable,
+    downloadZipBlob,
+    applyGeneratedFilesToGuestStore,
+  } from '@/lib/workspaceBackupZip'
 
   export default {
     name: 'DashboardCoreDrawer',
@@ -409,13 +418,7 @@
               responseType: 'blob',
             })
             const blob = new Blob([res.data], { type: 'application/zip' })
-            const a = document.createElement('a')
-            a.href = URL.createObjectURL(blob)
-            a.download = `neptune_${exportFilenameStamp()}.zip`
-            document.body.appendChild(a)
-            a.click()
-            document.body.removeChild(a)
-            URL.revokeObjectURL(a.href)
+            downloadZipBlob(blob, `neptune_${exportFilenameStamp()}.zip`)
           } catch (_) {
             alert('Failed to export zip')
           }
@@ -424,49 +427,20 @@
 
         const data = guestStore.exportData()
         const zip = new JSZip()
-
-        zip.file('index.json', JSON.stringify({
-          nextWorkspaceId: data.nextWorkspaceId,
-          nextFileId: data.nextFileId,
-        }, null, 2))
-
-        data.workspaces.forEach((w, idx) => {
-          const safeName = (w.name || `workspace_${w._id || idx + 1}`).replace(/[^a-zA-Z0-9_-]/g, '_')
-          const folderName = `workspace_${w._id || (idx + 1)}_${safeName}`
-          const folder = zip.folder(folderName)
-          if (!folder) return
-
-          folder.file('metadata.json', JSON.stringify({
-            _id: w._id,
-            name: w.name,
-            notes: w.notes,
-            updated_at: w.updated_at,
-            created_at: w.created_at,
-          }, null, 2))
-
-          ;(w.files || []).forEach((f, fi) => {
-            const base = (f.name || `file_${fi + 1}`).replace(/[^a-zA-Z0-9_-]/g, '_')
-            const ext = f.ext && f.ext.startsWith('.') ? f.ext : (f.ext ? `.${f.ext}` : '')
-            folder.file(`${base}${ext || '.txt'}`, fileContentForZipExport(f.content))
-          })
+        const jobs = await fetchJobsForBackup(axios)
+        const componentTable = await fetchComponentTable(axios)
+        fillBackupZip(zip, {
+          workspaces: data.workspaces,
+          jobs,
+          componentTable,
+          indexExtra: {
+            nextWorkspaceId: data.nextWorkspaceId,
+            nextFileId: data.nextFileId,
+          },
         })
 
-        try {
-          const compRes = await axios.get('/api/v1/componentFiles', {
-            withCredentials: true,
-            headers: { 'Content-Type': 'application/json' },
-          })
-          zip.file('component_table.json', JSON.stringify(compRes.data || { components: [] }, null, 2))
-        } catch (_) {}
-
         const blob = await zip.generateAsync({ type: 'blob' })
-        const a = document.createElement('a')
-        a.href = URL.createObjectURL(blob)
-        a.download = `neptune_${exportFilenameStamp()}.zip`
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
-        URL.revokeObjectURL(a.href)
+        downloadZipBlob(blob, `neptune_${exportFilenameStamp()}.zip`)
       },
       triggerImportZip () {
         const el = this.$refs.importZipInput
@@ -528,92 +502,29 @@
       async importGuestZip (file) {
         try {
           const zip = await JSZip.loadAsync(file)
-          const workspaces = []
-          let nextWorkspaceId = 1
-          let nextFileId = 1
-
-          if (zip.files['index.json']) {
-            try {
-              const indexStr = await zip.files['index.json'].async('string')
-              const index = JSON.parse(indexStr)
-              if (index.nextWorkspaceId) nextWorkspaceId = index.nextWorkspaceId
-              if (index.nextFileId) nextFileId = index.nextFileId
-            } catch (_) {}
-          }
-
-          let componentTable = null
-          if (zip.files['component_table.json']) {
-            try {
-              const tableStr = await zip.files['component_table.json'].async('string')
-              componentTable = JSON.parse(tableStr)
-            } catch (_) {
-              componentTable = null
-            }
-          }
-
-          const folderNames = Object.keys(zip.files)
-            .filter(name => name.endsWith('/'))
-            .filter(name => name.startsWith('workspace_'))
-
-          for (const folderName of folderNames) {
-            const metaFile = zip.file(`${folderName}metadata.json`)
-            if (!metaFile) continue
-            let meta
-            try {
-              const metaStr = await metaFile.async('string')
-              meta = JSON.parse(metaStr)
-            } catch (err) {
-              // eslint-disable-next-line no-console
-              console.error('Failed to parse workspace metadata', err)
-              continue
-            }
-
-            const files = []
-            Object.keys(zip.files)
-              .filter(name => name.startsWith(folderName) && name !== `${folderName}metadata.json` && !name.endsWith('/'))
-              .forEach((name, idx) => {
-                const entry = zip.files[name]
-                const short = name.substring(folderName.length)
-                const dot = short.lastIndexOf('.')
-                const fileBase = dot > 0 ? short.substring(0, dot) : short
-                const ext = dot > 0 ? short.substring(dot) : ''
-                files.push({
-                  id: String(nextFileId++),
-                  name: fileBase,
-                  ext,
-                  content: null,
-                  _entry: entry,
-                })
-              })
-
-            for (const f of files) {
-              try {
-                // eslint-disable-next-line no-await-in-loop
-                f.content = await f._entry.async('string')
-              } catch (err) {
-                f.content = ''
-              }
-              delete f._entry
-            }
-
-            workspaces.push({
-              _id: meta._id != null ? meta._id : String(nextWorkspaceId++),
-              name: meta.name || 'Guest Workspace',
-              notes: meta.notes || '',
-              files,
-              updated_at: meta.updated_at || new Date().toISOString(),
-              created_at: meta.created_at || undefined,
-            })
-          }
+          const parsed = await readWorkspacesFromZip(zip)
+          const componentTable = await readJsonFromZip(zip, 'component_table.json', null)
+          const jobs = await readJsonFromZip(zip, 'jobs.json', [])
 
           const payload = {
-            workspaces,
-            nextWorkspaceId,
-            nextFileId,
+            workspaces: parsed.workspaces,
+            nextWorkspaceId: parsed.nextWorkspaceId,
+            nextFileId: parsed.nextFileId,
           }
 
           if (guestStore.importData(payload)) {
             this.$store.commit('SET_WORKSPACE', null)
+          }
+
+          applyGeneratedFilesToGuestStore(guestStore, Array.isArray(jobs) ? jobs : [])
+
+          if (Array.isArray(jobs) && jobs.length) {
+            try {
+              await axios.post('/api/v1/restoreSessionJobs', { jobs }, {
+                withCredentials: true,
+                headers: { 'Content-Type': 'application/json' },
+              })
+            } catch (_) {}
           }
 
           if (componentTable && Array.isArray(componentTable.components)) {

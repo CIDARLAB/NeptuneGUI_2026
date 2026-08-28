@@ -39,9 +39,33 @@ export function resetGuestLocalStoreToDefaultsOnly () {
  * Align server with guest-only policy: clear guest Temp dir when cookie is guest, and
  * always remove built-in component tmp JSON overrides (see clearBrowserReloadState).
  */
+/**
+ * Align server with guest-only policy: clear guest Temp dir when cookie is guest, and
+ * always remove built-in component tmp JSON overrides (see clearBrowserReloadState).
+ */
+export async function ensureServerGuestSession (axiosInstance) {
+  const ax = axiosInstance
+  if (!ax || typeof ax.get !== 'function' || typeof ax.post !== 'function') return false
+  const creds = { withCredentials: true }
+  try {
+    await ax.get('/api/v2/user', creds)
+    return true
+  } catch (err) {
+    const status = err && err.response && err.response.status
+    if (status && status !== 401 && status !== 403) return false
+  }
+  try {
+    await ax.post('/api/v2/guest', {}, creds)
+    return true
+  } catch (_) {
+    return false
+  }
+}
+
 export async function syncServerEphemeralStateAfterGuiPageLoad (axiosInstance) {
   const ax = axiosInstance
   if (!ax || typeof ax.post !== 'function') return
+  await ensureServerGuestSession(ax)
   try {
     await ax.post('/api/v2/guest/clearBrowserReloadState', {}, { withCredentials: true })
   } catch (_) {}

@@ -434,7 +434,11 @@ export default {
     },
   },
   mounted () {
+    this.$root.$on('neptune-backup-imported', this.refreshResults)
     this.refreshResults()
+  },
+  beforeDestroy () {
+    this.$root.$off('neptune-backup-imported', this.refreshResults)
   },
   methods: {
     rowClass (item) {
@@ -783,6 +787,7 @@ export default {
     },
     mapOutputToInputFile (outputFileName) {
       if (!outputFileName) return '—'
+      const unstamped = String(outputFileName).replace(/\(\d{12}\)(?=\.[^.]+$)/, '')
       const knownReplacements = [
         { suffix: '_PRfromLFR.json', replacement: '.lfr' },
         { suffix: '_fromLFR_PR.json', replacement: '.lfr' },
@@ -793,11 +798,11 @@ export default {
         { suffix: '.json', replacement: '.lfr' },
       ]
       for (const item of knownReplacements) {
-        if (outputFileName.endsWith(item.suffix)) {
-          return outputFileName.replace(item.suffix, item.replacement)
+        if (unstamped.endsWith(item.suffix)) {
+          return unstamped.replace(item.suffix, item.replacement)
         }
       }
-      return outputFileName
+      return unstamped
     },
     getInputFileDisplay (job, outputFileName) {
       if (job && job.sourceFilename) return job.sourceFilename
@@ -1242,21 +1247,35 @@ export default {
     },
     persistGuestJobOutputs (jobs) {
       if (!this.$store.getters.isGuest || !Array.isArray(jobs)) return
+      const workspaces = guestStore.getWorkspaces() || []
       jobs.forEach((job) => {
-        const workspaceId = job.workspaceId || job.workspace_id
-        if (!workspaceId || !guestStore.getWorkspace(workspaceId)) return
+        const byId = (job.workspaceId || job.workspace_id)
+          ? guestStore.getWorkspace(job.workspaceId || job.workspace_id)
+          : null
+        const byName = workspaces.find((w) =>
+          String(w.name || '').trim().toLowerCase() === String(job.workspaceName || '').trim().toLowerCase()
+        )
+        const ws = byId || byName
+        if (!ws) return
         const status = this.getJobActionStatus(job)
+        const extras = []
+        if (Array.isArray(job.generatedFiles) && job.generatedFiles.length) {
+          extras.push(...job.generatedFiles)
+        }
         if (status === 'done' && job.jsonText && job.outputFileName) {
-          guestStore.upsertFileByName(workspaceId, job.outputFileName, job.jsonText)
+          extras.push({ name: job.outputFileName, content: job.jsonText })
         }
         const logText = this.getJobLogText(job)
         if (logText && (status === 'done' || status === 'fail')) {
-          guestStore.upsertFileByName(
-            workspaceId,
-            job.logFileName || this.defaultLogFileName(job),
-            logText,
-          )
+          extras.push({
+            name: job.logFileName || this.defaultLogFileName(job),
+            content: logText,
+          })
         }
+        extras.forEach((f) => {
+          if (!f || !f.name) return
+          guestStore.upsertFileByName(ws._id, f.name, f.content == null ? '' : f.content)
+        })
       })
     },
   },

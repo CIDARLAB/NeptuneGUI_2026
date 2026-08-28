@@ -176,9 +176,15 @@
   import { mapState, mapMutations } from 'vuex'
 
   import axios from 'axios'
-  import guestStore, { fileContentForZipExport } from '@/lib/guestStore'
+  import guestStore from '@/lib/guestStore'
   import JSZip from 'jszip'
   import { exportFilenameStamp } from '../../../../utils'
+  import {
+    fillBackupZip,
+    fetchJobsForBackup,
+    fetchComponentTable,
+    downloadZipBlob,
+  } from '@/lib/workspaceBackupZip'
 
   let self = this
   export default {
@@ -335,53 +341,20 @@
         try {
           const data = guestStore.exportData()
           const zip = new JSZip()
-
-          zip.file('index.json', JSON.stringify({
-            nextWorkspaceId: data.nextWorkspaceId,
-            nextFileId: data.nextFileId,
-          }, null, 2))
-
-          data.workspaces.forEach((w, idx) => {
-            const safeName = (w.name || `workspace_${w._id || idx + 1}`).replace(/[^a-zA-Z0-9_-]/g, '_')
-            const folderName = `workspace_${w._id || (idx + 1)}_${safeName}`
-            const folder = zip.folder(folderName)
-            if (!folder) return
-
-            const meta = {
-              _id: w._id,
-              name: w.name,
-              notes: w.notes,
-              updated_at: w.updated_at,
-              created_at: w.created_at,
-            }
-            folder.file('metadata.json', JSON.stringify(meta, null, 2))
-
-            ;(w.files || []).forEach((f, fi) => {
-              const base = (f.name || `file_${fi + 1}`).replace(/[^a-zA-Z0-9_-]/g, '_')
-              const ext = f.ext && f.ext.startsWith('.') ? f.ext : (f.ext ? `.${f.ext}` : '')
-              const filename = `${base}${ext || '.txt'}`
-              folder.file(filename, fileContentForZipExport(f.content))
-            })
+          const jobs = await fetchJobsForBackup(axios)
+          const componentTable = await fetchComponentTable(axios)
+          fillBackupZip(zip, {
+            workspaces: data.workspaces,
+            jobs,
+            componentTable,
+            indexExtra: {
+              nextWorkspaceId: data.nextWorkspaceId,
+              nextFileId: data.nextFileId,
+            },
           })
 
-          try {
-            const compRes = await axios.get('/api/v1/componentFiles', {
-              withCredentials: true,
-              headers: { 'Content-Type': 'application/json' },
-            })
-            zip.file('component_table.json', JSON.stringify(compRes.data || { components: [] }, null, 2))
-          } catch (_) {}
-
           const blob = await zip.generateAsync({ type: 'blob' })
-          const filename = `neptune_${exportFilenameStamp()}.zip`
-          const url = URL.createObjectURL(blob)
-          const a = document.createElement('a')
-          a.href = url
-          a.download = filename
-          document.body.appendChild(a)
-          a.click()
-          document.body.removeChild(a)
-          URL.revokeObjectURL(url)
+          downloadZipBlob(blob, `neptune_${exportFilenameStamp()}.zip`)
 
           this.applyLogoutPromptSnoozeIfNeeded()
           this.guestLogoutDialog = false

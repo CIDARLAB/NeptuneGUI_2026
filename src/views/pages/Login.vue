@@ -127,6 +127,7 @@
   import router from '../../router'
   import axios from 'axios'
   import * as localAuth from '@/lib/localAuth'
+  import { ensureServerGuestSession } from '@/lib/guestStore'
 
   export default {
     name: 'PagesLogin',
@@ -249,8 +250,9 @@
           })
           .finally(() => { this.forgotResetting = false })
       },
-      continueAsGuest () {
+      async continueAsGuest () {
         this.$store.commit('setGuest')
+        await ensureServerGuestSession(axios)
         router.push('/dashboard')
       },
     },

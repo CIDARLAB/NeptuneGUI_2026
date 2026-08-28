@@ -128,30 +128,6 @@
       </v-col>
     </v-row>
 
-  <v-dialog v-model="compiledialog" max-width="500px" content-class="editor-dialog-surface">
-    <v-card class="editor-dialog-card">
-      <v-card-title class="editor-dialog-title">Compile</v-card-title>
-      <v-card-text>
-        <v-select
-          :items="configfiles"
-          label="Select Config File"
-          item-value="id"
-          item-text="name"
-          v-model="selectedconfig"
-          :return-object="true"
-          outlined
-          dense
-          hide-details="auto"
-          color="primary"
-        />
-      </v-card-text>
-      <v-card-actions>
-        <v-btn color="primary" text @click="compiledialog = false; $router.push('/dashboard')">Close</v-btn>
-        <v-btn color="info" text @click="compilefile">Compile</v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
-
   <!-- Save to new workspace -->
   <v-dialog v-model="saveDialog" max-width="480px" persistent content-class="editor-dialog-surface">
     <v-card class="editor-dialog-card">
@@ -224,7 +200,7 @@ import VueTerminal from 'vue-terminal-ui'
 import axios from 'axios'
 import { Terminal } from 'xterm'
 import router from '../../router'
-import guestStore, { EXAMPLE_WORKSPACE_NAME } from '@/lib/guestStore'
+import guestStore, { EXAMPLE_WORKSPACE_NAME, ensureServerGuestSession } from '@/lib/guestStore'
 import { EXAMPLE_LFR_SCRIPT, EXAMPLE_MINT_SCRIPT } from '@/lib/exampleScripts'
 import {
   buildWorkspaceLfrIndex,
@@ -300,7 +276,6 @@ export default {
           if ((f.ext || '').toLowerCase() === '.mint') this.selectedScriptLanguage = 'mint'
           else this.selectedScriptLanguage = 'lfr'
           self.isloading = false
-          this.downloadconfigfiles()
           return
         }
       }
@@ -322,7 +297,6 @@ export default {
         if ((file.ext || '').toLowerCase() === '.lfr') this.selectedScriptLanguage = 'lfr'
       }
       self.isloading = false
-      this.downloadconfigfiles()
       return
     }
 
@@ -346,7 +320,6 @@ export default {
       })
       .catch((error) => { console.log(error) })
 
-    this.downloadconfigfiles()
     // axios.get('/api/v1/fs', config)
     //   .then((response) => {
     //     console.log(response)
@@ -359,12 +332,9 @@ export default {
   data () {
     return {
       isloading: false,
-      selectedconfig: '',
-      compiledialog: false,
       currentworkspace: { name: '' },
       code: '',
       fileobject: { name: '', id: '' },
-      configfiles: [],
       dialog: false,
       dialog2: false,
       dialog3: false,
@@ -753,38 +723,6 @@ export default {
       registerLang('lfr', baseLfrKeywords)
     },
 
-    downloadconfigfiles (event) {
-      this.configfiles = []
-      const ws = this.$store.getters.currentWorkspace
-      if (!ws || !ws._id) return
-      if (this.$store.getters.isGuest) {
-        const files = guestStore.getFiles(ws._id) || []
-        files.forEach(f => {
-          const ext = (f.ext || '').toLowerCase()
-          if (ext === '.ini' || ext === '.json') this.configfiles.push(f)
-        })
-        return
-      }
-      const config = {
-        withCredentials: true,
-        crossorigin: true,
-        headers: { 'Content-Type': 'application/json' },
-        params: { id: ws._id },
-      }
-      let self = this
-      axios.get('/api/v1/files', config)
-        .then((response) => {
-          (response.data || []).forEach((fid) => {
-            axios.get('/api/v1/file', { params: { id: fid }, withCredentials: true, headers: { 'Content-Type': 'application/json' } })
-              .then((res) => {
-                const ext = (res.data.ext || '').toLowerCase()
-                if (ext === '.ini' || ext === '.json') self.configfiles.push(res.data)
-              })
-              .catch((error) => { console.log(error) })
-          })
-        })
-        .catch((error) => { console.error(error) })
-    },
     createfile: function(event) {
       console.log("TEST");
     },
@@ -829,7 +767,7 @@ export default {
       if (this.$store.getters.isGuest) {
         guestStore.updateFile(this.currentworkspace._id, this.fileobject.id, this.code, newName)
         this.fileobject.name = newName
-        this.compiledialog = true
+        this.compilefile()
         return
       }
       const payload = { fileid: this.fileobject.id, text: this.code }
@@ -837,7 +775,7 @@ export default {
       axios.put('/api/v1/file', payload, config)
         .then(() => {
           this.fileobject.name = newName
-          this.compiledialog = true
+          this.compilefile()
         })
         .catch((err) => {
           const msg = (err.response && err.response.data && (err.response.data.error || err.response.data.message)) || err.message
@@ -854,7 +792,7 @@ export default {
         alert('Save the file first (use Save file from the Save file menu), then use Compile.')
         return
       }
-      this.compiledialog = true
+      this.compilefile()
     },
     openExistingWorkspaceDialog () {
       if (this.$store.getters.isGuest) {
@@ -966,12 +904,11 @@ export default {
     async compilefile (event) {
       let self = this
       self.isloading = true
-      this.compiledialog = false
       const config = {
         withCredentials: true,
-        crossorigin: true,
         headers: { 'Content-Type': 'application/json' },
       }
+      await ensureServerGuestSession(axios)
       let componentBundle = []
       try {
         const compRes = await axios.get('/api/v1/componentFiles', config)
@@ -1001,8 +938,6 @@ export default {
       const data = {
         sourcefileid: this.fileobject.id,
         sourcefilename: this.fileobject.name,
-        configfileid: this.selectedconfig && this.selectedconfig.id,
-        configfilename: this.selectedconfig && this.selectedconfig.name,
         workspace: currentWorkspace._id,
         workspaceName: currentWorkspace.name || '',
         user: currentUser.email,
@@ -1041,7 +976,11 @@ export default {
           console.error(error)
           self.isloading = false
           const kind = (self.lastCompileType || self.selectedScriptLanguage || 'script').toUpperCase()
-          alert(kind + ' compile failed. Could not start compile job.')
+          const status = error && error.response && error.response.status
+          const body = error && error.response && error.response.data
+          const detail = (body && (body.error || body.message)) || error.message || ''
+          const suffix = status ? ` (HTTP ${status}${detail ? ': ' + detail : ''})` : (detail ? ` (${detail})` : '')
+          alert(kind + ' compile failed. Could not start compile job.' + suffix)
         })
     },
     /**

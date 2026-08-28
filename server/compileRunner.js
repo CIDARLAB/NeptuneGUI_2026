@@ -120,12 +120,10 @@ function buildFluigiCmd (compileType, srcPath, outputDir, componentPaths) {
 
   if (!componentPaths) return args
 
-  if (componentPaths.jsonCount) {
-    args.push('--component-library', componentPaths.jsonDir)
-  }
-  if (compileType === 'lfr' && componentPaths.lfrCount) {
-    args.push('--pre-load', componentPaths.lfrDir)
-  }
+  // 3DuF visualization JSON is not a fluigi entity library; passing it as
+  // --component-library hangs place-and-route on PORT/VALVE3D lookups.
+  // Default LFR modules already live in pylfr/library — only pre-load
+  // files the Editor actually imported.
   if (compileType === 'lfr' && componentPaths.importLfrRoot) {
     args.push('--pre-load', componentPaths.importLfrRoot)
   }
@@ -174,8 +172,8 @@ function pickPrimaryPrJson (outputs) {
   for (const name of names) {
     const base = path.basename(name)
     if (base === 'component_library.json') continue
-    if (/_from(LFR|MINT)_PR\.json$/i.test(base)) ranked.push([0, name])
-    else if (/_PR\.json$/i.test(base)) ranked.push([1, name])
+    if (/_from(LFR|MINT)_PR(?:\(\d{12}\))?\.json$/i.test(base)) ranked.push([0, name])
+    else if (/_PR(?:\(\d{12}\))?\.json$/i.test(base)) ranked.push([1, name])
     else if (/\.json$/i.test(base)) ranked.push([2, name])
   }
   if (!ranked.length) return null

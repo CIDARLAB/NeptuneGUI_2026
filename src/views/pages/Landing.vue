@@ -302,7 +302,9 @@
 </style>
 
 <script>
+  import axios from 'axios'
   import router from '../../router'
+  import { ensureServerGuestSession } from '@/lib/guestStore'
 
   export default {
     name: 'Landing',
@@ -310,8 +312,9 @@
       hasAcknowledgedNoOnlineStorage: false,
     }),
     methods: {
-      continueAsGuest () {
+      async continueAsGuest () {
         this.$store.commit('setGuest')
+        await ensureServerGuestSession(axios)
         router.push('/dashboard')
       },
     },
