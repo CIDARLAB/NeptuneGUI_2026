@@ -26,7 +26,7 @@ This section summarizes the **bring-your-own-key** path from **English descripti
 | 2. Setup (once) | Paste **`en2lfr_system`** (or the English→LFR section of the `.md` pack) into that LLM’s system / custom instructions (see **`START_HERE.md`**). Do **not** edit template files. |
 | 3. Chat | Open your provider chat (**Open … chat** button) and describe your device in **plain English** in the message. |
 | 4. Paste LFR | Copy the ` ```lfr ` block into **Editor**, set **Script language** to **LFR**, **Save** / **Compile** per **[RUN_LFR.md](./RUN_LFR.md)**. |
-| Guide | In-app **`/prompt/steps`** renders **[src/Prompt/USER_GUIDE.md](./src/Prompt/USER_GUIDE.md)**. |
+| Guide | In-app **`/prompt/steps`** renders **[src/Prompt/USER_GUIDE.md](./src/Prompt/USER_GUIDE.md)**. Short English version of `ignore/prompt中文版.md`: **[docs/WRITE_LFR_WITH_PROMPT_PACKAGE.md](./docs/WRITE_LFR_WITH_PROMPT_PACKAGE.md)**. |
 | Workspace backup | **Dashboard** → **Export workspaces** / **Import workspaces** (.zip). Same ZIP from sidebar **Export** or export-on-exit (guest). Layout: `index.json`, `jobs.json`, `component_table.json` / `component_library.json`, then `workspace_<id>_<Name>/{metadata.json, LFR/, MINT/, JSON/, log/, evaluation/}`. |
 
 ### Neptune screens (sidebar)

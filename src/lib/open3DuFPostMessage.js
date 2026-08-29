@@ -1,5 +1,5 @@
-/** 3DuF app opened by Neptune “open in 3DuF” actions (override for local 3DuF: e.g. http://localhost:8082). */
-export const THREE_DUF_APP_URL = 'http://localhost:8082/'
+/** 3DuF app opened by Neptune “open in 3DuF” actions. Default is the public site; override for local 3DuF (e.g. http://localhost:8082). */
+export const THREE_DUF_APP_URL = 'https://3duf.org/'
 
 // Module-level reference to the 3DuF tab we last opened, and the timestamp at
 // which that window finished navigating to the 3DuF app for the first time. We
