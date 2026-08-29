@@ -27,15 +27,15 @@ This section summarizes the **bring-your-own-key** path from **English descripti
 | 3. Chat | Open your provider chat (**Open … chat** button) and describe your device in **plain English** in the message. |
 | 4. Paste LFR | Copy the ` ```lfr ` block into **Editor**, set **Script language** to **LFR**, **Save** / **Compile** per **[RUN_LFR.md](./RUN_LFR.md)**. |
 | Guide | In-app **`/prompt/steps`** renders **[src/Prompt/USER_GUIDE.md](./src/Prompt/USER_GUIDE.md)**. |
-| Workspace backup | **Dashboard** → **Export workspaces** / **Import workspaces** (.zip). Same ZIP from sidebar **Export** or export-on-exit (guest). |
+| Workspace backup | **Dashboard** → **Export workspaces** / **Import workspaces** (.zip). Same ZIP from sidebar **Export** or export-on-exit (guest). Layout: `index.json`, `jobs.json`, `component_table.json` / `component_library.json`, then `workspace_<id>_<Name>/{metadata.json, LFR/, MINT/, JSON/, log/, evaluation/}`. |
 
 ### Neptune screens (sidebar)
 
 These routes are what the **guest UI** exposes today:
 
-- **Dashboard** — Workspaces and files; **3DuF** on JSON rows; **Export workspaces** / **Import workspaces** (.zip).
-- **Editor** — Monaco editor; **Save**, **Compile**, per-file **Import** / **Export**; LFR cross-file `` `import "WorkspaceName/file.lfr" ``; integrated **terminal** (talks to the local API / Neptune stack via Socket.IO per your setup); **LLM prompts** sidebar **only** on this route.
-- **Jobs** — Jobs table for compile runs: download outputs, open a job as a workspace, inspect files, delete jobs.
+- **Dashboard** — Workspaces and files. Click an LFR/MINT **file name** (or the pen icon) to open it in the Editor. JSON rows: **3DuF** is always left of **Save to component library**. **Export workspaces** / **Import workspaces** (.zip, includes jobs and the component-library cache).
+- **Editor** — Monaco editor; **Save file**, **Save file and compile**, **Save/Move file to a new workspace**, **Save/Move file to an existing workspace**, per-file **Import** / **Export**, **Compile**. Save **copies** the current buffer to the destination and leaves the original file unchanged; Move copies then **deletes** the original. The save/move dialogs include a **file name** field (default: the name in the current workspace). Existing-workspace menus omit the current workspace; if none remain, the dropdown shows “No existing workspace can be selected” and Save is disabled. After save or move, the GUI opens Dashboard with that destination workspace expanded. LFR cross-file `` `import "WorkspaceName/file.lfr" ``; integrated **terminal**; **LLM prompts** sidebar **only** on this route. After a full reload, opening Editor still binds the Example workspace (so “Current workspace” is not None).
+- **Jobs** — Compile runs: download outputs, open a job as a workspace, inspect files, **Delete** (job + generated JSON/MINT/log/eval siblings). Table auto-refreshes every **10 s**. Compile outputs are written into the originating workspace. Reloading or reopening the site **clears jobs** with the rest of the guest session (they are not restored into Example).
 - **Component Library** — Component table (syntax is **case-sensitive** in-app); **Import JSON component**; **DIY** overrides; **Go to 3DuF** per row.
 
 Legacy Material Dashboard demo routes (charts, maps, etc.) still exist under `src/router.js` but are **not** linked from the main drawer.
@@ -120,11 +120,12 @@ Open the URL printed by Vue CLI (typically **`http://localhost:8082`**).
 
 Then point NeptuneGUI at that local origin: set `THREE_DUF_APP_URL` in `src/lib/open3DuFPostMessage.js` to `http://localhost:8082`, and refresh (or rebuild) the GUI. More detail: [3DuF README](https://github.com/CIDARLAB/3DuF).
 
-- **Accounts:** Neptune GUI is **online guest–only**. There is **no** in-app user registration; protected routes use a **local guest session** (see `src/main.js`). **We do not keep your work on the server for you.** Use **Export workspaces** (ZIP includes workspace files and `component_table.json` for the library cache), the sidebar **Export** button, or export-on-exit when offered. **Refreshing or reopening the site clears non-default data** (workspaces, uploads, imported library components, DIY overrides). Data loss from not exporting is **not** recoverable here.
+- **Accounts:** Neptune GUI is **online guest–only**. There is **no** in-app user registration; protected routes use a **local guest session** (see `src/main.js`). **We do not keep your work on the server for you.** Use **Export workspaces** (ZIP includes workspace files, `jobs.json`, and `component_table.json` / `component_library.json`), the sidebar **Export** button, or export-on-exit when offered. **Refreshing or reopening the site clears non-default data** (workspaces, uploads, imported library components, DIY overrides, **in-memory compile jobs**). A new guest cookie is minted after that wipe so previous run files are not written back into Example. Data loss from not exporting is **not** recoverable here.
 - **Server vs. GUI:** The bundled **`server/`** still implements **register/login** HTTP APIs for older deployments; **this GUI build does not use that flow.**
 
 - **Run LFR and compile:** see **[RUN_LFR.md](./RUN_LFR.md)** (connect Editor to Neptune_2026 and store output in Data).
-- More details: **TESTING.md**, **Data/README.md**.
+- **Compile artifacts:** web Compile stamps generated JSON / MINT / log / evaluation filenames as `{stem}(YYYYMMDDHHMM).ext` (example seeds in the Editor are not stamped). TREE-PLACE uses **`dump_intermediates=False`** (in `fluigi/place_and_route.py`): it writes only the final `*_PR.json` to the compile output directory and does **not** dump `tree.json` / `result.json` / PNGs or cluster scratch under `Neptune_2026/Benchmarks/` (disconnected clusters stay in memory). Set that one argument to `True` to restore the full inspection set; dumps do not change layout geometry. Fluigi is invoked as `synthesize` / `synthesizeFromMINT` with `--pre-load` **only** for Editor `` `import `` modules. **3DuF visualization JSON is not passed as `--component-library`** (that lookup hangs P&R on PORT/VALVE3D).
+- More details: **TESTING.md**, **Data/README.md**, **docs/SERVER_DEPLOYMENT_GUIDE.md**.
 
 ## About deprecation warnings
 

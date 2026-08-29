@@ -65,13 +65,13 @@ Vue.use(
 
 resetGuestLocalStoreToDefaultsOnly();
 
-let guiPageLoadServerSyncDone = false;
+let guiPageLoadServerSync = null;
 
 router.beforeEach(async (to, from, next) => {
-  if (!guiPageLoadServerSyncDone) {
-    guiPageLoadServerSyncDone = true;
-    await syncServerEphemeralStateAfterGuiPageLoad(axios);
+  if (!guiPageLoadServerSync) {
+    guiPageLoadServerSync = syncServerEphemeralStateAfterGuiPageLoad(axios);
   }
+  await guiPageLoadServerSync;
 
   const authRequired = to.matched.some(route => route.meta.requiresAuth);
 

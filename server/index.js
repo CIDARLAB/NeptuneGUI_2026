@@ -26,6 +26,12 @@ const {
   collectLogText,
   logFileNameFor,
 } = require('./compileRunner')
+const {
+  isPrJsonFileName,
+  isWorkspaceVisibleFileName,
+  isZipCompileSidecar,
+  shouldKeepCompileGeneratedFile,
+} = require('./compileOutputFiles')
 
 // Optional: forward compile to Modal. If unset, run fluigi locally via Neptune_2026.
 const NEPTUNE_COMPILE_URL = process.env.NEPTUNE_COMPILE_URL || ''
@@ -176,18 +182,23 @@ app.post('/api/v2/guest', (req, res) => {
  * Called once each time the Neptune GUI document loads (online guest mode).
  * Clears guest Temp session when cookie is guest; clears imported component rows for
  * user/admin cookies too (legacy login otherwise keeps uploads such as "terrace").
- * Always removes Data/3DuF_component/tmp JSON overrides.
+ * Always removes Data/3DuF_component/tmp JSON overrides and in-memory compile jobs
+ * for the current cookie — otherwise Dashboard/Jobs would restore previous run files.
  */
 app.post('/api/v2/guest/clearBrowserReloadState', (req, res) => {
   const clearedTmp = !!data.clearAllComponentTmpJsonFiles()
   const session = parseSession(req)
   let clearedSession = false
-  if (session && session.type === 'guest') {
-    clearedSession = !!data.clearGuestSessionUserData(session)
-  } else if (session && (session.type === 'user' || session.type === 'admin')) {
-    clearedSession = !!data.clearSessionImportedComponents(session)
+  let clearedJobs = false
+  if (session) {
+    clearedJobs = !!clearSessionJobs(session)
+    if (session.type === 'guest') {
+      clearedSession = !!data.clearGuestSessionUserData(session)
+    } else if (session.type === 'user' || session.type === 'admin') {
+      clearedSession = !!data.clearSessionImportedComponents(session)
+    }
   }
-  return res.json({ ok: true, clearedSession, clearedTmp })
+  return res.json({ ok: true, clearedSession, clearedTmp, clearedJobs })
 })
 
 // ---------- Workspaces ----------
@@ -309,7 +320,9 @@ app.get('/api/v1/exportWorkspacesZip', requireAuth, async (req, res) => {
     const jobs = sessionJobRecords(req.session)
     const withFiles = workspaces.map((w) => ({
       ...w,
-      files: data.getFiles(req.session, w._id) || [],
+      files: (data.getFiles(req.session, w._id) || []).filter((f) =>
+        f && isWorkspaceVisibleFileName(f.name)
+      ),
     }))
 
     const merged = (() => {
@@ -321,10 +334,7 @@ app.get('/api/v1/exportWorkspacesZip', requireAuth, async (req, res) => {
           byName.get(String(job.workspaceName || '').trim().toLowerCase())
         if (!w) return
         const names = new Set((w.files || []).map((f) => f && f.name).filter(Boolean))
-        const extras = []
-        if (Array.isArray(job.generatedFiles)) extras.push(...job.generatedFiles)
-        if (job.outputFileName && job.jsonText) extras.push({ name: job.outputFileName, content: job.jsonText })
-        if (job.logFileName && job.log) extras.push({ name: job.logFileName, content: job.log })
+        const extras = compileZipFilesFromJob(job)
         extras.forEach((f) => {
           if (!f || !f.name || names.has(f.name)) return
           names.add(f.name)
@@ -477,6 +487,7 @@ app.post(
           const content = await entry.async('string')
           const fileName = fileNameFromZipRel(rel)
           if (!fileName || fileName === 'metadata.json') continue
+          if (!isWorkspaceVisibleFileName(fileName)) continue
           const ext = path.extname(fileName)
           const f = data.createFile(req.session, newWs._id, fileName, ext)
           if (!f) continue
@@ -616,6 +627,34 @@ function evaluationFileNameFromPr (outputFileName, stamp) {
   return `${base}_evaluation(${stamp}).json`
 }
 
+function compileZipFilesFromJob (job) {
+  if (!job || typeof job !== 'object') return []
+  const extras = []
+  const seen = new Set()
+  const add = (f) => {
+    if (!f || !f.name || seen.has(f.name)) return
+    if (!isWorkspaceVisibleFileName(f.name) && !isZipCompileSidecar(f.name)) return
+    seen.add(f.name)
+    extras.push({ name: f.name, content: f.content == null ? '' : f.content })
+  }
+  ;(job.generatedFiles || []).forEach(add)
+  if (job.outputFileName && job.jsonText) {
+    add({ name: job.outputFileName, content: job.jsonText })
+  }
+  if (job.logFileName && job.log) {
+    add({ name: job.logFileName, content: job.log })
+  }
+  if (job.evaluation && !extras.some((f) => /evaluation/i.test(f.name))) {
+    const stampMatch = String(job.outputFileName || '').match(/\((\d{12})\)\.[^.]+$/)
+    const stamp = stampMatch ? stampMatch[1] : filenameStamp(new Date())
+    add({
+      name: evaluationFileNameFromPr(job.outputFileName, stamp),
+      content: JSON.stringify(job.evaluation, null, 2),
+    })
+  }
+  return extras
+}
+
 function listWorkspaceFolderNames (zip) {
   const folders = new Set()
   Object.keys((zip && zip.files) || {}).forEach((name) => {
@@ -635,13 +674,55 @@ function relinkJobFiles (session, workspaceId, job) {
   const files = data.getFiles(session, workspaceId) || []
   const ids = []
   const wanted = new Set()
-  ;(job.generatedFiles || []).forEach((f) => { if (f && f.name) wanted.add(f.name) })
-  if (job.outputFileName) wanted.add(job.outputFileName)
-  if (job.logFileName) wanted.add(job.logFileName)
+  ;(job.generatedFiles || []).forEach((f) => { if (f && f.name && isWorkspaceVisibleFileName(f.name)) wanted.add(f.name) })
+  if (job.outputFileName && isWorkspaceVisibleFileName(job.outputFileName)) wanted.add(job.outputFileName)
   files.forEach((f) => {
     if (f && wanted.has(f.name) && f.id) ids.push(f.id)
   })
   return ids
+}
+
+function generatedNamesForJob (record) {
+  const names = new Set()
+  if (!record) return []
+  if (record.outputFileName) names.add(record.outputFileName)
+  if (record.logFileName) names.add(record.logFileName)
+  ;(record.generatedFiles || []).forEach((f) => {
+    if (f && f.name) names.add(f.name)
+  })
+  return [...names]
+}
+
+/** Drop in-memory compile jobs for this cookie so a later GUI load cannot revive them. */
+function clearSessionJobs (session) {
+  if (!session) return false
+  const key = sessionKey(session)
+  const ids = sessionJobs.get(key) || []
+  ids.forEach((id) => jobRecords.delete(id))
+  sessionJobs.delete(key)
+  return true
+}
+
+function deleteSessionJob (session, jobId) {
+  const id = String(jobId || '')
+  if (!id) return { ok: false, error: 'id required' }
+  const key = sessionKey(session)
+  const ids = sessionJobs.get(key) || []
+  if (!ids.includes(id)) return { ok: false, error: 'not_found' }
+  const record = jobRecords.get(id) || {}
+  const fileNames = generatedNamesForJob(record)
+  const workspaceId = record.workspaceId || null
+  // Workspace compile artifacts only. Component Library imports are independent
+  // copies and must not be removed when a job or workspace result is deleted.
+  if (session && workspaceId) {
+    const files = data.getFiles(session, workspaceId) || []
+    files.forEach((f) => {
+      if (f && fileNames.includes(f.name)) data.deleteFile(session, workspaceId, f.id)
+    })
+  }
+  jobRecords.delete(id)
+  sessionJobs.set(key, ids.filter((x) => x !== id))
+  return { ok: true, id, workspaceId, fileNames }
 }
 
 function restoreSessionJobs (session, jobs, { replace } = { replace: true }) {
@@ -659,16 +740,15 @@ function restoreSessionJobs (session, jobs, { replace } = { replace: true }) {
     const name = String(job.workspaceName || '').trim()
     const hit = name ? byName.get(name.toLowerCase()) : null
     const workspaceId = hit ? hit._id : (job.workspaceId || null)
-    const generatedFiles = Array.isArray(job.generatedFiles) ? job.generatedFiles : []
+    const generatedFiles = (Array.isArray(job.generatedFiles) ? job.generatedFiles : [])
+      .filter((f) => f && f.name && shouldKeepCompileGeneratedFile(f.name))
     generatedFiles.forEach((f) => {
       if (!f || !f.name || f.content == null || !workspaceId) return
-      upsertWorkspaceFile(session, workspaceId, f.name, f.content)
+      if (!isWorkspaceVisibleFileName(f.name)) return
+      upsertWorkspaceFile(session, workspaceId, f.name, f.content, job.workspaceName)
     })
-    if (job.outputFileName && job.jsonText && workspaceId) {
+    if (job.outputFileName && job.jsonText && workspaceId && isWorkspaceVisibleFileName(job.outputFileName)) {
       upsertWorkspaceFile(session, workspaceId, job.outputFileName, job.jsonText)
-    }
-    if (job.logFileName && job.log && workspaceId) {
-      upsertWorkspaceFile(session, workspaceId, job.logFileName, job.log)
     }
     const id = uuidv4()
     const record = {
@@ -725,12 +805,14 @@ function shouldSaveCompileOutput (relPath) {
   const base = path.basename(String(relPath || ''))
   const ext = path.extname(base).toLowerCase()
   if (base === 'component_library.json') return false
-  if (ext === '.dot') return false
-  return ['.json', '.mint', '.log', '.txt'].includes(ext)
+  if (ext === '.dot' || ext === '.log' || ext === '.txt') return false
+  if (ext === '.json') return isPrJsonFileName(base)
+  return ext === '.mint'
 }
 
-function upsertWorkspaceFile (session, workspaceId, fileName, content) {
+function upsertWorkspaceFile (session, workspaceId, fileName, content, workspaceName) {
   if (!session || !workspaceId || !fileName) return null
+  data.ensureWorkspace(session, workspaceId, workspaceName)
   const existingList = data.getFiles(session, workspaceId) || []
   const existing = existingList.find(f => f && f.name === fileName)
   if (existing) {
@@ -740,6 +822,16 @@ function upsertWorkspaceFile (session, workspaceId, fileName, content) {
   const created = data.createFile(session, workspaceId, fileName, ext)
   if (!created) return null
   return data.updateFileContent(session, workspaceId, created.id, content) || created
+}
+
+function removeHiddenCompileArtifactsFromWorkspace (session, workspaceId) {
+  if (!session || !workspaceId) return
+  const files = data.getFiles(session, workspaceId) || []
+  files.forEach((f) => {
+    if (f && f.id && f.name && !isWorkspaceVisibleFileName(f.name)) {
+      data.deleteFile(session, workspaceId, f.id)
+    }
+  })
 }
 
 function toJobEvaluation (metrics) {
@@ -776,7 +868,9 @@ function toJobEvaluation (metrics) {
 function createPendingJob (session, meta) {
   const id = uuidv4()
   const now = new Date().toISOString()
-  const ws = meta.workspaceId ? data.getWorkspace(session, meta.workspaceId) : null
+  const ws = meta.workspaceId
+    ? data.ensureWorkspace(session, meta.workspaceId, meta.workspaceName)
+    : null
   const record = {
     id,
     status: 'running',
@@ -824,13 +918,15 @@ function applyCompileResult (record, result, session) {
   )
 
   const seen = new Set()
-  const saveNamed = (fileName, content) => {
+  const saveNamed = (fileName, content, { toWorkspace } = {}) => {
     if (!fileName || content == null) return
     if (seen.has(fileName)) return
+    if (!shouldKeepCompileGeneratedFile(fileName)) return
     seen.add(fileName)
     generatedFiles.push({ name: fileName, content: String(content) })
-    if (!session || !record.workspaceId) return
-    const saved = upsertWorkspaceFile(session, record.workspaceId, fileName, content)
+    const writeWorkspace = toWorkspace !== false && isWorkspaceVisibleFileName(fileName)
+    if (!writeWorkspace || !session || !record.workspaceId) return
+    const saved = upsertWorkspaceFile(session, record.workspaceId, fileName, content, record.workspaceName)
     if (saved && saved.id) record.files = [...(record.files || []), saved.id]
   }
 
@@ -850,9 +946,12 @@ function applyCompileResult (record, result, session) {
     saveNamed(stampGeneratedFilename(base, stamp), result.outputs[rel])
   })
   if (record.log) {
-    saveNamed(record.logFileName, record.log)
+    saveNamed(record.logFileName, record.log, { toWorkspace: false })
   }
   record.generatedFiles = generatedFiles
+  if (session && record.workspaceId) {
+    removeHiddenCompileArtifactsFromWorkspace(session, record.workspaceId)
+  }
   return record
 }
 
@@ -870,12 +969,6 @@ async function attachEvaluation (record) {
       record.generatedFiles = Array.isArray(record.generatedFiles) ? record.generatedFiles : []
       if (!record.generatedFiles.some((f) => f && f.name === evalName)) {
         record.generatedFiles.push({ name: evalName, content: evalText })
-      }
-      if (record.session && record.workspaceId) {
-        const saved = upsertWorkspaceFile(record.session, record.workspaceId, evalName, evalText)
-        if (saved && saved.id && !(record.files || []).includes(saved.id)) {
-          record.files = [...(record.files || []), saved.id]
-        }
       }
     }
   } catch (err) {
@@ -1104,6 +1197,15 @@ app.post('/api/v1/restoreSessionJobs', requireAuth, (req, res) => {
   const jobs = req.body && Array.isArray(req.body.jobs) ? req.body.jobs : []
   const ids = restoreSessionJobs(req.session, jobs, { replace: true })
   res.json({ ok: true, restored: ids.length, ids })
+})
+app.delete('/api/v1/job', requireAuth, (req, res) => {
+  const jobId = String((req.query && req.query.id) || (req.body && req.body.id) || '')
+  const result = deleteSessionJob(req.session, jobId)
+  if (!result.ok) {
+    const status = result.error === 'not_found' ? 404 : 400
+    return res.status(status).json({ error: result.error || 'Failed to delete job' })
+  }
+  res.json(result)
 })
 
 function runCmd (cmd, args, options = {}) {
@@ -1371,7 +1473,7 @@ function findDiySourceNode (syntax, jsonObj) {
 // Derived from each corresponding 3DuF component class render2D()/transformRender().
 const DIY_RENDER_PARAM_ALLOWLIST = {
   channel: new Set(['channelWidth', 'crossSection']),
-  mixer: new Set(['bendLength', 'bendSpacing', 'channelWidth', 'numberOfBends', 'rotation', 'mirrorByX', 'mirrorByY']),
+  mixer: new Set(['bendLength', 'bendSpacing', 'channelWidth', 'numberOfBends', 'edgeBend1', 'edgeBend2', 'rotation', 'mirrorByX', 'mirrorByY']),
   mux: new Set([
     'controlChannelWidth',
     'flowChannelWidth',

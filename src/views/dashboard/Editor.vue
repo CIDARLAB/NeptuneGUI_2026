@@ -24,8 +24,14 @@
             <v-list-item @click="saveToNewWorkspace">
               <v-list-item-title>Save file to a new workspace</v-list-item-title>
             </v-list-item>
-            <v-list-item @click="openExistingWorkspaceDialog">
+            <v-list-item @click="openExistingWorkspaceDialog(false)">
               <v-list-item-title>Save file to an existing workspace</v-list-item-title>
+            </v-list-item>
+            <v-list-item @click="moveToNewWorkspace">
+              <v-list-item-title>Move file to a new workspace</v-list-item-title>
+            </v-list-item>
+            <v-list-item @click="openExistingWorkspaceDialog(true)">
+              <v-list-item-title>Move file to an existing workspace</v-list-item-title>
             </v-list-item>
           </v-list>
         </v-menu>
@@ -128,10 +134,10 @@
       </v-col>
     </v-row>
 
-  <!-- Save to new workspace -->
+  <!-- Save / move to a new workspace -->
   <v-dialog v-model="saveDialog" max-width="480px" persistent content-class="editor-dialog-surface">
     <v-card class="editor-dialog-card">
-      <v-card-title class="editor-dialog-title">New workspace</v-card-title>
+      <v-card-title class="editor-dialog-title">{{ newWorkspaceDialogTitle }}</v-card-title>
       <v-card-text>
         <v-text-field
           v-model="newWorkspaceName"
@@ -150,38 +156,72 @@
           rows="2"
           hide-details="auto"
           color="primary"
+          class="mb-3"
         />
+        <div class="d-flex align-center">
+          <v-text-field
+            v-model="saveAsFileBaseName"
+            label="File name"
+            outlined
+            dense
+            hide-details="auto"
+            color="primary"
+            class="flex-grow-1"
+          />
+          <span class="editor-page-filename-ext ml-2">.{{ selectedScriptLanguage }}</span>
+        </div>
+        <p class="caption mt-2 mb-0">{{ workspaceCopyOrMoveHint }}</p>
       </v-card-text>
       <v-card-actions>
         <v-spacer />
         <v-btn color="primary" text @click="saveDialog = false">Cancel</v-btn>
-        <v-btn color="success" text @click="confirmSaveNewWorkspace">Create workspace</v-btn>
+        <v-btn color="success" text @click="confirmSaveNewWorkspace">{{ workspaceActionConfirmLabel }}</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
 
-  <!-- Save to existing workspace -->
+  <!-- Save / move to an existing workspace -->
   <v-dialog v-model="existingWorkspaceDialog" max-width="480px" persistent content-class="editor-dialog-surface">
     <v-card class="editor-dialog-card">
-      <v-card-title class="editor-dialog-title">Save file to an existing workspace</v-card-title>
+      <v-card-title class="editor-dialog-title">{{ existingWorkspaceDialogTitle }}</v-card-title>
       <v-card-text>
         <v-select
           v-model="selectedExistingWorkspaceId"
-          :items="existingWorkspacesList"
+          :items="existingWorkspaceSelectItems"
           item-text="name"
           item-value="_id"
+          item-disabled="disabled"
           label="Workspace"
+          :no-data-text="existingWorkspaceEmptyMessage"
           outlined
           dense
           hide-details="auto"
           color="primary"
+          class="mb-3"
         />
-        <p class="caption mt-2">Current content will be saved as a new file in the selected workspace.</p>
+        <div class="d-flex align-center">
+          <v-text-field
+            v-model="saveAsFileBaseName"
+            label="File name"
+            outlined
+            dense
+            hide-details="auto"
+            color="primary"
+            class="flex-grow-1"
+          />
+          <span class="editor-page-filename-ext ml-2">.{{ selectedScriptLanguage }}</span>
+        </div>
+        <p class="caption mt-2 mb-0">{{ workspaceCopyOrMoveHint }}</p>
       </v-card-text>
       <v-card-actions>
         <v-spacer />
         <v-btn color="primary" text @click="existingWorkspaceDialog = false">Cancel</v-btn>
-        <v-btn color="success" text @click="confirmSaveToExistingWorkspace">Save</v-btn>
+        <v-btn
+          color="success"
+          text
+          :disabled="!canConfirmExistingWorkspace"
+          @click="confirmSaveToExistingWorkspace"
+        >{{ workspaceActionConfirmLabel }}</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
@@ -207,6 +247,7 @@ import {
   collectImportLfr,
   formatImportResolveError,
 } from '@/lib/lfrImportResolve'
+import { persistGuestJobOutputs, pollCompileJobUntilSettled } from '@/lib/jobResultSync'
 
 const term = new Terminal()
 let initialPromptWritten = false
@@ -269,7 +310,7 @@ export default {
             || ws.files.find(x => /\.lfr$/i.test(x.name))
             || ws.files[0]
           const fullWs = guestStore.getWorkspace(ws._id) || ws
-          this.$store.commit('SET_WORKSPACE', fullWs)
+          this.applyEditorWorkspace(fullWs)
           this.$store.commit('SET_CURRENT_FILE', f.id)
           this.fileobject = { id: f.id, name: f.name, ext: f.ext }
           this.code = f.content || ''
@@ -287,7 +328,14 @@ export default {
     self.isloading = true
 
     if (this.$store.getters.isGuest) {
-      const wid = this.currentworkspace && this.currentworkspace._id
+      let wid = this.currentworkspace && this.currentworkspace._id
+      if (!wid) {
+        const hit = guestStore.findWorkspaceContainingFile(currentfile)
+        if (hit) {
+          this.applyEditorWorkspace(hit)
+          wid = hit._id
+        }
+      }
       if (!wid) { self.isloading = false; return }
       const file = guestStore.getFile(wid, currentfile)
       if (file) {
@@ -377,6 +425,8 @@ export default {
       saveDialog: false,
       newWorkspaceName: '',
       newWorkspaceNotes: '',
+      saveAsFileBaseName: '',
+      workspaceActionIsMove: false,
       cliCommand: '',
       existingWorkspaceDialog: false,
       selectedExistingWorkspaceId: null,
@@ -405,14 +455,16 @@ export default {
   },
   computed: {
     currentWorkspaceLabel () {
-      if (!this.currentworkspace || !this.currentworkspace.name) return 'None'
-      return this.currentworkspace.name
+      const ws = this.resolvedEditorWorkspace()
+      if (!ws || !ws.name) return 'None'
+      return ws.name
     },
     newScriptWorkspaceSubtitle () {
-      if (!this.currentworkspace || !this.currentworkspace.name) {
+      const ws = this.resolvedEditorWorkspace()
+      if (!ws || !ws.name) {
         return 'Current workspace: None. Workspace name and notes can be set when you Save.'
       }
-      return 'Current workspace: ' + this.currentworkspace.name
+      return 'Current workspace: ' + ws.name
     },
     editorOptionsWithTheme () {
       const theme = this.editorLanguage === 'lfr' ? 'lfrTheme' : this.editorLanguage === 'mint' ? 'mintTheme' : 'vs'
@@ -427,6 +479,36 @@ export default {
       if (ext === '.json') return 'json'
       if (ext === '.ini') return 'ini'
       return this.selectedScriptLanguage || 'plaintext'
+    },
+    newWorkspaceDialogTitle () {
+      return this.workspaceActionIsMove ? 'Move file to a new workspace' : 'Save file to a new workspace'
+    },
+    existingWorkspaceDialogTitle () {
+      return this.workspaceActionIsMove ? 'Move file to an existing workspace' : 'Save file to an existing workspace'
+    },
+    workspaceActionConfirmLabel () {
+      return this.workspaceActionIsMove ? 'Move' : 'Save'
+    },
+    workspaceCopyOrMoveHint () {
+      if (this.workspaceActionIsMove) {
+        return 'The original file will be removed from the current workspace after it is saved in the destination.'
+      }
+      return 'The original file stays in the current workspace. Edited content is saved as a new file.'
+    },
+    existingWorkspaceEmptyMessage () {
+      return 'No existing workspace can be selected'
+    },
+    existingWorkspaceSelectItems () {
+      if (this.existingWorkspacesList.length) return this.existingWorkspacesList
+      return [{ _id: '__none__', name: this.existingWorkspaceEmptyMessage, disabled: true }]
+    },
+    canConfirmExistingWorkspace () {
+      const id = this.selectedExistingWorkspaceId
+      if (id == null || id === '' || id === '__none__') return false
+      if (!this.existingWorkspacesList.length) return false
+      const curId = this.currentworkspace && this.currentworkspace._id
+      if (curId != null && String(id) === String(curId)) return false
+      return true
     },
   },
   sockets: {
@@ -463,14 +545,30 @@ export default {
         lower.includes('failed') ||
         lower.includes('exception')
       if (failed) {
-        alert(compileKind + ' compile failed. Please check logs/output for details.')
+        this.showSnack(compileKind + ' compile failed. Check Alerts or the Jobs log.', 'error')
       } else {
-        alert(compileKind + ' compile finished successfully.')
+        this.showSnack(compileKind + ' compile finished. Open Alerts or Jobs for results.', 'success')
       }
     }
 
   },
   methods: {
+    applyEditorWorkspace (ws) {
+      const full = (ws && ws._id && this.$store.getters.isGuest)
+        ? (guestStore.getWorkspace(ws._id) || ws)
+        : ws
+      this.currentworkspace = full && full.name ? full : (full || { name: '' })
+      if (full && full._id) this.$store.commit('SET_WORKSPACE', full)
+    },
+    resolvedEditorWorkspace () {
+      if (this.currentworkspace && this.currentworkspace.name) return this.currentworkspace
+      const fromStore = this.$store.getters.currentWorkspace
+      if (fromStore && fromStore.name) return fromStore
+      if (this.$store.getters.isGuest && this.fileobject && this.fileobject.id) {
+        return guestStore.findWorkspaceContainingFile(this.fileobject.id)
+      }
+      return this.currentworkspace || fromStore || null
+    },
     showSnack (text, color = 'info') {
       this.snackbarText = text
       this.snackbarColor = color
@@ -735,7 +833,7 @@ export default {
         if (this.$store.getters.isGuest) {
           guestStore.updateFile(this.currentworkspace._id, this.fileobject.id, this.code, newName)
           this.fileobject.name = newName
-          this.$router.push('/dashboard')
+          this.goToDashboardWorkspace(this.currentworkspace)
           return
         }
         const payload = { fileid: this.fileobject.id, text: this.code }
@@ -743,16 +841,14 @@ export default {
         axios.put('/api/v1/file', payload, config)
           .then(() => {
             this.fileobject.name = newName
-            this.$router.push('/dashboard')
+            this.goToDashboardWorkspace(this.currentworkspace)
           })
           .catch((err) => {
             const msg = (err.response && err.response.data && (err.response.data.error || err.response.data.message)) || err.message
             alert('Could not save file. ' + (msg ? String(msg) : 'Please try again.'))
           })
       } else {
-        this.newWorkspaceName = ''
-        this.newWorkspaceNotes = ''
-        this.saveDialog = true
+        this.openNewWorkspaceDialog(false)
       }
     },
     saveFileAndCompile () {
@@ -782,10 +878,75 @@ export default {
           alert('Could not save file. ' + (msg ? String(msg) : 'Please try again.'))
         })
     },
-    saveToNewWorkspace () {
+    defaultSaveAsFileBaseName () {
+      const name = String((this.fileobject && this.fileobject.name) || '')
+      const stripped = name.replace(/\.(mint|lfr|uf|v)$/i, '')
+      if (stripped) return stripped
+      const fromEditor = String(this.editableFileBaseName || this.newScriptBaseName || '').trim()
+      return fromEditor || 'script'
+    },
+    resolvedSaveAsFileName () {
+      const ext = '.' + this.selectedScriptLanguage
+      const base = String(this.saveAsFileBaseName || this.defaultSaveAsFileBaseName() || 'script')
+        .trim()
+        .replace(/\.(mint|lfr|uf|v)$/i, '') || 'script'
+      return base + ext
+    },
+    prepareWorkspaceFileDialog (isMove) {
+      this.workspaceActionIsMove = !!isMove
+      this.saveAsFileBaseName = this.defaultSaveAsFileBaseName()
+    },
+    goToDashboardWorkspace (workspace) {
+      const id = workspace && (workspace._id || workspace.id)
+      if (workspace && id) this.$store.commit('SET_WORKSPACE', workspace)
+      if (id) {
+        this.$router.push({ path: '/dashboard', query: { workspace: String(id), expand: '1' } })
+        return
+      }
+      this.$router.push('/dashboard')
+    },
+    filterOtherWorkspaces (list) {
+      const curId = this.currentworkspace && this.currentworkspace._id
+      return (list || []).filter((w) => w && (curId == null || String(w._id) !== String(curId)))
+    },
+    applyExistingWorkspaceChoices (list) {
+      this.existingWorkspacesList = this.filterOtherWorkspaces(list)
+      if (this.existingWorkspacesList.length) {
+        this.selectedExistingWorkspaceId = this.existingWorkspacesList[0]._id
+      } else {
+        this.selectedExistingWorkspaceId = '__none__'
+      }
+      this.existingWorkspaceDialog = true
+    },
+    removeOriginalFileIfMoving () {
+      if (!this.workspaceActionIsMove) return Promise.resolve()
+      const fid = this.fileobject && this.fileobject.id
+      const wid = this.currentworkspace && this.currentworkspace._id
+      if (!fid || !wid) return Promise.resolve()
+      if (this.$store.getters.isGuest) {
+        guestStore.deleteFile(wid, fid)
+        return Promise.resolve()
+      }
+      return axios.delete('/api/v1/file', {
+        data: { fileid: fid, workspaceid: wid },
+        withCredentials: true,
+        headers: { 'Content-Type': 'application/json' },
+      }).catch((err) => {
+        console.error(err)
+        alert('Saved to the destination, but could not remove the original file.')
+      })
+    },
+    openNewWorkspaceDialog (isMove) {
+      this.prepareWorkspaceFileDialog(isMove)
       this.newWorkspaceName = ''
       this.newWorkspaceNotes = ''
       this.saveDialog = true
+    },
+    saveToNewWorkspace () {
+      this.openNewWorkspaceDialog(false)
+    },
+    moveToNewWorkspace () {
+      this.openNewWorkspaceDialog(true)
     },
     openCompile () {
       if (!this.fileobject || !this.fileobject.id) {
@@ -794,13 +955,10 @@ export default {
       }
       this.compilefile()
     },
-    openExistingWorkspaceDialog () {
+    openExistingWorkspaceDialog (isMove) {
+      this.prepareWorkspaceFileDialog(!!isMove)
       if (this.$store.getters.isGuest) {
-        this.existingWorkspacesList = guestStore.getWorkspacesSortedForDashboard()
-        const curId = this.currentworkspace && this.currentworkspace._id
-        const inList = this.existingWorkspacesList.some(w => String(w._id) === String(curId))
-        this.selectedExistingWorkspaceId = inList ? curId : (this.existingWorkspacesList[0] && this.existingWorkspacesList[0]._id) || null
-        this.existingWorkspaceDialog = true
+        this.applyExistingWorkspaceChoices(guestStore.getWorkspacesSortedForDashboard())
         return
       }
       const config = { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
@@ -812,38 +970,44 @@ export default {
           ))
         })
         .then((list) => {
-          this.existingWorkspacesList = list.filter(Boolean)
-          const curId = this.currentworkspace && this.currentworkspace._id
-          const inList = this.existingWorkspacesList.some(w => String(w._id) === String(curId))
-          this.selectedExistingWorkspaceId = inList ? curId : (this.existingWorkspacesList[0] && this.existingWorkspacesList[0]._id) || null
-          this.existingWorkspaceDialog = true
+          this.applyExistingWorkspaceChoices(list.filter(Boolean))
         })
-        .catch(() => {})
+        .catch(() => {
+          this.applyExistingWorkspaceChoices([])
+        })
     },
     confirmSaveToExistingWorkspace () {
+      if (!this.canConfirmExistingWorkspace) return
       const wsId = this.selectedExistingWorkspaceId
-      if (!wsId) return
       const ext = '.' + this.selectedScriptLanguage
-      const base = (this.editableFileBaseName || this.fileobject.name || this.newScriptBaseName || 'script').trim().replace(/\.(mint|lfr)$/i, '') || 'script'
-      const fileName = base + ext
+      const fileName = this.resolvedSaveAsFileName()
       const config = { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
+      const destWorkspace = this.existingWorkspacesList.find((w) => String(w._id) === String(wsId))
+        || { _id: wsId }
       if (this.$store.getters.isGuest) {
         const file = guestStore.createFile(wsId, fileName, ext)
-        if (file) guestStore.updateFile(wsId, file.id, this.code)
-        this.existingWorkspaceDialog = false
-        this.$router.push('/dashboard')
+        if (file) {
+          guestStore.updateFile(wsId, file.id, this.code)
+          this.$store.commit('SET_CURRENT_FILE', file.id)
+        }
+        this.removeOriginalFileIfMoving().then(() => {
+          this.existingWorkspaceDialog = false
+          this.goToDashboardWorkspace(guestStore.getWorkspace(wsId) || destWorkspace)
+        })
         return
       }
       axios.post('/api/v1/file', { workspaceid: wsId, file_name: fileName, ext }, config)
         .then((res) => {
           const fileId = res.data.id
+          if (fileId) this.$store.commit('SET_CURRENT_FILE', fileId)
           if (fileId && this.code) {
             return axios.put('/api/v1/file', { fileid: fileId, text: this.code }, config)
           }
         })
+        .then(() => this.removeOriginalFileIfMoving())
         .then(() => {
           this.existingWorkspaceDialog = false
-          this.$router.push('/dashboard')
+          this.goToDashboardWorkspace(destWorkspace)
         })
         .catch((err) => {
           const msg = (err.response && err.response.data && (err.response.data.error || err.response.data.message)) || err.message
@@ -857,16 +1021,19 @@ export default {
       const name = (this.newWorkspaceName || '').trim() || 'New Workspace'
       const notes = (this.newWorkspaceNotes || '').trim()
       const ext = '.' + this.selectedScriptLanguage
-      let base = (this.newScriptBaseName || 'script').trim().replace(/\.(mint|lfr)$/i, '') || 'script'
-      const fileName = base + ext
+      const fileName = this.resolvedSaveAsFileName()
 
       if (this.$store.getters.isGuest) {
         const ws = guestStore.createWorkspace(name, notes)
         const file = guestStore.createFile(ws._id, fileName, ext)
-        if (file) guestStore.updateFile(ws._id, file.id, this.code)
-        this.$store.commit('SET_WORKSPACE', ws)
-        this.saveDialog = false
-        this.$router.push('/dashboard')
+        if (file) {
+          guestStore.updateFile(ws._id, file.id, this.code)
+          this.$store.commit('SET_CURRENT_FILE', file.id)
+        }
+        this.removeOriginalFileIfMoving().then(() => {
+          this.saveDialog = false
+          this.goToDashboardWorkspace(ws)
+        })
         return
       }
 
@@ -882,18 +1049,19 @@ export default {
             workspaceid: workspaceId,
             file_name: fileName,
             ext,
-          }, config).then((fileRes) => ({ workspaceId, fileId: fileRes.data.id }))
+          }, config).then((fileRes) => ({ workspace, workspaceId, fileId: fileRes.data.id }))
         })
-        .then(({ workspaceId, fileId }) => {
-          if (fileId && this.code) {
-            return axios.put('/api/v1/file', { fileid: fileId, text: this.code }, config).then(() => workspaceId)
-          }
-          return workspaceId
+        .then(({ workspace, workspaceId, fileId }) => {
+          if (fileId) this.$store.commit('SET_CURRENT_FILE', fileId)
+          const afterContent = fileId && this.code
+            ? axios.put('/api/v1/file', { fileid: fileId, text: this.code }, config)
+            : Promise.resolve()
+          return afterContent.then(() => ({ workspace, workspaceId }))
         })
-        .then((workspaceId) => {
-          this.$store.commit('SET_WORKSPACE', { _id: workspaceId, name })
+        .then(({ workspace, workspaceId }) => this.removeOriginalFileIfMoving().then(() => ({ workspace, workspaceId })))
+        .then(({ workspace, workspaceId }) => {
           this.saveDialog = false
-          this.$router.push('/dashboard')
+          this.goToDashboardWorkspace(workspace || { _id: workspaceId, name })
         })
         .catch((err) => {
           console.error(err)
@@ -933,8 +1101,8 @@ export default {
         return
       }
 
-      const currentWorkspace = this.$store.getters.currentWorkspace || {}
       const currentUser = this.$store.getters.currentUser || {}
+      const currentWorkspace = this.resolveCompileWorkspace()
       const data = {
         sourcefileid: this.fileobject.id,
         sourcefilename: this.fileobject.name,
@@ -969,8 +1137,26 @@ export default {
         .then((response) => {
           const jobid = response.data
           try { if (self.$socket) self.$socket.emit('monitor', jobid) } catch (e) { /* ignore */ }
+          self.$store.commit('ingestJobSnapshots', [{
+            id: jobid,
+            status: 'running',
+            sourceFilename: self.fileobject && self.fileobject.name,
+            workspaceName: currentWorkspace.name || '',
+            workspaceId: currentWorkspace._id,
+          }])
           self.isloading = false
           self.$router.push({ name: 'Jobs' }).catch(() => {})
+          pollCompileJobUntilSettled(axios, jobid).then((job) => {
+            if (!job) return
+            self.$store.commit('addJobResultAlert', job)
+            if (self.$store.getters.isGuest) {
+              persistGuestJobOutputs(guestStore, [job])
+            }
+            self.$root.$emit('neptune-job-outputs-changed', {
+              workspaceId: job.workspaceId || currentWorkspace._id,
+              expand: true,
+            })
+          })
         })
         .catch((error) => {
           console.error(error)
@@ -982,6 +1168,22 @@ export default {
           const suffix = status ? ` (HTTP ${status}${detail ? ': ' + detail : ''})` : (detail ? ` (${detail})` : '')
           alert(kind + ' compile failed. Could not start compile job.' + suffix)
         })
+    },
+    resolveCompileWorkspace () {
+      const fromStore = this.$store.getters.currentWorkspace
+      if (fromStore && fromStore._id) {
+        if (!this.currentworkspace || !this.currentworkspace._id) this.applyEditorWorkspace(fromStore)
+        return fromStore
+      }
+      if (this.currentworkspace && this.currentworkspace._id) return this.currentworkspace
+      if (this.$store.getters.isGuest && this.fileobject && this.fileobject.id) {
+        const hit = guestStore.findWorkspaceContainingFile(this.fileobject.id)
+        if (hit) {
+          this.applyEditorWorkspace(hit)
+          return hit
+        }
+      }
+      return fromStore || this.currentworkspace || {}
     },
     /**
      * Load every workspace + file content so `` `import "Ws/file.lfr" `` can be checked locally.

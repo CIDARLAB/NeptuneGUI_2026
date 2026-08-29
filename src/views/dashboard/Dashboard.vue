@@ -238,7 +238,7 @@
                           :id="file.id"
                           :workspaceid="selectedworkspace._id"
                           :content="file.content"
-                          v-on:onFileDeleted="refreshFiles"
+                          v-on:onFileDeleted="onWorkspaceFileDeleted"
                           @view3duf="openJsonIn3DuF($event)"
                           @importComponentJson="importWorkspaceJsonToComponentLibrary($event)"
                       />
@@ -297,7 +297,13 @@
                           <tr v-for="(file, i) in sortedFilesForList" :key="`list-${i}`">
                             <td class="file-list-name-cell file-list-col-name">
                               <div class="file-list-name-scroll">
-                                <span class="file-list-name-text">{{ getFileDisplayName(file) }}</span>
+                                <button
+                                  v-if="canEditFile(file)"
+                                  type="button"
+                                  class="file-list-name-link"
+                                  @click="editFile(file)"
+                                >{{ getFileDisplayName(file) }}</button>
+                                <span v-else class="file-list-name-text">{{ getFileDisplayName(file) }}</span>
                               </div>
                             </td>
                             <td class="file-list-col-type">
@@ -325,49 +331,47 @@
                                   <span>Download this file</span>
                                 </v-tooltip>
 
-                                <v-tooltip
+                                <div
                                   v-if="(file.ext || '').toLowerCase() === '.json'"
-                                  bottom
+                                  class="file-json-action-pair"
                                 >
-                                  <template v-slot:activator="{ on, attrs }">
-                                    <v-btn
-                                      text
-                                      icon
-                                      small
-                                      color="purple"
-                                      v-bind="attrs"
-                                      v-on="on"
-                                      @click="viewFileIn3DuF(file)"
-                                    >
-                                      <img
-                                        class="go-3duf-btn-logo go-3duf-btn-logo--sm"
-                                        :src="logo3duf"
-                                        alt="3DuF"
+                                  <v-tooltip bottom>
+                                    <template v-slot:activator="{ on, attrs }">
+                                      <v-btn
+                                        text
+                                        icon
+                                        small
+                                        color="purple"
+                                        v-bind="attrs"
+                                        v-on="on"
+                                        @click="viewFileIn3DuF(file)"
                                       >
-                                    </v-btn>
-                                  </template>
-                                  <span>Open design JSON in 3DuF</span>
-                                </v-tooltip>
-
-                                <v-tooltip
-                                  v-if="(file.ext || '').toLowerCase() === '.json'"
-                                  bottom
-                                >
-                                  <template v-slot:activator="{ on, attrs }">
-                                    <v-btn
-                                      text
-                                      icon
-                                      small
-                                      color="primary"
-                                      v-bind="attrs"
-                                      v-on="on"
-                                      @click="importFileJson(file)"
-                                    >
-                                      <v-icon small>mdi-database-import-outline</v-icon>
-                                    </v-btn>
-                                  </template>
-                                  <span>Import this JSON into Component Library</span>
-                                </v-tooltip>
+                                        <img
+                                          class="go-3duf-btn-logo go-3duf-btn-logo--sm"
+                                          :src="logo3duf"
+                                          alt="3DuF"
+                                        >
+                                      </v-btn>
+                                    </template>
+                                    <span>Open design JSON in 3DuF</span>
+                                  </v-tooltip>
+                                  <v-tooltip bottom>
+                                    <template v-slot:activator="{ on, attrs }">
+                                      <v-btn
+                                        text
+                                        icon
+                                        small
+                                        color="primary"
+                                        v-bind="attrs"
+                                        v-on="on"
+                                        @click="importFileJson(file)"
+                                      >
+                                        <v-icon small>mdi-database-import-outline</v-icon>
+                                      </v-btn>
+                                    </template>
+                                    <span>Import this JSON into Component Library</span>
+                                  </v-tooltip>
+                                </div>
 
                                 <v-tooltip
                                   v-if="canEditFile(file)"
@@ -485,6 +489,8 @@
   import guestStore, { fileContentForZipExport } from '@/lib/guestStore'
   import { openAndLoadDeviceIn3DuF } from '@/lib/open3DuFPostMessage'
   import { validateAndNormalizeLfrName } from '@/lib/lfrNaming'
+  import { deleteLinkedJobForWorkspaceFile, fetchFullJobs, persistGuestJobOutputs, pruneHiddenCompileArtifactsFromWorkspace } from '@/lib/jobResultSync'
+  import { filterWorkspaceVisibleFiles } from '@/lib/compileOutputFiles'
 
   export default {
     name: 'DashboardDashboard',
@@ -492,12 +498,22 @@
     mounted: async function() {
         this.refreshworkspacedata()
         this.$root.$on('neptune-backup-imported', this.refreshworkspacedata)
+        this.$root.$on('neptune-job-outputs-changed', this.onJobOutputsChanged)
     },
     beforeDestroy () {
       this.$root.$off('neptune-backup-imported', this.refreshworkspacedata)
+      this.$root.$off('neptune-job-outputs-changed', this.onJobOutputsChanged)
     },
     activated () {
       this.refreshworkspacedata()
+    },
+    watch: {
+      '$route.query.workspace' (wid) {
+        if (!wid) return
+        if (this.workspacesobjects[wid] && this.shouldExpandWorkspaceFromRoute()) {
+          this.expandWorkspaceFiles(wid)
+        }
+      },
     },
     data: () => ({
       logo3duf: require('@/assets/3duf_icon.png'),
@@ -655,36 +671,22 @@
       },
       editFile (file) {
         if (!file || !file.id || !this.canEditFile(file)) return
+        if (this.selectedworkspace) this.$store.commit('SET_WORKSPACE', this.selectedworkspace)
         this.$store.commit('SET_CURRENT_FILE', file.id)
         this.$router.push('/editor')
       },
-      deleteFile (file) {
+      async deleteFile (file) {
         if (!file || !file.id) return
         const wid =
           (this.selectedworkspace && this.selectedworkspace._id) ||
           (this.$store.getters.currentWorkspace && this.$store.getters.currentWorkspace._id) ||
           null
         if (!wid) return
-
-        if (this.$store.getters.isGuest) {
-          guestStore.deleteFile(wid, file.id)
-          this.refreshFiles(wid)
-          return
-        }
-
-        const config = {
-          data: {
-            fileid: file.id,
-            workspaceid: wid,
-          },
-          withCredentials: true,
-          crossorigin: true,
-          headers: { 'Content-Type': 'application/json' },
-        }
-
-        axios.delete('/api/v1/file', config)
-          .then(() => { this.refreshFiles(wid) })
-          .catch((error) => { console.log(error) })
+        await this.removeWorkspaceFileAndLinkedJob({
+          workspaceId: wid,
+          fileId: file.id,
+          name: file.name,
+        })
       },
       viewFileIn3DuF (file) {
         if (!file || !file.id) return
@@ -1098,6 +1100,7 @@
         return expand === '1' || expand === 'true' || expand === true
       },
         refreshworkspacedata () {
+          const keepExpanded = this.dashboardFilesWorkspaceId
           this.workspaces = []
           this.workspacesobjects = {}
           this.files = []
@@ -1106,21 +1109,33 @@
           if (this.$store.getters.isGuest) {
             guestStore.ensureExampleWorkspace()
             guestStore.pruneEmptyWorkspaces()
-            const list = guestStore.getWorkspacesSortedForDashboard()
-            list.forEach(w => {
-              this.workspaces.push(w)
-              this.workspacesobjects[w._id] = w
-            })
-            const target = this.$route && this.$route.query && this.$route.query.workspace
-            const shouldExpand = this.shouldExpandWorkspaceFromRoute()
-            if (target && this.workspacesobjects[target]) {
-              if (shouldExpand) this.expandWorkspaceFiles(target)
-            } else if (!list.length) {
-              this.$store.commit('SET_WORKSPACE', null)
-              this.$store.commit('SET_CURRENT_FILE', null)
-              this.selectedworkspace = { name: '', id: '' }
-              this.files = []
+            const applyGuestList = (list) => {
+              this.workspaces = list
+              this.workspacesobjects = {}
+              list.forEach(w => {
+                this.workspacesobjects[w._id] = w
+              })
+              const target = this.$route && this.$route.query && this.$route.query.workspace
+              const shouldExpand = this.shouldExpandWorkspaceFromRoute()
+              if (target && this.workspacesobjects[target] && shouldExpand) {
+                this.expandWorkspaceFiles(target)
+              } else if (keepExpanded && this.workspacesobjects[keepExpanded]) {
+                this.expandWorkspaceFiles(keepExpanded)
+              } else if (!list.length) {
+                this.$store.commit('SET_WORKSPACE', null)
+                this.$store.commit('SET_CURRENT_FILE', null)
+                this.selectedworkspace = { name: '', id: '' }
+                this.files = []
+              }
             }
+            applyGuestList(guestStore.getWorkspacesSortedForDashboard())
+            fetchFullJobs(axios).then((jobs) => {
+              persistGuestJobOutputs(guestStore, jobs)
+              ;(guestStore.getWorkspaces() || []).forEach((w) => {
+                if (w && w._id) pruneHiddenCompileArtifactsFromWorkspace(guestStore, w._id)
+              })
+              applyGuestList(guestStore.getWorkspacesSortedForDashboard())
+            }).catch(() => {})
             return
           }
 
@@ -1238,6 +1253,66 @@
           if (this.dashboardFilesWorkspaceId !== id) return
           this.loadWorkspaceFiles(id)
         },
+        onJobOutputsChanged (payload) {
+          const wid = payload && payload.workspaceId
+          if (this.$store.getters.isGuest) {
+            guestStore.ensureExampleWorkspace()
+            const list = guestStore.getWorkspacesSortedForDashboard()
+            this.workspaces = list
+            this.workspacesobjects = {}
+            list.forEach((w) => { this.workspacesobjects[w._id] = w })
+          }
+          if (!wid) return
+          if (payload && payload.expand && this.workspacesobjects[wid]) {
+            this.expandWorkspaceFiles(wid)
+            return
+          }
+          this.refreshFiles(wid)
+        },
+        async onWorkspaceFileDeleted (payload) {
+          const wid = payload && typeof payload === 'object' ? payload.workspaceId : payload
+          const name = payload && typeof payload === 'object' ? payload.name : ''
+          const fileId = payload && typeof payload === 'object' ? payload.fileId : null
+          if (name) {
+            await this.removeWorkspaceFileAndLinkedJob({
+              workspaceId: wid,
+              fileId,
+              name,
+              alreadyDeleted: true,
+            })
+            return
+          }
+          this.refreshFiles(wid)
+        },
+        async removeWorkspaceFileAndLinkedJob ({ workspaceId, fileId, name, alreadyDeleted }) {
+          if (!workspaceId) return
+          const linked = await deleteLinkedJobForWorkspaceFile(axios, guestStore, {
+            workspaceId,
+            fileName: name,
+            isGuest: this.$store.getters.isGuest,
+          })
+          if (linked && linked.linked) {
+            this.$root.$emit('neptune-job-outputs-changed', { workspaceId: linked.workspaceId || workspaceId })
+            this.refreshFiles(workspaceId)
+            return
+          }
+          if (!alreadyDeleted && fileId) {
+            if (this.$store.getters.isGuest) {
+              guestStore.deleteFile(workspaceId, fileId)
+            } else {
+              try {
+                await axios.delete('/api/v1/file', {
+                  data: { fileid: fileId, workspaceid: workspaceId },
+                  withCredentials: true,
+                  headers: { 'Content-Type': 'application/json' },
+                })
+              } catch (error) {
+                console.log(error)
+              }
+            }
+          }
+          this.refreshFiles(workspaceId)
+        },
         toggleWorkspaceFiles (workspace_id) {
           if (this.dashboardFilesWorkspaceId === workspace_id) {
             this.collapseWorkspaceFilesPanel()
@@ -1260,7 +1335,8 @@
           if (obj) this.$store.commit('SET_WORKSPACE', obj)
 
           if (this.$store.getters.isGuest) {
-            this.files = guestStore.getFiles(workspace_id) || []
+            pruneHiddenCompileArtifactsFromWorkspace(guestStore, workspace_id)
+            this.files = filterWorkspaceVisibleFiles(guestStore.getFiles(workspace_id) || [])
             return
           }
 
@@ -1271,7 +1347,10 @@
               const ids = response.data || []
               ids.forEach(fid => {
                 axios.get('/api/v1/file', { params: { id: fid } })
-                  .then((res) => { self.files.push(res.data) })
+                  .then((res) => {
+                    const file = res.data
+                    if (file && filterWorkspaceVisibleFiles([file]).length) self.files.push(file)
+                  })
                   .catch((error) => { console.log(error) })
               })
             })
@@ -1441,9 +1520,38 @@
         white-space: nowrap;
         padding-bottom: 2px;
     }
-    #dashboard .file-list-name-text {
+    #dashboard .file-list-name-text,
+    #dashboard .file-list-name-link {
         display: inline-block;
         min-width: max-content;
+        border: 0;
+        background: transparent;
+        padding: 0;
+        font: inherit;
+        color: inherit;
+        text-align: left;
+    }
+    #dashboard .file-list-name-link {
+        cursor: pointer;
+        color: #006994;
+    }
+    #dashboard .file-list-name-link:hover,
+    #dashboard .file-list-name-link:focus {
+        text-decoration: underline;
+        outline: none;
+    }
+    #dashboard .file-list-actions {
+        flex-wrap: nowrap;
+        flex-direction: row;
+        gap: 4px;
+    }
+    #dashboard .file-json-action-pair {
+        display: inline-flex;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        align-items: center;
+        flex: 0 0 auto;
+        gap: 4px;
     }
     #dashboard .file-list-ext-pill {
         font-family: monospace;
@@ -1463,9 +1571,6 @@
     #dashboard .file-list-ext-pill--mint {
         background: rgba(46, 125, 50, 0.12);
         color: #2e7d32;
-    }
-    #dashboard .file-list-actions {
-        gap: 4px;
     }
     #dashboard .go-3duf-btn-logo {
         object-fit: contain;

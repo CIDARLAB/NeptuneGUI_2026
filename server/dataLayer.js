@@ -370,6 +370,22 @@ function createWorkspace (session, name) {
   return workspace
 }
 
+function ensureWorkspace (session, workspaceId, name) {
+  if (!session || workspaceId == null || workspaceId === '') return null
+  const existing = getWorkspace(session, workspaceId)
+  if (existing) return existing
+  const list = getWorkspaces(session)
+  const workspace = {
+    _id: String(workspaceId),
+    name: name || 'Workspace',
+    updated_at: new Date().toISOString(),
+    files: [],
+  }
+  list.push(workspace)
+  saveWorkspaces(session, list)
+  return workspace
+}
+
 function deleteWorkspace (session, workspaceId) {
   let list = getWorkspaces(session)
   list = list.filter(w => String(w._id) !== String(workspaceId))
@@ -563,6 +579,7 @@ module.exports = {
   getWorkspace,
   getWorkspaces,
   createWorkspace,
+  ensureWorkspace,
   deleteWorkspace,
   deleteWorkspaceDeep,
   getFileIds,

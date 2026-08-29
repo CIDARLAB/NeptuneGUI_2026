@@ -119,7 +119,7 @@
               color="success"
               small
               outlined
-              @click="refreshResults"
+              @click="onRefreshClick"
             >
               <v-icon left small>mdi-refresh</v-icon>
               Refresh
@@ -130,7 +130,8 @@
             :key="'results-weights-' + evaluationWeightsRevision"
             :headers="tableHeaders"
             :items="displayRows"
-            :items-per-page="10"
+            :items-per-page.sync="resultsTableItemsPerPage"
+            :page.sync="resultsTablePage"
             :custom-sort="customTableSort"
             item-key="rowKey"
             :item-class="rowClass"
@@ -226,6 +227,19 @@
               </span>
             </template>
 
+            <template v-slot:item.deleteActions="{ item }">
+              <span v-if="!canDeleteJobRow(item)">-</span>
+              <v-btn
+                v-else
+                small
+                outlined
+                color="error"
+                @click="deleteJobRow(item)"
+              >
+                Delete
+              </v-btn>
+            </template>
+
             <template v-slot:no-data>
               <div class="text-center grey--text text--darken-1 py-4">
                 No jobs found for current session.
@@ -259,7 +273,7 @@
           <v-btn
             text
             color="warning"
-            :disabled="!jsonDialogRow || !jsonDialogRow.fileId"
+            :disabled="!canDeleteJsonDialog"
             @click="deleteJsonDialogFile"
           >
             Delete
@@ -302,6 +316,11 @@ import { EVALUATION_METRIC_SPEC_URL } from '@/lib/evaluationMetricSpec'
 import guestStore, { EXAMPLE_WORKSPACE_NAME } from '@/lib/guestStore'
 import { validateAndNormalizeLfrName } from '@/lib/lfrNaming'
 import { openAndLoadDeviceIn3DuF } from '@/lib/open3DuFPostMessage'
+import {
+  persistGuestJobOutputs,
+  deleteJobResult,
+  deleteLinkedJobForWorkspaceFile,
+} from '@/lib/jobResultSync'
 
 const METRIC_KEYS = ['areaScore', 'compactScore', 'connectionLengthScore', 'bendScore', 'symmetryScore', 'fragmentationScore']
 
@@ -310,6 +329,12 @@ export default {
     return {
       jobs: [],
       jobobjects: {},
+      resultsPollTimer: null,
+      resultsRefreshing: false,
+      highlightJobId: null,
+      highlightTimer: null,
+      resultsTablePage: 1,
+      resultsTableItemsPerPage: 10,
       fileNameById: {},
       fileDataById: {},
       workspaceNameById: {},
@@ -386,6 +411,7 @@ export default {
         { text: 'Log', value: 'logActions', sortable: false, align: 'center' },
         { text: 'Visualization', value: 'threedufActions', sortable: false, align: 'center' },
         { text: 'Status', value: 'status', sortable: false, align: 'end' },
+        { text: 'Delete', value: 'deleteActions', sortable: false, align: 'center' },
       ],
     }
   },
@@ -432,18 +458,69 @@ export default {
       if (!this.logDialogRow) return 'Compile log'
       return this.logDialogRow.logFileName || 'Compile log'
     },
+    canDeleteJsonDialog () {
+      const row = this.jsonDialogRow
+      if (!row) return false
+      if (row.rowKind === 'job') return true
+      return !!(row.fileId && row.workspaceId)
+    },
+    highlightFromStore () {
+      return this.$store.state.highlightJobId
+    },
   },
   mounted () {
     this.$root.$on('neptune-backup-imported', this.refreshResults)
-    this.refreshResults()
+    this.startResultsPolling()
+    this.refreshResults().then(() => this.applyHighlightFromRoute())
   },
   beforeDestroy () {
     this.$root.$off('neptune-backup-imported', this.refreshResults)
+    this.stopResultsPolling()
+    if (this.highlightTimer) clearTimeout(this.highlightTimer)
+  },
+  watch: {
+    '$route.query.job' () {
+      this.applyHighlightFromRoute()
+    },
+    highlightFromStore (id) {
+      if (id) this.applyHighlight(id)
+    },
   },
   methods: {
     rowClass (item) {
       const status = item && item.status === 'ongoing' ? 'processing' : (item && item.status) || 'processing'
-      return `results-row results-row--${status}`
+      const flash = this.highlightJobId && item && String(item.jobId) === String(this.highlightJobId)
+      return `results-row results-row--${status}${flash ? ' results-row--flash' : ''}`
+    },
+    applyHighlightFromRoute () {
+      const id = this.$route && this.$route.query && this.$route.query.job
+      if (id) this.applyHighlight(id)
+    },
+    applyHighlight (jobId) {
+      const id = jobId ? String(jobId) : ''
+      if (!id) return
+      this.highlightJobId = id
+      this.$store.commit('setHighlightJobId', null)
+      const idx = (this.displayRows || []).findIndex((r) => String(r.jobId) === id)
+      if (idx >= 0) {
+        const per = this.resultsTableItemsPerPage || 10
+        this.resultsTablePage = Math.floor(idx / per) + 1
+      }
+      this.$nextTick(() => {
+        this.$nextTick(() => this.scrollHighlightedRowIntoView())
+      })
+      if (this.highlightTimer) clearTimeout(this.highlightTimer)
+      this.highlightTimer = setTimeout(() => {
+        this.highlightJobId = null
+      }, 4500)
+    },
+    scrollHighlightedRowIntoView () {
+      try {
+        const el = this.$el && this.$el.querySelector('.results-row--flash')
+        if (el && typeof el.scrollIntoView === 'function') {
+          el.scrollIntoView({ block: 'center', behavior: 'smooth' })
+        }
+      } catch (_) {}
     },
     customTableSort (items, sortBy, sortDesc) {
       if (!sortBy) return items
@@ -529,17 +606,39 @@ export default {
       this.evaluationWeightsRevision += 1
     },
     async refreshResults () {
-      this.jobs = []
-      this.jobobjects = {}
-      this.fileNameById = {}
-      this.fileDataById = {}
-      this.workspaceNameById = {}
-      this.computedMetricsByFileId = {}
-      this.evaluationFetchStateByFileId = {}
-      await this.loadExampleWorkspaceMeta()
-      await this.prefetchWorkspaceNames()
-      await this.getAllJobs()
-      await this.computeAllEvaluationMetrics()
+      if (this.resultsRefreshing) return
+      this.resultsRefreshing = true
+      try {
+        await this.loadExampleWorkspaceMeta()
+        await this.prefetchWorkspaceNames()
+        await this.getAllJobs()
+        await this.computeAllEvaluationMetrics()
+      } finally {
+        this.resultsRefreshing = false
+      }
+    },
+    startResultsPolling () {
+      this.stopResultsPolling()
+      const tick = () => {
+        this.refreshResults()
+        const running = (this.jobs || []).some((j) => {
+          const s = String((j && j.status) || '').toLowerCase()
+          return s === 'running' || s === 'pending' || s === 'unknown' || s === ''
+        })
+        this.stopResultsPolling()
+        this.resultsPollTimer = setTimeout(tick, running ? 2000 : 10000)
+      }
+      this.resultsPollTimer = setTimeout(tick, 2000)
+    },
+    stopResultsPolling () {
+      if (this.resultsPollTimer) {
+        clearTimeout(this.resultsPollTimer)
+        this.resultsPollTimer = null
+      }
+    },
+    onRefreshClick () {
+      this.startResultsPolling()
+      this.refreshResults()
     },
     async loadExampleWorkspaceMeta () {
       const meta = {
@@ -759,7 +858,8 @@ export default {
         outputFileName,
         workspaceId,
         workspaceName,
-        fileId: primaryFileId,
+        fileId: primaryFileId || this.guestFileIdForJob(job),
+        jobId: job.id || null,
         jobRef: job,
         status,
         hasJson: !failedOrProcessing && !!(job.jsonText || primaryFileId),
@@ -780,6 +880,19 @@ export default {
     canShowResultActions (row) {
       if (!row) return false
       return row.status === 'done'
+    },
+    canDeleteJobRow (row) {
+      return !!(row && row.rowKind === 'job' && row.status !== 'processing' && row.status !== 'ongoing')
+    },
+    guestFileIdForJob (job) {
+      if (!this.$store.getters.isGuest || !job) return null
+      const ws = guestStore.getWorkspace(job.workspaceId || job.workspace_id)
+        || (guestStore.getWorkspaces() || []).find((w) =>
+          String(w.name || '').trim().toLowerCase() === String(job.workspaceName || '').trim().toLowerCase()
+        )
+      if (!ws || !job.outputFileName) return null
+      const f = guestStore.findFileByName(ws._id, job.outputFileName)
+      return f ? f.id : null
     },
     formatMetricCell (row, key) {
       if (!row || row.status === 'fail' || row.status === 'processing' || row.status === 'ongoing') return '-'
@@ -1187,13 +1300,48 @@ export default {
         alert('JSON in dialog is not valid.')
       }
     },
+    async deleteJobRow (row) {
+      const job = (row && row.jobRef) || null
+      const jobId = (row && row.jobId) || (job && job.id)
+      if (!jobId) return
+      const label = (row && row.outputFileName) || jobId
+      if (!window.confirm(`Delete "${label}" from Jobs and the matching workspace files?`)) return
+      const result = await deleteJobResult(axios, guestStore, job || { id: jobId, ...row }, {
+        isGuest: this.$store.getters.isGuest,
+      })
+      if (!result.ok) {
+        alert('Delete failed: ' + (result.error || 'please try again.'))
+        return
+      }
+      this.$store.commit('removeJobAlert', jobId)
+      this.jsonDialogOpen = false
+      this.$root.$emit('neptune-job-outputs-changed', { workspaceId: result.workspaceId || row.workspaceId })
+      await this.refreshResults()
+    },
     async deleteJsonDialogFile () {
       const row = this.jsonDialogRow
-      if (!row || !row.fileId || !row.workspaceId) return
-      if (!window.confirm(`Delete "${row.outputFileName}" from workspace?`)) return
+      if (!row) return
+      if (row.rowKind === 'job') {
+        await this.deleteJobRow(row)
+        return
+      }
+      if (!row.fileId || !row.workspaceId) return
+      if (!window.confirm(`Delete "${row.outputFileName}" from Jobs and the matching workspace files?`)) return
+      const linked = await deleteLinkedJobForWorkspaceFile(axios, guestStore, {
+        workspaceId: row.workspaceId,
+        fileName: row.outputFileName,
+        isGuest: this.$store.getters.isGuest,
+      })
+      if (linked && linked.linked) {
+        this.jsonDialogOpen = false
+        this.$root.$emit('neptune-job-outputs-changed', { workspaceId: linked.workspaceId || row.workspaceId })
+        await this.refreshResults()
+        return
+      }
       if (this.$store.getters.isGuest) {
         guestStore.deleteFile(row.workspaceId, row.fileId)
         this.jsonDialogOpen = false
+        this.$root.$emit('neptune-job-outputs-changed', { workspaceId: row.workspaceId })
         await this.refreshResults()
         return
       }
@@ -1204,6 +1352,7 @@ export default {
           headers: { 'Content-Type': 'application/json' },
         })
         this.jsonDialogOpen = false
+        this.$root.$emit('neptune-job-outputs-changed', { workspaceId: row.workspaceId })
         await this.refreshResults()
       } catch (err) {
         const msg = (err.response && err.response.data && err.response.data.error) || err.message
@@ -1216,23 +1365,40 @@ export default {
         headers: { 'Content-Type': 'application/json' },
       }
       try {
-        const jobsResponse = await axios.get('/api/v1/jobs', config)
-        const jobIds = Array.isArray(jobsResponse.data) ? jobsResponse.data : []
-        const jobRequests = jobIds.map((jobid) =>
-          axios.get('/api/v1/job', { params: { id: jobid }, ...config })
-            .then((response) => {
-              const data = response.data || {}
-              return { ...data, id: data.id || jobid }
-            })
-            .catch(() => null)
-        )
-        const allJobs = (await Promise.all(jobRequests)).filter(Boolean)
-        this.persistGuestJobOutputs(allJobs)
+        const jobsResponse = await axios.get('/api/v1/jobs', { params: { full: 1 }, ...config })
+        let allJobs = []
+        if (Array.isArray(jobsResponse.data) && jobsResponse.data.length && typeof jobsResponse.data[0] === 'object' && jobsResponse.data[0].id) {
+          allJobs = jobsResponse.data
+        } else {
+          const jobIds = Array.isArray(jobsResponse.data) ? jobsResponse.data : []
+          const jobRequests = jobIds.map((jobid) =>
+            axios.get('/api/v1/job', { params: { id: jobid }, ...config })
+              .then((response) => {
+                const data = response.data || {}
+                return { ...data, id: data.id || jobid }
+              })
+              .catch(() => null)
+          )
+          allJobs = (await Promise.all(jobRequests)).filter(Boolean)
+        }
+        if (this.$store.getters.isGuest) {
+          persistGuestJobOutputs(guestStore, allJobs)
+        }
+        const seenWs = new Set()
+        allJobs.forEach((job) => {
+          const status = this.getJobActionStatus(job)
+          if (status !== 'done' && status !== 'fail') return
+          const wid = job.workspaceId || job.workspace_id
+          if (!wid || seenWs.has(String(wid))) return
+          seenWs.add(String(wid))
+          this.$root.$emit('neptune-job-outputs-changed', { workspaceId: wid })
+        })
         this.jobs = allJobs
         this.jobobjects = {}
         allJobs.forEach((job) => {
           this.jobobjects[job.id] = job
         })
+        this.$store.commit('ingestJobSnapshots', allJobs)
         const fileIdLists = allJobs.map(j => j.files).filter(Boolean)
         await Promise.all(fileIdLists.map((files) => this.prefetchFileData(files)))
         await Promise.all(allJobs.map((job) => {
@@ -1244,39 +1410,6 @@ export default {
       } catch (error) {
         console.log(error)
       }
-    },
-    persistGuestJobOutputs (jobs) {
-      if (!this.$store.getters.isGuest || !Array.isArray(jobs)) return
-      const workspaces = guestStore.getWorkspaces() || []
-      jobs.forEach((job) => {
-        const byId = (job.workspaceId || job.workspace_id)
-          ? guestStore.getWorkspace(job.workspaceId || job.workspace_id)
-          : null
-        const byName = workspaces.find((w) =>
-          String(w.name || '').trim().toLowerCase() === String(job.workspaceName || '').trim().toLowerCase()
-        )
-        const ws = byId || byName
-        if (!ws) return
-        const status = this.getJobActionStatus(job)
-        const extras = []
-        if (Array.isArray(job.generatedFiles) && job.generatedFiles.length) {
-          extras.push(...job.generatedFiles)
-        }
-        if (status === 'done' && job.jsonText && job.outputFileName) {
-          extras.push({ name: job.outputFileName, content: job.jsonText })
-        }
-        const logText = this.getJobLogText(job)
-        if (logText && (status === 'done' || status === 'fail')) {
-          extras.push({
-            name: job.logFileName || this.defaultLogFileName(job),
-            content: logText,
-          })
-        }
-        extras.forEach((f) => {
-          if (!f || !f.name) return
-          guestStore.upsertFileByName(ws._id, f.name, f.content == null ? '' : f.content)
-        })
-      })
     },
   },
 }
@@ -1331,6 +1464,9 @@ export default {
   ::v-deep .solutions-jobs-table .results-row--processing td,
   ::v-deep .solutions-jobs-table .results-row--ongoing td
     background: rgba(255, 152, 0, 0.18)
+
+  ::v-deep .solutions-jobs-table .results-row--flash td
+    animation: job-row-flash 0.7s ease-in-out 6
 
   .solutions-path-link
     background: none
@@ -1424,4 +1560,10 @@ export default {
   @media (max-width: 1280px)
     ::v-deep .solutions-jobs-table .v-data-table__wrapper
       overflow-x: auto
+
+@keyframes job-row-flash
+  0%, 100%
+    background-color: rgba(0, 172, 193, 0.16)
+  50%
+    background-color: rgba(0, 172, 193, 0.62)
 </style>

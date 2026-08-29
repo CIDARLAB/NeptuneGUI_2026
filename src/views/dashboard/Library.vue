@@ -372,6 +372,11 @@ export default {
         connectionspacing: 'Spacing value used when routing or placing connection/channel segments.',
         componentspacing: 'Spacing offset used when placing component-local geometry around anchors.',
         portradius: 'Port radius that controls the size of circular I/O port openings.',
+        edgebend1: 'Distance from mixer port 1 to the outer end of that incomplete bend. Set to half the connecting channel width so the joint widths match.',
+        edgebend2: 'Distance from mixer port 2 to the outer end of that incomplete bend. Set to half the connecting channel width so the joint widths match.',
+        bendlength: 'Length of each full serpentine mixer bend.',
+        bendspacing: 'Spacing between adjacent mixer bends.',
+        numberofbends: 'Number of serpentine mixer bends.',
       },
     }
   },

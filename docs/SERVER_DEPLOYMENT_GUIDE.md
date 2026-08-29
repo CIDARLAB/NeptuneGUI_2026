@@ -101,11 +101,13 @@ Open the site → **Component Library** should list ~9 built-in components.
 
 For each component entity in the design:
 
-1. This request’s `componentBundle` → `--component-library <job-tmp>/JSON`
+1. This request’s Editor `` `import `` modules → `--pre-load <job-tmp>/import_lfr` (LFR only; omitted if nothing was imported)
 2. Neptune repo default `user_components/` (if present)
-3. **Primitives Server** (types not covered by the bundle)
+3. **Primitives Server** (types not covered by those sources)
 
-So: **even with a full componentBundle per compile, primitives must be reachable at compile time** unless every entity in the design is fully defined in the bundle.
+3DuF **visualization** JSON in the component table is **not** passed as `--component-library`. That flag is for ParchMint entity libraries; using glyph JSON hangs TREE-PLACE on PORT/VALVE3D lookups.
+
+So: **primitives must be reachable at compile time** unless every entity is already fully defined in `user_components/` or the primitive defaults.
 
 ### 3.3 Local development
 
@@ -181,13 +183,14 @@ Body = enriched payload above. Response = **job UUID** (JSON string).
 2. `ensure_primitives_server()` (container reuse)
 3. fluigi:
    ```bash
-   fluigi synthesize -o <out> <source> \
-     --component-library <tmp>/JSON \
-     --pre-load <tmp>/LFR          # LFR only
+   fluigi synthesize -o <out> <source>
+   # LFR only, and only if the Editor sent importLfr:
+   #   --pre-load <tmp>/import_lfr
    ```
-4. Collect files under `output/` (including `*_fromLFR_PR.json` or `*_fromMINT_PR.json`)
+   Do **not** pass 3DuF visualization JSON as `--component-library`.
+4. Collect files under `output/` (including `*_fromLFR_PR.json` or `*_fromMINT_PR.json`). TREE-PLACE uses `dump_intermediates=False` in `fluigi/place_and_route.py` (only the PR JSON; no `Neptune_2026/Benchmarks/` tree/result/PNG or cluster dumps). Set that argument to `True` to restore the full inspection set.
 5. Run `compute_layout_evaluation_scores()` on primary `*_PR.json`
-6. **Remove this job’s temp directory**; keep job metadata in `job_store` until Express fetches and persists
+6. **Remove this job’s temp directory**; keep job metadata in `job_store` until Express fetches and persists. Express then stamps generated names `{stem}(YYYYMMDDHHMM).ext` and writes them into the originating workspace.
 
 ### 4.4 Modal → Express → persistence (target behavior)
 
@@ -245,7 +248,9 @@ On failure: `status: "error"`, `stderr` contains fluigi log tail.
 | Method | Path | Notes |
 |--------|------|-------|
 | `GET` | `/api/v1/jobs` | Job ids for current session |
+| `GET` | `/api/v1/jobs?full=1` | Full job records (ZIP export / restore) |
 | `GET` | `/api/v1/job?id=<uuid>` | Job detail — query param **`id`**, not `job_id` |
+| `DELETE` | `/api/v1/job?id=<uuid>` | Delete job and sibling generated files |
 
 ---
 
@@ -264,6 +269,9 @@ Route: Dashboard → **Results / Jobs** (`Solutions.vue`).
 | Global Util. … Total | Six components + weighted total |
 | **JSON** | Button → modal (below) |
 | Action | Done / Ongoing / Fail |
+| **Delete** | Last column: remove the job **and** sibling generated files (JSON / MINT / log / eval). Deleting the matching workspace file does the same. |
+
+The table **auto-refreshes every 10 s**. **Refresh** runs an immediate reload and resets that timer. `GET /api/v1/jobs?full=1` returns full job records (used by ZIP export).
 
 ### 5.2 JSON modal
 
@@ -274,7 +282,7 @@ Route: Dashboard → **Results / Jobs** (`Solutions.vue`).
   - **Download** — download the JSON file
   - **Import to Component Library** — add as custom component
   - **Open in 3DuF** — load routed `*_PR.json` at [3duf.org](https://3duf.org/)
-  - **Delete** — remove output from workspace and refresh jobs list
+  - **Delete** — remove the job and generated siblings from the workspace, then refresh the jobs list
 
 ### 5.3 Evaluation scores and weight re-apply
 
@@ -300,7 +308,7 @@ Spec: `docs/EVALUATION_METRIC_SPEC_V1.md`. Implementation: Neptune_2026 `fluigi/
 |----------|-------|---------|
 | `NEPTUNE_COMPILE_URL` | Fly secret | Modal API root, no trailing slash |
 | `NEPTUNE_SEED_DATA_ROOT` | Optional | Default `/app/seed-data` |
-| `NEPTUNE_2026_ROOT` | Express optional | Path for local evaluation proxy |
+| `NEPTUNE_2026_ROOT` | Express optional | Sibling `Neptune_2026` path for **local** `fluigi` compile (`compileRunner.js`) when `NEPTUNE_COMPILE_URL` is unset |
 | `PRIMITIVE_SERVER_URI` | Set inside Modal | `http://localhost:6060` |
 | `PORT` | Fly `8080` | Express listen port |
 

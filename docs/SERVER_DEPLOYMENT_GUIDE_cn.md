@@ -101,11 +101,13 @@ Neptune Data server running at http://localhost:8080
 
 对设计中每个组件类型：
 
-1. 本次请求 `componentBundle` → `--component-library <job-tmp>/JSON`
+1. 本次请求 Editor 的 `` `import `` 模块 → `--pre-load <job-tmp>/import_lfr`（仅 LFR；没有 import 则不加该参数）
 2. Neptune 仓库默认 `user_components/`（若存在）
-3. **Primitives Server**（bundle 未覆盖的类型）
+3. **Primitives Server**（上述来源未覆盖的类型）
 
-因此：**即使每次 compile 都带 componentBundle，仍必须在 compute 侧能访问 primitives**（除非保证设计中只用 bundle 内已完整定义的类型）。
+组件表里的 **3DuF 可视化 JSON 不会**作为 `--component-library` 传给 fluigi。该标志用于 ParchMint 实体库；把 glyph JSON 当库会让 TREE-PLACE 在 PORT/VALVE3D 查找上卡住。
+
+因此：**compile 时 compute 侧仍须能访问 primitives**（除非设计里每个实体都已在 `user_components/` 或 primitive 默认值中完整定义）。
 
 ### 3.3 本地开发对照
 
@@ -180,13 +182,14 @@ Express `proxyCompile` 会补充：
 2. `ensure_primitives_server()`（容器级复用）
 3. 执行 fluigi：
    ```bash
-   fluigi synthesize -o <out> <source> \
-     --component-library <tmp>/JSON \
-     --pre-load <tmp>/LFR          # 仅 LFR
+   fluigi synthesize -o <out> <source>
+   # 仅 LFR，且仅当 Editor 提交了 importLfr：
+   #   --pre-load <tmp>/import_lfr
    ```
-4. 收集 `output/` 下文件（含 `*_fromLFR_PR.json` 或 `*_fromMINT_PR.json`）
+   **不要**把 3DuF 可视化 JSON 当作 `--component-library`。
+4. 收集 `output/` 下文件（含 `*_fromLFR_PR.json` 或 `*_fromMINT_PR.json`）。TREE-PLACE 使用 `dump_intermediates=False`（写死在 `fluigi/place_and_route.py`：只写最终 PR JSON，不写 `Neptune_2026/Benchmarks/` 下 tree/result/PNG，也不为 cluster 落盘）。把该参数改为 `True` 即可恢复全部检查文件。
 5. 对主输出 JSON 调用 `compute_layout_evaluation_scores()`，得到评估分项
-6. **删除本 job 的临时目录**；job 元数据保留在 `job_store` 直至 Express 拉取并落盘
+6. **删除本 job 的临时目录**；job 元数据保留在 `job_store` 直至 Express 拉取并落盘。Express 将生成文件名加上 `{stem}(YYYYMMDDHHMM).ext` 时间戳，写入发起 compile 的 workspace。
 
 ### 4.4 Modal → Express → 持久化（目标行为）
 
@@ -244,7 +247,9 @@ Express 在 job 成功后应：
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | `GET` | `/api/v1/jobs` | 当前会话的 job id 列表 |
+| `GET` | `/api/v1/jobs?full=1` | 完整 job 记录（ZIP 导出 / 恢复） |
 | `GET` | `/api/v1/job?id=<uuid>` | 单 job 详情（**查询参数名为 `id`**） |
+| `DELETE` | `/api/v1/job?id=<uuid>` | 删除 job 及同次生成文件 |
 
 ---
 
@@ -263,6 +268,9 @@ Express 在 job 成功后应：
 | Global Util. … Total | 六项分项 + 加权总分（见下） |
 | **JSON** | 按钮打开弹窗（见下） |
 | Action | 状态：Done / Ongoing / Fail |
+| **Delete** | 最后一列：删除该 job **以及** 同次生成的 JSON / MINT / log / eval。删除对应 workspace 文件效果相同。 |
+
+表格每 **10 s** 自动刷新。**Refresh** 立即拉取并重置该计时器。`GET /api/v1/jobs?full=1` 返回完整 job 记录（ZIP 导出使用）。
 
 ### 5.2 JSON 弹窗
 
@@ -273,7 +281,7 @@ Express 在 job 成功后应：
   - **Download** — 下载当前 JSON 文件
   - **Import to Component Library** — 作为 custom 组件导入
   - **Open in 3DuF** — 打开 [3duf.org](https://3duf.org/) 并加载该 JSON（需使用 routed `*_PR.json`）
-  - **Delete** — 从 workspace 删除该输出文件，并更新 jobs 列表
+  - **Delete** — 从 workspace 删除该 job 及其同次生成文件，并更新 jobs 列表
 
 ### 5.3 Evaluation Score 与权重重算
 
@@ -300,7 +308,7 @@ Express 在 job 成功后应：
 |------|----------|------|
 | `NEPTUNE_COMPILE_URL` | Fly secret | Modal API 根 URL，无尾斜杠 |
 | `NEPTUNE_SEED_DATA_ROOT` | 可选 | 默认 `/app/seed-data` |
-| `NEPTUNE_2026_ROOT` | Express 可选 | 本地 evaluation 代理用 Neptune 路径 |
+| `NEPTUNE_2026_ROOT` | Express 可选 | 未设置 `NEPTUNE_COMPILE_URL` 时，本地 `fluigi` compile（`compileRunner.js`）所用的 Neptune_2026 路径 |
 | `PRIMITIVE_SERVER_URI` | Modal 容器内自动 | `http://localhost:6060` |
 | `PORT` | Fly `8080` | Express 监听端口 |
 

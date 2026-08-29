@@ -9,6 +9,12 @@
  *     LFR/  MINT/  JSON/  log/  evaluation/  other/
  */
 
+import {
+  isWorkspaceVisibleFileName,
+  isZipCompileSidecar,
+  zipSidecarFilesFromJob,
+} from './compileOutputFiles'
+
 export function zipSafeFileName (name) {
   const base = String(name == null ? 'file' : name).split(/[/\\]/).pop() || 'file'
   return base.replace(/\0/g, '')
@@ -83,7 +89,8 @@ export function jobsForBackup (jobs) {
       jsonText: j.jsonText || '',
       outputFileName: j.outputFileName || '',
       logFileName: j.logFileName || '',
-      generatedFiles: Array.isArray(j.generatedFiles) ? j.generatedFiles : [],
+      generatedFiles: (Array.isArray(j.generatedFiles) ? j.generatedFiles : [])
+        .filter((f) => f && f.name && (isWorkspaceVisibleFileName(f.name) || isZipCompileSidecar(f.name))),
       error: j.error || '',
       fluigiCmd: Array.isArray(j.fluigiCmd) ? j.fluigiCmd : [],
       backend: j.backend || '',
@@ -93,7 +100,9 @@ export function jobsForBackup (jobs) {
 export function mergeJobFilesIntoWorkspaces (workspaces, jobs) {
   const list = (workspaces || []).map((w) => ({
     ...w,
-    files: Array.isArray(w.files) ? w.files.slice() : [],
+    files: (Array.isArray(w.files) ? w.files : []).filter((f) =>
+      f && isWorkspaceVisibleFileName(f.name)
+    ),
   }))
   const byId = new Map(list.map((w) => [String(w._id), w]))
   const byName = new Map(list.map((w) => [String(w.name || '').trim().toLowerCase(), w]))
@@ -103,15 +112,7 @@ export function mergeJobFilesIntoWorkspaces (workspaces, jobs) {
       byName.get(String(job.workspaceName || '').trim().toLowerCase())
     if (!w) return
     const names = new Set((w.files || []).map((f) => f && f.name).filter(Boolean))
-    const extras = []
-    if (Array.isArray(job.generatedFiles)) extras.push(...job.generatedFiles)
-    if (job.outputFileName && job.jsonText) {
-      extras.push({ name: job.outputFileName, content: job.jsonText })
-    }
-    if (job.logFileName && job.log) {
-      extras.push({ name: job.logFileName, content: job.log })
-    }
-    extras.forEach((f) => {
+    zipSidecarFilesFromJob(job).forEach((f) => {
       if (!f || !f.name || names.has(f.name)) return
       names.add(f.name)
       w.files.push({
@@ -203,6 +204,7 @@ export async function readWorkspacesFromZip (zip) {
       const short = name.substring(folderName.length)
       const fileName = fileNameFromZipRel(short)
       if (!fileName || fileName === 'metadata.json') continue
+      if (!isWorkspaceVisibleFileName(fileName)) continue
       const entry = zip.files[name]
       let content = ''
       try {
@@ -293,12 +295,9 @@ export function applyGeneratedFilesToGuestStore (guestStore, jobs) {
     )
     const ws = byId || byName
     if (!ws) return
-    const extras = []
-    if (Array.isArray(job.generatedFiles)) extras.push(...job.generatedFiles)
-    if (job.outputFileName && job.jsonText) extras.push({ name: job.outputFileName, content: job.jsonText })
-    if (job.logFileName && job.log) extras.push({ name: job.logFileName, content: job.log })
-    extras.forEach((f) => {
+    zipSidecarFilesFromJob(job).forEach((f) => {
       if (!f || !f.name) return
+      if (!isWorkspaceVisibleFileName(f.name)) return
       guestStore.upsertFileByName(ws._id, f.name, f.content == null ? '' : f.content)
     })
   })

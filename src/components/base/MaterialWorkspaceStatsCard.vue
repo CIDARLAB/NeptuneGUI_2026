@@ -27,8 +27,49 @@
           </template>
           <span>Download this file</span>
         </v-tooltip>
+        <div
+          v-if="isJsonFile"
+          class="file-json-action-pair"
+        >
+          <v-tooltip bottom>
+            <template v-slot:activator="{ on, attrs }">
+              <v-btn
+                text
+                icon
+                color="purple"
+                class="file-stats-action-btn"
+                v-bind="attrs"
+                v-on="on"
+                @click="$emit('view3duf', { id, name, workspaceid, ext, content })"
+              >
+                <img
+                  class="go-3duf-btn-logo"
+                  :src="logo3duf"
+                  alt="3DuF"
+                >
+              </v-btn>
+            </template>
+            <span>Open design JSON in 3DuF</span>
+          </v-tooltip>
+          <v-tooltip bottom>
+            <template v-slot:activator="{ on, attrs }">
+              <v-btn
+                text
+                icon
+                color="primary"
+                class="file-stats-action-btn"
+                v-bind="attrs"
+                v-on="on"
+                @click="$emit('importComponentJson', { id, name, workspaceid })"
+              >
+                <v-icon>mdi-database-import-outline</v-icon>
+              </v-btn>
+            </template>
+            <span>Import this JSON into Component Library</span>
+          </v-tooltip>
+        </div>
         <v-tooltip
-          v-if="(ext || '').toLowerCase() !== '.log' && (ext || '').toLowerCase() !== '.json'"
+          v-if="canEditFile"
           bottom
         >
           <template v-slot:activator="{ on, attrs }">
@@ -45,48 +86,6 @@
             </v-btn>
           </template>
           <span>Open this file in the Editor</span>
-        </v-tooltip>
-        <v-tooltip
-          v-if="(ext || '').toLowerCase() === '.json'"
-          bottom
-        >
-          <template v-slot:activator="{ on, attrs }">
-            <v-btn
-              text
-              icon
-              color="purple"
-              class="file-stats-action-btn"
-              v-bind="attrs"
-              v-on="on"
-              @click="$emit('view3duf', { id, name, workspaceid, ext, content })"
-            >
-              <img
-                class="go-3duf-btn-logo"
-                :src="logo3duf"
-                alt="3DuF"
-              >
-            </v-btn>
-          </template>
-          <span>Open design JSON in 3DuF</span>
-        </v-tooltip>
-        <v-tooltip
-          v-if="(ext || '').toLowerCase() === '.json'"
-          bottom
-        >
-          <template v-slot:activator="{ on, attrs }">
-            <v-btn
-              text
-              icon
-              color="primary"
-              class="file-stats-action-btn"
-              v-bind="attrs"
-              v-on="on"
-              @click="$emit('importComponentJson', { id, name, workspaceid })"
-            >
-              <v-icon>mdi-database-import-outline</v-icon>
-            </v-btn>
-          </template>
-          <span>Import this JSON into Component Library</span>
         </v-tooltip>
         <v-tooltip bottom>
           <template v-slot:activator="{ on, attrs }">
@@ -108,7 +107,14 @@
     </div>
 
     <div class="file-stats-body">
-      <h3 class="file-stats-name-heading font-weight-light text--primary">
+      <h3
+        class="file-stats-name-heading font-weight-light text--primary"
+        :class="{ 'file-stats-name-heading--link': canEditFile }"
+        :role="canEditFile ? 'button' : undefined"
+        :tabindex="canEditFile ? 0 : undefined"
+        @click="openEditorFromName"
+        @keydown.enter.prevent="openEditorFromName"
+      >
         {{ displayNameWithoutExt }}
       </h3>
     </div>
@@ -217,6 +223,13 @@
         }
         return raw
       },
+      isJsonFile () {
+        return String(this.ext || '').toLowerCase() === '.json'
+      },
+      canEditFile () {
+        const lowerExt = String(this.ext || '').toLowerCase()
+        return lowerExt !== '.log' && lowerExt !== '.json'
+      },
     },
 
     methods: {
@@ -270,7 +283,7 @@
 
         if (this.$store.getters.isGuest) {
           guestStore.deleteFile(wid, fid)
-          this.$emit('onFileDeleted', wid)
+          this.$emit('onFileDeleted', { workspaceId: wid, fileId: fid, name: this.name })
           return
         }
 
@@ -286,17 +299,18 @@
 
         axios.delete('/api/v1/file', config)
           .then(() => {
-            this.$emit('onFileDeleted', wid)
+            this.$emit('onFileDeleted', { workspaceId: wid, fileId: fid, name: this.name })
           })
           .catch((error) => { console.log(error) })
       },
       editfile (id) {
-        const lowerExt = (this.ext || '').toLowerCase()
-        if (lowerExt === '.log' || lowerExt === '.json') {
-          return
-        }
+        if (!this.canEditFile) return
         this.$store.commit('SET_CURRENT_FILE', id)
         router.push('/editor')
+      },
+      openEditorFromName () {
+        if (!this.canEditFile) return
+        this.editfile(this.id)
       },
     },
   }
@@ -321,8 +335,17 @@
 
   .file-stats-actions
     width: 100%
-    flex-wrap: wrap
+    flex-wrap: nowrap
+    flex-direction: row
     justify-content: center
+    gap: 2px
+
+  .file-json-action-pair
+    display: inline-flex
+    flex-direction: row
+    flex-wrap: nowrap
+    align-items: center
+    flex: 0 0 auto
     gap: 2px
 
   .file-stats-action-btn
@@ -359,6 +382,15 @@
     overflow-wrap: anywhere
     text-align: left
     margin: 0
+
+  .file-stats-name-heading--link
+    cursor: pointer
+    color: #006994 !important
+
+  .file-stats-name-heading--link:hover,
+  .file-stats-name-heading--link:focus
+    text-decoration: underline
+    outline: none
 
   .file-stats-footer
     width: 100%

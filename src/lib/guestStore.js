@@ -5,8 +5,8 @@
  * load of the app resets local guest state to defaults (Example seeds only). Users must
  * export if they want to keep data; refresh or reopening the tab discards non-default work.
  *
- * Server-side guest cookie data and Data/3DuF_component/tmp overrides are cleared via
- * POST /api/v2/guest/clearBrowserReloadState on each GUI document load.
+ * Server-side guest cookie data, in-memory compile jobs, and Data/3DuF_component/tmp
+ * overrides are cleared via POST /api/v2/guest/clearBrowserReloadState on each GUI load.
  */
 
 import { EXAMPLE_SEED_SPECS } from './exampleSeedSpecs'
@@ -36,12 +36,8 @@ export function resetGuestLocalStoreToDefaultsOnly () {
 }
 
 /**
- * Align server with guest-only policy: clear guest Temp dir when cookie is guest, and
- * always remove built-in component tmp JSON overrides (see clearBrowserReloadState).
- */
-/**
- * Align server with guest-only policy: clear guest Temp dir when cookie is guest, and
- * always remove built-in component tmp JSON overrides (see clearBrowserReloadState).
+ * Reuse an existing cookie session if the server still knows it; otherwise mint a guest.
+ * Used during the visit (Editor / Library / compile), not on first document load.
  */
 export async function ensureServerGuestSession (axiosInstance) {
   const ax = axiosInstance
@@ -62,12 +58,21 @@ export async function ensureServerGuestSession (axiosInstance) {
   }
 }
 
+/**
+ * Align server with guest-only policy on each full GUI document load:
+ * 1. Clear the previous cookie's Temp files, DIY tmp JSON, and in-memory jobs
+ *    (must happen before replacing the cookie, or previous compile outputs come back).
+ * 2. Always mint a new guest identity so leftover user/admin cookies cannot revive work.
+ */
 export async function syncServerEphemeralStateAfterGuiPageLoad (axiosInstance) {
   const ax = axiosInstance
   if (!ax || typeof ax.post !== 'function') return
-  await ensureServerGuestSession(ax)
+  const creds = { withCredentials: true }
   try {
-    await ax.post('/api/v2/guest/clearBrowserReloadState', {}, { withCredentials: true })
+    await ax.post('/api/v2/guest/clearBrowserReloadState', {}, creds)
+  } catch (_) {}
+  try {
+    await ax.post('/api/v2/guest', {}, creds)
   } catch (_) {}
 }
 
@@ -174,6 +179,13 @@ function getFile (workspaceId, fileId) {
   return w.files.find(f => String(f.id) === String(fileId)) || null
 }
 
+function findWorkspaceContainingFile (fileId) {
+  if (fileId == null || fileId === '') return null
+  return (getWorkspaces() || []).find((w) =>
+    (w.files || []).some((f) => f && String(f.id) === String(fileId))
+  ) || null
+}
+
 function createFile (workspaceId, fileName, ext) {
   const data = load()
   const w = data.workspaces.find(ws => String(ws._id) === String(workspaceId))
@@ -227,6 +239,23 @@ function upsertFileByName (workspaceId, fileName, content) {
   const created = createFile(workspaceId, fileName, ext)
   if (!created) return null
   return updateFile(workspaceId, created.id, content)
+}
+
+function findFileByName (workspaceId, fileName) {
+  return (getFiles(workspaceId) || []).find(f => f && f.name === fileName) || null
+}
+
+function deleteFilesByNames (workspaceId, names) {
+  const wanted = new Set((names || []).filter(Boolean).map((n) => String(n)))
+  if (!wanted.size) return []
+  const removed = []
+  ;(getFiles(workspaceId) || []).forEach((f) => {
+    if (f && wanted.has(f.name)) {
+      deleteFile(workspaceId, f.id)
+      removed.push(f.name)
+    }
+  })
+  return removed
 }
 
 const UPLOAD_WORKSPACE_NAME = 'uploaded files'
@@ -372,14 +401,16 @@ function syncExampleDemoFiles (wid) {
   const now = new Date().toISOString()
   const desiredByName = new Map(EXAMPLE_SEED_SPECS.map(s => [s.name, s]))
   const existingByName = new Map()
+  const extras = []
   let changed = false
 
   for (const f of ws.files) {
-    if (!f || !f.name || !desiredByName.has(f.name) || existingByName.has(f.name)) {
-      changed = true
+    if (!f || !f.name) continue
+    if (desiredByName.has(f.name) && !existingByName.has(f.name)) {
+      existingByName.set(f.name, f)
       continue
     }
-    existingByName.set(f.name, f)
+    extras.push(f)
   }
 
   const nextFiles = []
@@ -409,6 +440,7 @@ function syncExampleDemoFiles (wid) {
     })
     changed = true
   }
+  nextFiles.push(...extras)
 
   if (changed) {
     ws.files = nextFiles
@@ -493,9 +525,12 @@ export default {
   deleteWorkspace,
   getFiles,
   getFile,
+  findWorkspaceContainingFile,
   createFile,
   updateFile,
   upsertFileByName,
+  findFileByName,
+  deleteFilesByNames,
   deleteFile,
   load,
   save,

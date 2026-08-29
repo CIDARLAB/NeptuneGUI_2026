@@ -57,59 +57,24 @@
 
     <div class="mx-3" />
 
-    <v-menu
-      bottom
-      left
-      offset-y
-      origin="top right"
-      transition="scale-transition"
+    <v-btn
+      class="ml-2 neptune-appbar-icon-btn"
+      min-width="0"
+      text
+      color="primary"
+      :to="{ name: 'Alerts' }"
+      aria-label="Job result alerts"
     >
-      <template v-slot:activator="{ attrs, on }">
-        <v-btn
-          class="ml-2 neptune-appbar-icon-btn"
-          min-width="0"
-          text
-          color="primary"
-          v-bind="attrs"
-          v-on="on"
-        >
-          <v-badge
-            color="red"
-            :content="totalNotifications"
-            :value="totalNotifications"
-            overlap
-            bordered
-          >
-            <v-icon color="primary">mdi-bell</v-icon>
-          </v-badge>
-        </v-btn>
-      </template>
-
-      <v-list
-        :tile="false"
-        nav
+      <v-badge
+        color="red"
+        overlap
+        bordered
+        :content="unreadJobAlertCount"
+        :value="unreadJobAlertCount > 0"
       >
-        <div>
-          <app-bar-item :key="'alerts-page'" to="/alerts">
-            <v-list-item-title v-text="'Alerts'" />
-          </app-bar-item>
-          <v-divider class="mb-2 mt-2" :key="'nd'" />
-          <app-bar-item
-            v-for="(n, i) in notifications"
-            :key="`item-${i}`"
-          >
-            <v-list-item-title v-text="n.text" />
-          </app-bar-item>
-          <v-divider
-            v-if="notifications.length"
-            class="mb-2 mt-2"
-          />
-          <app-bar-item :key="'clear'" @click.native="clearNotifications">
-            <v-list-item-title v-text="'Clear Notifications'" />
-          </app-bar-item>
-        </div>
-      </v-list>
-    </v-menu>
+        <v-icon color="primary">mdi-bell</v-icon>
+      </v-badge>
+    </v-btn>
 
     <!--
     <v-btn
@@ -169,11 +134,8 @@
 </template>
 
 <script>
-  // Components
-  import { VHover, VListItem } from 'vuetify/lib'
-
   // Utilities
-  import { mapState, mapMutations } from 'vuex'
+  import { mapState, mapGetters, mapMutations } from 'vuex'
 
   import axios from 'axios'
   import guestStore from '@/lib/guestStore'
@@ -185,44 +147,12 @@
     fetchComponentTable,
     downloadZipBlob,
   } from '@/lib/workspaceBackupZip'
+  import { fetchFullJobs } from '@/lib/jobResultSync'
 
-  let self = this
   export default {
     name: 'DashboardCoreAppBar',
 
-    components: {
-      AppBarItem: {
-        render (h) {
-          return h(VHover, {
-            scopedSlots: {
-              default: ({ hover }) => {
-                return h(VListItem, {
-                  attrs: this.$attrs,
-                  class: {
-                    'black--text': !hover,
-                    'white--text secondary elevation-12': hover,
-                  },
-                  props: {
-                    activeClass: '',
-                    dark: hover,
-                    link: true,
-                    ...this.$attrs,
-                  },
-                }, this.$slots.default)
-              },
-            },
-          })
-        },
-      },
-    },
-
     data: () => ({
-      notifications: [
-        // {
-        //   text: "This is a test notification",
-        //   jobid: 0,
-        // },
-      ],
       profile: [
         { title: 'Profile' },
         { title: 'Settings' },
@@ -234,22 +164,50 @@
       guestLogoutDialog: false,
       guestExporting: false,
       dontShowLogoutPromptWeek: false,
+      jobAlertPollTimer: null,
     }),
 
     computed: {
       ...mapState(['drawer']),
+      ...mapGetters(['unreadJobAlertCount']),
       isGuest () {
         return this.$store.getters.isGuest
       },
-      totalNotifications: function() {
-        return this.notifications.length
-      }
+    },
+
+    mounted () {
+      this.startJobAlertPolling()
+    },
+
+    beforeDestroy () {
+      this.stopJobAlertPolling()
     },
 
     methods: {
       ...mapMutations({
         setDrawer: 'SET_DRAWER',
       }),
+
+      startJobAlertPolling () {
+        this.stopJobAlertPolling()
+        const tick = async () => {
+          try {
+            const jobs = await fetchFullJobs(axios)
+            this.$store.commit('ingestJobSnapshots', jobs)
+          } catch (_) {}
+          const running = Object.values(this.$store.state.jobStatusById || {}).some((s) => s === 'processing')
+          this.stopJobAlertPolling()
+          this.jobAlertPollTimer = setTimeout(tick, running ? 2000 : 8000)
+        }
+        this.jobAlertPollTimer = setTimeout(tick, 400)
+      },
+
+      stopJobAlertPolling () {
+        if (this.jobAlertPollTimer) {
+          clearTimeout(this.jobAlertPollTimer)
+          this.jobAlertPollTimer = null
+        }
+      },
 
       /** Leave Neptune in this tab (close if allowed, else blank page—not Landing). */
       leaveApplication () {
@@ -298,8 +256,7 @@
       },
 
       clearNotifications: function (event) {
-        console.log("test", this)
-        this.notifications = []
+        this.$store.commit('clearJobAlerts')
       },
 
       applyLogoutPromptSnoozeIfNeeded () {
