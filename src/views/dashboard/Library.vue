@@ -80,7 +80,9 @@
                   <template v-slot:activator="{ on, attrs }">
                     <v-btn
                       small
-                      class="three-duf-go-btn white--text"
+                      text
+                      color="primary"
+                      class="library-text-action-btn"
                       v-bind="attrs"
                       v-on="on"
                       @click="openIn3DuF(item)"
@@ -97,7 +99,9 @@
                   <template v-slot:activator="{ on, attrs }">
                     <v-btn
                       small
-                      class="diy-btn white--text"
+                      text
+                      color="primary"
+                      class="library-text-action-btn"
                       v-bind="attrs"
                       v-on="on"
                       @click="openDiyDialog(item)"
@@ -853,30 +857,40 @@ export default {
     },
 
     openIn3DuF (item) {
-      const rawJsonPayload = item && item.jsonScript != null ? item.jsonScript : ''
-      const isEmptyString = (typeof rawJsonPayload === 'string' && !rawJsonPayload.trim())
-      if (rawJsonPayload == null || isEmptyString) {
-        this.showSnack('No JSON content available for this component.', 'warning')
-        return
-      }
-
-      const parsed = this.parseJsonFor3DuF(rawJsonPayload)
-      if (parsed.error) {
-        if (parsed.error === 'html_response') {
-          this.showSnack('Received HTML instead of JSON. Refresh Neptune/login, then retry opening 3DuF.', 'error')
-        } else {
-          this.showSnack('Component JSON is invalid and cannot be opened in 3DuF.', 'error')
+      try {
+        const rawJsonPayload = item && item.jsonScript != null ? item.jsonScript : ''
+        const isEmptyString = (typeof rawJsonPayload === 'string' && !rawJsonPayload.trim())
+        if (rawJsonPayload == null || isEmptyString) {
+          this.showSnack('No JSON content available for this component.', 'warning')
+          return
         }
-        return
-      }
 
-      const result = openAndLoadDeviceIn3DuF(parsed.jsonObject)
-      if (!result.ok) {
-        if (result.reason === 'popup_blocked') {
-          this.showSnack('Popup blocked. Please allow popups to open 3DuF.', 'warning')
-        } else {
-          this.showSnack('Component JSON is invalid and cannot be opened in 3DuF.', 'error')
+        const parsed = this.parseJsonFor3DuF(rawJsonPayload)
+        if (parsed.error) {
+          if (parsed.error === 'html_response') {
+            this.showSnack('Received HTML instead of JSON. Refresh Neptune/login, then retry opening 3DuF.', 'error')
+          } else {
+            this.showSnack('Component JSON is invalid and cannot be opened in 3DuF.', 'error')
+          }
+          return
         }
+        const root = parsed.jsonObject
+        if (!root || typeof root !== 'object' || Array.isArray(root) || (!root.layers && !root.components && !root.renderLayers)) {
+          this.showSnack('Component JSON is missing device layers/components and cannot be opened in 3DuF.', 'error')
+          return
+        }
+
+        const result = openAndLoadDeviceIn3DuF(root)
+        if (!result.ok) {
+          if (result.reason === 'popup_blocked') {
+            this.showSnack('Popup blocked. Please allow popups to open 3DuF.', 'warning')
+          } else {
+            this.showSnack('Component JSON is invalid and cannot be opened in 3DuF.', 'error')
+          }
+        }
+      } catch (err) {
+        const msg = err && err.message ? err.message : String(err)
+        this.showSnack('Could not open 3DuF. ' + msg, 'error')
       }
     },
   },
@@ -1198,8 +1212,8 @@ export default {
 }
 
 .import-json-btn {
-  background-color: #006994 !important;
-  border-color: #006994 !important;
+  background-color: #fb8c00 !important;
+  border-color: #fb8c00 !important;
   font-size: var(--neptune-fs-body, 14pt) !important;
   text-transform: none !important;
   letter-spacing: normal !important;
@@ -1225,7 +1239,7 @@ export default {
 }
 
 .theme--dark .import-json-btn {
-  background-color: #00838f !important;
-  border-color: #00838f !important;
+  background-color: #ff9800 !important;
+  border-color: #ff9800 !important;
 }
 </style>

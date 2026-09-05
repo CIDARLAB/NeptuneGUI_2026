@@ -1,429 +1,171 @@
 {
   "name": "channel",
-  "params": {
-    "width": 135000,
-    "length": 85000
-  },
-  "renderLayers": [
-    {
-      "id": "72471f73-376e-11f1-b572-e1b82a6fa485",
-      "name": "RenderLayerFlow_1",
-      "modellayer": "4952d7a0-f16c-11eb-8c04-ff751cb31c4c",
-      "type": "FLOW",
-      "features": [
-        {
-          "id": "76a681f0-376e-11f1-b572-e1b82a6fa485",
-          "name": "New Feature",
-          "macro": "Port",
-          "params": {
-            "position": [
-              40000,
-              20000
-            ],
-            "componentSpacing": 1000,
-            "portRadius": 1000,
-            "height": 1100
-          },
-          "type": "XY",
-          "referenceID": "76a74540-376e-11f1-b572-e1b82a6fa485",
-          "dxfData": [],
-          "layerID": "4952d7a0-f16c-11eb-8c04-ff751cb31c4c"
-        },
-        {
-          "id": "78222570-376e-11f1-b572-e1b82a6fa485",
-          "name": "New Feature",
-          "macro": "Port",
-          "params": {
-            "position": [
-              40000,
-              40000
-            ],
-            "componentSpacing": 1000,
-            "portRadius": 1000,
-            "height": 1100
-          },
-          "type": "XY",
-          "referenceID": "7822e8c0-376e-11f1-b572-e1b82a6fa485",
-          "dxfData": [],
-          "layerID": "4952d7a0-f16c-11eb-8c04-ff751cb31c4c"
-        },
-        {
-          "id": "7d1b56f0-376e-11f1-b572-e1b82a6fa485",
-          "name": "New Feature",
-          "macro": "Connection",
-          "params": {
-            "start": [
-              "Point",
-              40000,
-              20000
-            ],
-            "end": [
-              40000,
-              40000
-            ],
-            "wayPoints": [
-              [
-                40000,
-                20000
-              ],
-              [
-                40000,
-                40000
-              ]
-            ],
-            "segments": [
-              [
-                [
-                  40000,
-                  20000
-                ],
-                [
-                  40000,
-                  20000
-                ]
-              ],
-              [
-                [
-                  40000,
-                  20000
-                ],
-                [
-                  40000,
-                  40000
-                ]
-              ],
-              [
-                [
-                  40000,
-                  40000
-                ],
-                [
-                  40000,
-                  40000
-                ]
-              ]
-            ],
-            "connectionSpacing": 1600,
-            "channelWidth": 800,
-            "height": 250
-          },
-          "type": "XY",
-          "referenceID": "7de13f00-376e-11f1-b572-e1b82a6fa485",
-          "dxfData": [],
-          "layerID": "4952d7a0-f16c-11eb-8c04-ff751cb31c4c"
-        }
-      ],
-      "color": "indigo"
-    },
-    {
-      "id": "72471f74-376e-11f1-b572-e1b82a6fa485",
-      "name": "RenderLayerControl_1",
-      "modellayer": "4952feb0-f16c-11eb-8c04-ff751cb31c4c",
-      "type": "CONTROL",
-      "features": [],
-      "color": "red"
-    },
-    {
-      "id": "72471f75-376e-11f1-b572-e1b82a6fa485",
-      "name": "RenderLayerIntegration_1",
-      "modellayer": "4952feb1-f16c-11eb-8c04-ff751cb31c4c",
-      "type": "INTEGRATION",
-      "features": [],
-      "color": "green"
-    }
-  ],
-  "layers": [
-    {
-      "id": "4952d7a0-f16c-11eb-8c04-ff751cb31c4c",
-      "name": "LayerFlow_1",
-      "type": "FLOW",
-      "group": "0",
-      "params": {
-        "z_offset": 0,
-        "flip": false
-      },
-      "features": [
-        {
-          "id": "76a681f0-376e-11f1-b572-e1b82a6fa485",
-          "name": "New Feature",
-          "macro": "Port",
-          "params": {
-            "position": [
-              40000,
-              20000
-            ],
-            "componentSpacing": 1000,
-            "portRadius": 1000,
-            "height": 1100
-          },
-          "type": "XY",
-          "referenceID": "76a74540-376e-11f1-b572-e1b82a6fa485",
-          "dxfData": [],
-          "layerID": "4952d7a0-f16c-11eb-8c04-ff751cb31c4c"
-        },
-        {
-          "id": "78222570-376e-11f1-b572-e1b82a6fa485",
-          "name": "New Feature",
-          "macro": "Port",
-          "params": {
-            "position": [
-              40000,
-              40000
-            ],
-            "componentSpacing": 1000,
-            "portRadius": 1000,
-            "height": 1100
-          },
-          "type": "XY",
-          "referenceID": "7822e8c0-376e-11f1-b572-e1b82a6fa485",
-          "dxfData": [],
-          "layerID": "4952d7a0-f16c-11eb-8c04-ff751cb31c4c"
-        },
-        {
-          "id": "7d1b56f0-376e-11f1-b572-e1b82a6fa485",
-          "name": "New Feature",
-          "macro": "Connection",
-          "params": {
-            "start": [
-              "Point",
-              40000,
-              20000
-            ],
-            "end": [
-              40000,
-              40000
-            ],
-            "wayPoints": [
-              [
-                40000,
-                20000
-              ],
-              [
-                40000,
-                40000
-              ]
-            ],
-            "segments": [
-              [
-                [
-                  40000,
-                  20000
-                ],
-                [
-                  40000,
-                  20000
-                ]
-              ],
-              [
-                [
-                  40000,
-                  20000
-                ],
-                [
-                  40000,
-                  40000
-                ]
-              ],
-              [
-                [
-                  40000,
-                  40000
-                ],
-                [
-                  40000,
-                  40000
-                ]
-              ]
-            ],
-            "connectionSpacing": 1600,
-            "channelWidth": 800,
-            "height": 250
-          },
-          "type": "XY",
-          "referenceID": "7de13f00-376e-11f1-b572-e1b82a6fa485",
-          "dxfData": [],
-          "layerID": "4952d7a0-f16c-11eb-8c04-ff751cb31c4c"
-        }
-      ]
-    },
-    {
-      "id": "4952feb0-f16c-11eb-8c04-ff751cb31c4c",
-      "name": "LayerControl_1",
-      "type": "CONTROL",
-      "group": "0",
-      "params": {
-        "z_offset": 0,
-        "flip": false
-      },
-      "features": []
-    },
-    {
-      "id": "4952feb1-f16c-11eb-8c04-ff751cb31c4c",
-      "name": "LayerIntegration_1",
-      "type": "INTEGRATION",
-      "group": "0",
-      "params": {
-        "z_offset": 0,
-        "flip": false
-      },
-      "features": []
-    }
-  ],
-  "groups": [],
+  "IsPlacedAndRouted": true,
   "components": [
     {
-      "id": "76a74540-376e-11f1-b572-e1b82a6fa485",
-      "name": "Port_1",
+      "name": "port_1",
+      "id": "port_1",
       "entity": "PORT",
+      "layers": [
+        "0"
+      ],
       "params": {
+        "componentSpacing": 1000.0,
+        "portRadius": 1000.0,
+        "height": 1100.0,
         "position": [
-          40000,
-          20000
+          6000.0,
+          10600.0
         ],
-        "componentSpacing": 1000,
-        "portRadius": 1000,
-        "height": 1100
+        "ID": "port_1",
+        "rotation": 0,
+        "mirrorByX": 0
       },
-      "x-span": 2000,
-      "y-span": 2000,
       "ports": [
         {
-          "x": 0,
-          "y": 0,
-          "layer": "FLOW",
-          "label": "1"
+          "x": 1000,
+          "y": 1000,
+          "label": "1",
+          "layer": "FLOW"
         }
       ],
-      "layers": [
-        "4952d7a0-f16c-11eb-8c04-ff751cb31c4c"
-      ]
+      "x-span": 2000,
+      "y-span": 2000
     },
     {
-      "id": "7822e8c0-376e-11f1-b572-e1b82a6fa485",
-      "name": "Port_2",
+      "name": "port_2",
+      "id": "port_2",
       "entity": "PORT",
+      "layers": [
+        "0"
+      ],
       "params": {
+        "componentSpacing": 1000.0,
+        "portRadius": 1000.0,
+        "height": 1100.0,
         "position": [
-          40000,
-          40000
+          6000.0,
+          6000.0
         ],
-        "componentSpacing": 1000,
-        "portRadius": 1000,
-        "height": 1100
+        "ID": "port_2",
+        "rotation": 0,
+        "mirrorByX": 0
       },
-      "x-span": 2000,
-      "y-span": 2000,
       "ports": [
         {
-          "x": 0,
-          "y": 0,
-          "layer": "FLOW",
-          "label": "1"
+          "x": 1000,
+          "y": 1000,
+          "label": "1",
+          "layer": "FLOW"
         }
       ],
-      "layers": [
-        "4952d7a0-f16c-11eb-8c04-ff751cb31c4c"
-      ]
+      "x-span": 2000,
+      "y-span": 2000
     }
   ],
   "connections": [
     {
-      "id": "7de13f00-376e-11f1-b572-e1b82a6fa485",
-      "name": "CHANNEL_1",
-      "entity": "CHANNEL",
-      "source": {
-        "component": "76a74540-376e-11f1-b572-e1b82a6fa485",
-        "port": "1"
-      },
       "sinks": [
         {
-          "component": "7822e8c0-376e-11f1-b572-e1b82a6fa485",
+          "component": "port_2",
           "port": "1"
         }
       ],
-      "paths": [
-        {
-          "source": {
-            "component": "76a74540-376e-11f1-b572-e1b82a6fa485",
-            "port": "1"
-          },
-          "sink": {
-            "component": "7822e8c0-376e-11f1-b572-e1b82a6fa485",
-            "port": "1"
-          },
-          "wayPoints": [
-            [
-              40000,
-              20000
-            ],
-            [
-              40000,
-              40000
-            ]
-          ],
-          "features": []
-        }
-      ],
+      "name": "channel_1",
+      "id": "channel_1",
+      "source": {
+        "component": "port_1",
+        "port": "1"
+      },
       "params": {
+        "connectionSpacing": 1600,
+        "channelWidth": 600,
+        "crossSection": 0,
+        "height": 250,
         "start": [
-          "Point",
-          40000,
-          20000
+          6000.0,
+          10600.0
         ],
         "end": [
-          40000,
-          40000
+          6000.0,
+          6000.0
         ],
         "wayPoints": [
           [
-            40000,
-            20000
+            6000.0,
+            10600.0
           ],
           [
-            40000,
-            40000
+            6000.0,
+            6000.0
           ]
         ],
         "segments": [
           [
             [
-              40000,
-              20000
+              6000.0,
+              10600.0
             ],
             [
-              40000,
-              20000
-            ]
-          ],
-          [
-            [
-              40000,
-              20000
-            ],
-            [
-              40000,
-              40000
-            ]
-          ],
-          [
-            [
-              40000,
-              40000
-            ],
-            [
-              40000,
-              40000
+              6000.0,
+              6000.0
             ]
           ]
         ],
-        "connectionSpacing": 1600,
-        "channelWidth": 800,
-        "height": 250
+        "ID": "channel_1"
       },
-      "layer": "4952d7a0-f16c-11eb-8c04-ff751cb31c4c"
+      "layer": "0",
+      "paths": [
+        {
+          "source": {
+            "component": "port_1",
+            "port": "1"
+          },
+          "sink": {
+            "component": "port_2",
+            "port": "1"
+          },
+          "wayPoints": [
+            [
+              6000.0,
+              10600.0
+            ],
+            [
+              6000.0,
+              6000.0
+            ]
+          ]
+        }
+      ],
+      "entity": "CHANNEL"
     }
   ],
-  "valves": [],
+  "params": {
+    "x-span": 12000.0,
+    "y-span": 16600.0,
+    "length": 76200,
+    "flowPortCount": 2,
+    "controlPortCount": 0,
+    "width": 76200
+  },
+  "layers": [
+    {
+      "name": "FLOW_0",
+      "id": "0",
+      "type": "FLOW",
+      "params": {},
+      "group": "0"
+    },
+    {
+      "id": "1",
+      "name": "CONTROL_0",
+      "type": "CONTROL",
+      "group": "0"
+    }
+  ],
   "features": [],
-  "version": "1.2"
+  "version": "1.2",
+  "valves": [],
+  "isPnR": false,
+  "layoutConstraints": []
 }

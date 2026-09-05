@@ -1,6 +1,6 @@
 # Neptune GUI + Compute 服务器部署与集成说明（中文）
 
-本文档供部署与维护同事使用，说明如何将 **NeptuneGUI_2026**（Web 前端 + Express 数据服务）与 **Compute 后端**（Modal 上的 `modal_app.py`，内嵌 Neptune_2026 / fluigi）联调上线，以及用户点击 **Compile** 后前后端之间的数据流、Primitives Server 安排、Jobs 界面行为约定。
+本文档供部署与维护同事使用，说明如何将 **NeptuneGUI_2026**（Web 前端 + Express 数据服务）与 **Compute 后端**（Modal 上的 `modal_app.py`，内嵌 Neptune_2026 / fluigi）联调上线，以及用户点击 **Save and synthesize** / **Compile to MINT** 后前后端之间的数据流、Primitives Server 安排、Jobs 界面行为约定。
 
 ---
 
@@ -17,9 +17,9 @@ Express Data Server (NeptuneGUI, :8080)
     ▼
 Modal Compute API (modal_app.py)
     │  每 worker 容器：fluigi + 3DuF primitives（容器内复用）
-    │  临时目录写 bundle → fluigi synthesize / synthesizeFromMINT
+    │  临时目录写 bundle → fluigi synthesize / synthesizeFromMINT / compile_lfr
     ▼
-输出：*_PR.json、评估分项、日志；清理本 job 临时文件
+输出：*_PR.json（完整 synthesize）、*_fromLFR.mint（仅转 MINT）、评估分项、日志；清理本 job 临时文件
     │
     ▼
 Express 将结果 JSON 写入用户 Workspace（Data/ 卷）
@@ -118,7 +118,15 @@ Neptune Data server running at http://localhost:8080
 
 ---
 
-## 4. 用户点击 Compile 后的数据流
+## 4. Save and synthesize / Compile to MINT — 数据流
+
+Editor 动作：
+
+| UI | 路由 / 模式 | Fluigi |
+|----|-------------|--------|
+| **Save and synthesize**（`.lfr`） | `POST /api/v1/mushroommapper`（`lfr`） | `fluigi synthesize` |
+| **Save and synthesize**（`.mint`） | `POST /api/v1/fluigi`（`mint`） | `fluigi synthesizeFromMINT` |
+| **Compile to MINT**（仅 `.lfr`） | `POST /api/v1/mushroommapper` 且 `compileMode: "lfrToMint"`（别名 `mintOnly`，或 `POST /api/v1/lfrToMint`） | `fluigi compile_lfr` — 成功以主输出 `*_fromLFR.mint` 为准；丢弃未布局 JSON；**无** PR JSON / 评估 |
 
 ### 4.1 前端 → Express（`POST /api/v1/mushroommapper` 或 `/api/v1/fluigi`）
 
@@ -132,6 +140,7 @@ Editor 在 compile 前拉取 `/api/v1/componentFiles`，组装请求体：
   "configfilename": "config.json",
   "workspace": "<当前 workspace _id>",
   "user": "<用户 email 或 guest>",
+  "compileMode": "lfrToMint",
   "componentBundle": [ /* 见下 */ ],
   "evaluationWeights": {
     "area": 0.2,
@@ -144,7 +153,7 @@ Editor 在 compile 前拉取 `/api/v1/componentFiles`，组装请求体：
 }
 ```
 
-> **说明：** `componentBundle` 与 Express 侧 merge 逻辑 **已实现**。`evaluationWeights` 为 **目标契约**（Jobs 页当前权重应随 compile 一并提交，供 compute 端计算并返回分项；若尚未传入，compute 使用默认权重，GUI 仍可用返回的分项按本地权重重算 Total）。
+> **说明：** `compileMode` / `compileType` 为 `lfrToMint` 或 `mintOnly` 时走仅转 MINT。省略则走完整布局。`componentBundle` 与 Express 侧 merge 逻辑 **已实现**。`evaluationWeights` 为 **目标契约**（Jobs 页当前权重应随完整 synthesize 一并提交；若尚未传入，compute 使用默认权重，GUI 仍可用返回的分项按本地权重重算 Total）。创建 workspace（`POST /api/v1/workspace`）支持可选 **`notes`**。
 
 #### `componentBundle` 每项字段（发给 Modal 前由 `toCompileComponentBundle` 裁剪）
 
@@ -154,7 +163,7 @@ Editor 在 compile 前拉取 `/api/v1/componentFiles`，组装请求体：
 | `name` | 显示名 |
 | `source` | `default` / `tmp` / `custom` |
 | `sourceType` | 来源类型 |
-| `params` | 用户在 Library DIY 中修改的数值参数 |
+| `params` | 用户在 Library DIY 中修改的数值参数（mixer 允许 `edgeBend` / `edgeBend1` / `edgeBend2`） |
 | `jsonScript` | 完整 3DuF/ParchMint JSON 字符串 |
 | `lfrScript` | 组件 LFR 模块文本（LFR import 用） |
 | `mintScript` | 组件 MINT 片段 |
@@ -169,7 +178,7 @@ Express `proxyCompile` 会补充：
 
 ### 4.2 Express → Modal
 
-`POST {NEPTUNE_COMPILE_URL}/api/v1/mushroommapper`（`.lfr` / `.v`）  
+`POST {NEPTUNE_COMPILE_URL}/api/v1/mushroommapper`（`.lfr` / `.v` / `lfrToMint`）  
 或 `POST {NEPTUNE_COMPILE_URL}/api/v1/fluigi`（`.mint` / `.uf`）
 
 请求体为上述 enriched body。响应为 **job UUID 字符串**（纯文本 JSON）。
@@ -180,15 +189,20 @@ Express `proxyCompile` 会补充：
    - `3DuF_component/default/JSON/*.json`
    - `LFR/*.lfr`、`MINT/*.mint`
 2. `ensure_primitives_server()`（容器级复用）
-3. 执行 fluigi：
+3. 按模式执行 fluigi：
    ```bash
+   # 完整 LFR synthesize:
    fluigi synthesize -o <out> <source>
+   # 完整 MINT synthesize:
+   fluigi synthesizeFromMINT -o <out> <source>
+   # 仅 Compile to MINT:
+   fluigi compile_lfr -o <out> <source>
    # 仅 LFR，且仅当 Editor 提交了 importLfr：
    #   --pre-load <tmp>/import_lfr
    ```
    **不要**把 3DuF 可视化 JSON 当作 `--component-library`。
-4. 收集 `output/` 下文件（含 `*_fromLFR_PR.json` 或 `*_fromMINT_PR.json`）。TREE-PLACE 使用 `dump_intermediates=False`（写死在 `fluigi/place_and_route.py`：只写最终 PR JSON，不写 `Neptune_2026/Benchmarks/` 下 tree/result/PNG，也不为 cluster 落盘）。把该参数改为 `True` 即可恢复全部检查文件。
-5. 对主输出 JSON 调用 `compute_layout_evaluation_scores()`，得到评估分项
+4. 收集 `output/` 下文件。完整 synthesize 优先 `*_fromLFR_PR.json` / `*_fromMINT_PR.json`。TREE-PLACE 使用 `dump_intermediates=False`（写死在 `fluigi/place_and_route.py`：只写最终 PR JSON，不写 `Neptune_2026/Benchmarks/` 下 tree/result/PNG，也不为 cluster 落盘）。把该参数改为 `True` 即可恢复全部检查文件。**仅转 MINT** 保留主输出 `*_fromLFR.mint` 并丢弃未布局 JSON。
+5. 对主输出 `*_PR.json` 调用 `compute_layout_evaluation_scores()`（**`lfrToMint` 跳过**）
 6. **删除本 job 的临时目录**；job 元数据保留在 `job_store` 直至 Express 拉取并落盘。Express 将生成文件名加上 `{stem}(YYYYMMDDHHMM).ext` 时间戳，写入发起 compile 的 workspace。
 
 ### 4.4 Modal → Express → 持久化（目标行为）
@@ -246,6 +260,7 @@ Express 在 job 成功后应：
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
+| `POST` | `/api/v1/lfrToMint` | 等同 mushroommapper 且 `compileMode: "lfrToMint"` |
 | `GET` | `/api/v1/jobs` | 当前会话的 job id 列表 |
 | `GET` | `/api/v1/jobs?full=1` | 完整 job 记录（ZIP 导出 / 恢复） |
 | `GET` | `/api/v1/job?id=<uuid>` | 单 job 详情（**查询参数名为 `id`**） |

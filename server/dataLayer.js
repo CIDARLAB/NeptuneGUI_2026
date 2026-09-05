@@ -361,10 +361,16 @@ function saveWorkspaces (session, list) {
   fs.writeFileSync(p, JSON.stringify(list, null, 2))
 }
 
-function createWorkspace (session, name) {
+function createWorkspace (session, name, notes) {
   const list = getWorkspaces(session)
   const id = String(Date.now())
-  const workspace = { _id: id, name: name || 'Workspace', updated_at: new Date().toISOString(), files: [] }
+  const workspace = {
+    _id: id,
+    name: name || 'Workspace',
+    notes: notes ? String(notes) : '',
+    updated_at: new Date().toISOString(),
+    files: [],
+  }
   list.push(workspace)
   saveWorkspaces(session, list)
   return workspace

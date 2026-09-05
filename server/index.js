@@ -23,8 +23,11 @@ const {
 const {
   runLocalCompile,
   pickPrimaryPrJson,
+  pickPrimaryMint,
+  siblingMintFileName,
   collectLogText,
   logFileNameFor,
+  isLfrCompileType,
 } = require('./compileRunner')
 const {
   isPrJsonFileName,
@@ -217,7 +220,8 @@ app.get('/api/v1/workspace', requireAuth, (req, res) => {
 
 app.post('/api/v1/workspace', requireAuth, (req, res) => {
   const name = (req.body && req.body.name) || 'Workspace'
-  const w = data.createWorkspace(req.session, name)
+  const notes = (req.body && req.body.notes) || ''
+  const w = data.createWorkspace(req.session, name, notes)
   res.json(w)
 })
 
@@ -904,10 +908,17 @@ function applyCompileResult (record, result, session) {
   record.fluigiCmd = result.fluigiCmd || record.fluigiCmd
   record.log = result.log || collectLogText(result.outputs || {}, result.stdout, result.stderr, result.error)
   record.error = result.error || ''
-  const success = result.returncode === 0 && result.primaryJson && result.primaryJson.text
+  const mintOnly = record.compileType === 'lfrToMint'
+  const mintHit = mintOnly ? (pickPrimaryMint(result.outputs || {}) || null) : null
+  const success = mintOnly
+    ? (result.returncode === 0 && mintHit && mintHit.text)
+    : (result.returncode === 0 && result.primaryJson && result.primaryJson.text)
   record.status = success ? 'done' : 'error'
   const generatedFiles = []
-  if (success) {
+  if (success && mintOnly) {
+    record.jsonText = ''
+    record.outputFileName = siblingMintFileName(record.sourceFilename)
+  } else if (success) {
     record.jsonText = result.primaryJson.text
     const rawJsonName = result.primaryJson.basename || path.basename(result.primaryJson.name)
     record.outputFileName = stampGeneratedFilename(rawJsonName, stamp)
@@ -931,19 +942,38 @@ function applyCompileResult (record, result, session) {
   }
 
   record.files = []
-  if (success && record.outputFileName && record.jsonText) {
+  if (success && mintOnly && record.outputFileName && mintHit && mintHit.text) {
+    saveNamed(record.outputFileName, mintHit.text)
+  } else if (success && record.outputFileName && record.jsonText) {
     saveNamed(record.outputFileName, record.jsonText)
+  }
+  if (mintOnly) {
+    if (record.log) {
+      saveNamed(record.logFileName, record.log, { toWorkspace: false })
+    }
+    record.generatedFiles = generatedFiles
+    if (session && record.workspaceId) {
+      removeHiddenCompileArtifactsFromWorkspace(session, record.workspaceId)
+    }
+    return record
   }
   Object.keys(result.outputs || {}).forEach((rel) => {
     if (!shouldSaveCompileOutput(rel)) return
     const ext = path.extname(rel).toLowerCase()
     if (ext === '.log') return
-    const base = path.basename(rel)
+    let base = path.basename(rel)
     if (success && record.outputFileName && ext === '.json') {
       const unstamped = record.outputFileName.replace(/\(\d{12}\)(?=\.[^.]+$)/, '')
       if (base === unstamped || base === record.outputFileName) return
     }
-    saveNamed(stampGeneratedFilename(base, stamp), result.outputs[rel])
+    // LFR compiles must expose MINT as *_fromLFR.mint (not bare <stem>.mint).
+    if (ext === '.mint' && isLfrCompileType(record.compileType)) {
+      const preferred = siblingMintFileName(record.sourceFilename || base)
+      base = stampGeneratedFilename(preferred, stamp)
+    } else {
+      base = stampGeneratedFilename(base, stamp)
+    }
+    saveNamed(base, result.outputs[rel])
   })
   if (record.log) {
     saveNamed(record.logFileName, record.log, { toWorkspace: false })
@@ -1081,6 +1111,7 @@ function startModalCompileJob (req, res, routePath, compileType) {
     configContent: enriched.configContent,
     componentBundle: enriched.componentBundle,
     importLfr: enriched.importLfr,
+    compileMode: compileType === 'lfrToMint' ? 'lfrToMint' : (req.body && req.body.compileMode),
     workspaceName: enriched.workspaceName,
   }
   delete enrichedBody.workspaceLfrBundle
@@ -1117,9 +1148,12 @@ function ingestRemoteJobPayload (record, payload, session) {
     return record
   }
   const outputs = payload.outputs && typeof payload.outputs === 'object' ? payload.outputs : {}
-  const primaryJson = payload.primaryJsonName && payload.primaryJsonText
-    ? { name: payload.primaryJsonName, basename: path.basename(payload.primaryJsonName), text: payload.primaryJsonText }
-    : pickPrimaryPrJson(outputs)
+  const mintOnly = record.compileType === 'lfrToMint'
+  const primaryJson = mintOnly
+    ? null
+    : (payload.primaryJsonName && payload.primaryJsonText
+      ? { name: payload.primaryJsonName, basename: path.basename(payload.primaryJsonName), text: payload.primaryJsonText }
+      : pickPrimaryPrJson(outputs))
   const result = {
     returncode: payload.returncode == null
       ? (remoteStatus === 'done' || remoteStatus === 'success' ? 0 : 1)
@@ -1159,6 +1193,12 @@ async function refreshModalJob (record) {
   return record
 }
 
+function resolveCompileType (req, fallback) {
+  const mode = String((req.body && (req.body.compileMode || req.body.compileType)) || '').trim()
+  if (mode === 'lfrToMint' || mode === 'mintOnly') return 'lfrToMint'
+  return fallback
+}
+
 function proxyCompile (req, res, routePath, compileType) {
   try {
     if (NEPTUNE_COMPILE_URL) {
@@ -1176,7 +1216,14 @@ function proxyCompile (req, res, routePath, compileType) {
 }
 
 app.post('/api/v1/fluigi', requireAuth, (req, res) => proxyCompile(req, res, '/api/v1/fluigi', 'mint'))
-app.post('/api/v1/mushroommapper', requireAuth, (req, res) => proxyCompile(req, res, '/api/v1/mushroommapper', 'lfr'))
+app.post('/api/v1/mushroommapper', requireAuth, (req, res) => {
+  proxyCompile(req, res, '/api/v1/mushroommapper', resolveCompileType(req, 'lfr'))
+})
+// Alias kept for older clients; always hit mushroommapper so Modal/local do not 404.
+app.post('/api/v1/lfrToMint', requireAuth, (req, res) => {
+  if (req.body && typeof req.body === 'object') req.body.compileMode = 'lfrToMint'
+  proxyCompile(req, res, '/api/v1/mushroommapper', 'lfrToMint')
+})
 app.get('/api/v1/jobs', requireAuth, (req, res) => {
   const ids = sessionJobs.get(sessionKey(req.session)) || []
   if (String(req.query.full || '') === '1') {
@@ -1473,7 +1520,7 @@ function findDiySourceNode (syntax, jsonObj) {
 // Derived from each corresponding 3DuF component class render2D()/transformRender().
 const DIY_RENDER_PARAM_ALLOWLIST = {
   channel: new Set(['channelWidth', 'crossSection']),
-  mixer: new Set(['bendLength', 'bendSpacing', 'channelWidth', 'numberOfBends', 'edgeBend1', 'edgeBend2', 'rotation', 'mirrorByX', 'mirrorByY']),
+  mixer: new Set(['bendLength', 'bendSpacing', 'channelWidth', 'numberOfBends', 'edgeBend', 'edgeBend1', 'edgeBend2', 'rotation', 'mirrorByX', 'mirrorByY']),
   mux: new Set([
     'controlChannelWidth',
     'flowChannelWidth',

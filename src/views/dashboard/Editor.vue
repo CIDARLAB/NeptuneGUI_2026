@@ -7,39 +7,12 @@
   >
     <v-row class="editor-toolbar-row">
       <v-col cols="12" class="pt-0 d-flex align-center flex-wrap editor-toolbar">
-        <v-menu offset-y left close-on-content-click>
-          <template v-slot:activator="{ on, attrs }">
-            <v-btn class="editor-toolbar-btn editor-toolbar-btn-1" small v-bind="attrs" v-on="on">
-              Save file
-              <v-icon right small>mdi-menu-down</v-icon>
-            </v-btn>
-          </template>
-          <v-list dense>
-            <v-list-item @click="saveFile">
-              <v-list-item-title>Save file</v-list-item-title>
-            </v-list-item>
-            <v-list-item @click="saveFileAndCompile">
-              <v-list-item-title>Save file and compile</v-list-item-title>
-            </v-list-item>
-            <v-list-item @click="saveToNewWorkspace">
-              <v-list-item-title>Save file to a new workspace</v-list-item-title>
-            </v-list-item>
-            <v-list-item @click="openExistingWorkspaceDialog(false)">
-              <v-list-item-title>Save file to an existing workspace</v-list-item-title>
-            </v-list-item>
-            <v-list-item @click="moveToNewWorkspace">
-              <v-list-item-title>Move file to a new workspace</v-list-item-title>
-            </v-list-item>
-            <v-list-item @click="openExistingWorkspaceDialog(true)">
-              <v-list-item-title>Move file to an existing workspace</v-list-item-title>
-            </v-list-item>
-          </v-list>
-        </v-menu>
-        <v-btn class="editor-toolbar-btn editor-toolbar-btn-2" small @click="openCompile">Compile</v-btn>
+        <v-btn class="editor-toolbar-btn editor-toolbar-btn-1" small @click="saveFile">Save file</v-btn>
+        <v-btn class="editor-toolbar-btn editor-toolbar-btn-2" small @click="saveFileAndCompile">Save and synthesize</v-btn>
         <v-btn class="editor-toolbar-btn editor-toolbar-btn-4" small @click="triggerImport">Import</v-btn>
         <v-btn class="editor-toolbar-btn editor-toolbar-btn-3" small @click="downloadfile">Export</v-btn>
         <v-btn class="editor-toolbar-btn editor-toolbar-btn-delete" small color="error" @click="deletefile">Delete</v-btn>
-        <input ref="fileImportInput" type="file" accept=".lfr,.mint,.v,.uf" style="display: none" @change="importFile">
+        <input ref="fileImportInput" type="file" accept=".lfr,.mint,.v,.uf" style="display: none" @change="onImportFileChosen">
       </v-col>
     </v-row>
 
@@ -53,23 +26,22 @@
             label="Script language"
             outlined
             hide-details
+            disabled
             class="script-language-select"
             color="primary"
             style="max-width: 260px;"
             :menu-props="{ contentClass: 'script-language-select-menu' }"
-          >
-            <template v-slot:append-inner>
-              <span class="script-language-arrow" aria-hidden="true">▼</span>
-            </template>
-          </v-select>
+          />
           <v-btn
+            v-if="canSwitchToMint"
             small
-            outlined
+            depressed
             color="primary"
-            class="script-language-switch-btn"
-            @click="toggleScriptLanguage"
+            class="script-language-switch-btn white--text"
+            :disabled="isloading"
+            @click="switchToMint"
           >
-            Switch to another language
+            Compile to MINT
           </v-btn>
         </div>
       </v-col>
@@ -83,42 +55,85 @@
             :hidden="!isloading"
             color="primary"
           />
-          <v-list-item three-line v-if="fileobject.name">
-            <v-list-item-content>
-              <div class="d-flex align-center flex-wrap">
+          <div class="editor-file-meta">
+            <div class="d-flex align-center flex-wrap editor-meta-row">
+              <div class="editor-workspace-subtitle">
+                Current workspace: <span v-text="currentWorkspaceLabel"></span>
+              </div>
+              <v-btn
+                small
+                depressed
+                color="primary"
+                class="editor-meta-action-btn editor-meta-action-btn--filled white--text"
+                :disabled="isloading"
+                @click="openTransferWorkspacePicker(true)"
+              >
+                Move to another workspace
+              </v-btn>
+              <v-btn
+                small
+                depressed
+                color="primary"
+                class="editor-meta-action-btn editor-meta-action-btn--filled white--text"
+                :disabled="isloading"
+                @click="openTransferWorkspacePicker(false)"
+              >
+                Copy to another workspace
+              </v-btn>
+            </div>
+            <div class="d-flex align-center flex-wrap editor-meta-row">
+              <template v-if="!isRenamingFile">
+                <div class="editor-workspace-subtitle">
+                  Current file name: <span>{{ currentFileDisplayName }}</span>
+                </div>
+                <v-btn
+                  small
+                  depressed
+                  color="primary"
+                  class="editor-meta-action-btn editor-meta-action-btn--filled white--text"
+                  :disabled="isloading"
+                  @click="startRenameFile"
+                >
+                  Rename
+                </v-btn>
+              </template>
+              <template v-else>
                 <v-text-field
-                  v-model="editableFileBaseName"
+                  ref="renameFilenameInput"
+                  v-model="renameFileBaseName"
                   label="File name"
-                  placeholder="Script name"
                   outlined
                   dense
                   hide-details
-                  class="editor-page-filename-input flex-grow-1 mr-2"
+                  class="editor-page-filename-input flex-grow-1"
                   style="max-width: 280px;"
+                  @keydown.enter.prevent="confirmRenameFile"
+                  @keydown.esc.prevent="cancelRenameFile"
                 />
                 <span class="editor-page-filename-ext">.{{ selectedScriptLanguage }}</span>
-              </div>
-              <v-list-item-subtitle class="mt-1 editor-workspace-subtitle">Current workspace: <span v-text="currentWorkspaceLabel"></span></v-list-item-subtitle>
-            </v-list-item-content>
-          </v-list-item>
-          <v-list-item three-line v-else class="new-script-filename-row">
-            <v-list-item-content>
-              <div class="d-flex align-center flex-wrap">
-                <v-text-field
-                  v-model="newScriptBaseName"
-                  label="File name"
-                  placeholder="New Script"
-                  outlined
-                  dense
-                  hide-details
-                  class="new-script-filename-input flex-grow-1 mr-2"
-                  style="max-width: 280px;"
-                />
-                <span class="editor-page-filename-ext">.{{ selectedScriptLanguage }}</span>
-              </div>
-              <v-list-item-subtitle class="mt-1 editor-workspace-subtitle" v-text="newScriptWorkspaceSubtitle"></v-list-item-subtitle>
-            </v-list-item-content>
-          </v-list-item>
+                <v-btn
+                  small
+                  depressed
+                  color="success"
+                  class="editor-meta-action-btn editor-meta-action-btn--confirm white--text"
+                  :disabled="isloading || !renameFileBaseName.trim()"
+                  @click="confirmRenameFile"
+                >
+                  Confirm
+                </v-btn>
+                <v-btn
+                  small
+                  depressed
+                  color="primary"
+                  class="editor-meta-action-btn editor-meta-action-btn--filled white--text"
+                  :disabled="isloading"
+                  @click="cancelRenameFile"
+                >
+                  Cancel
+                </v-btn>
+              </template>
+            </div>
+          </div>
           <v-card-text class="editor-card-text">
             <MonacoEditor
               ref="monaco"
@@ -226,6 +241,113 @@
     </v-card>
   </v-dialog>
 
+  <!-- Move / copy current file to another workspace -->
+  <v-dialog v-model="moveWorkspaceDialog" max-width="480px" persistent content-class="editor-dialog-surface">
+    <v-card class="editor-dialog-card">
+      <v-card-title class="editor-dialog-title">{{ transferWorkspaceDialogTitle }}</v-card-title>
+      <v-card-text>
+        <v-select
+          v-model="moveWorkspaceTargetId"
+          :items="moveWorkspaceSelectItems"
+          label="Workspace"
+          outlined
+          dense
+          hide-details="auto"
+          color="primary"
+          class="mb-3"
+        />
+        <template v-if="moveCreatesNewWorkspace">
+          <v-text-field
+            v-model="newWorkspaceName"
+            label="Workspace name"
+            outlined
+            dense
+            hide-details="auto"
+            color="primary"
+            class="mb-3"
+          />
+          <v-textarea
+            v-model="newWorkspaceNotes"
+            label="Notes (optional)"
+            outlined
+            dense
+            rows="2"
+            hide-details="auto"
+            color="primary"
+            class="mb-3"
+          />
+        </template>
+        <p class="caption mt-2 mb-0">{{ moveWorkspaceHint }}</p>
+      </v-card-text>
+      <v-card-actions>
+        <v-spacer />
+        <v-btn color="primary" text @click="moveWorkspaceDialog = false">Cancel</v-btn>
+        <v-btn
+          color="success"
+          text
+          :disabled="!canConfirmMoveWorkspace"
+          @click="confirmTransferWorkspacePicker"
+        >{{ workspaceActionIsMove ? 'Move' : 'Copy' }}</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+
+  <!-- Import LFR/MINT into a chosen workspace -->
+  <v-dialog v-model="importWorkspaceDialog" max-width="480px" persistent content-class="editor-dialog-surface">
+    <v-card class="editor-dialog-card">
+      <v-card-title class="editor-dialog-title">Import into workspace</v-card-title>
+      <v-card-text>
+        <p class="caption mb-3" v-if="pendingImport && pendingImport.name">
+          File: <strong>{{ pendingImport.name }}</strong>
+        </p>
+        <v-select
+          v-model="importWorkspaceTargetId"
+          :items="importWorkspaceSelectItems"
+          label="Workspace"
+          outlined
+          dense
+          hide-details="auto"
+          color="primary"
+          class="mb-3"
+        />
+        <template v-if="importCreatesNewWorkspace">
+          <v-text-field
+            v-model="newWorkspaceName"
+            label="Workspace name"
+            outlined
+            dense
+            hide-details="auto"
+            color="primary"
+            class="mb-3"
+          />
+          <v-textarea
+            v-model="newWorkspaceNotes"
+            label="Notes (optional)"
+            outlined
+            dense
+            rows="2"
+            hide-details="auto"
+            color="primary"
+            class="mb-3"
+          />
+        </template>
+        <p class="caption mt-2 mb-0">
+          Choose an existing workspace, or create a new one (name required; notes optional).
+        </p>
+      </v-card-text>
+      <v-card-actions>
+        <v-spacer />
+        <v-btn color="primary" text @click="cancelImportWorkspacePicker">Cancel</v-btn>
+        <v-btn
+          color="success"
+          text
+          :disabled="!canConfirmImportWorkspace"
+          @click="confirmImportWorkspacePicker"
+        >Import</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+
   <v-snackbar v-model="snackbar" :color="snackbarColor" :timeout="5000" bottom>
     {{ snackbarText }}
   </v-snackbar>
@@ -314,6 +436,7 @@ export default {
           this.$store.commit('SET_CURRENT_FILE', f.id)
           this.fileobject = { id: f.id, name: f.name, ext: f.ext }
           this.code = f.content || ''
+          this.markSavedBaseline()
           if ((f.ext || '').toLowerCase() === '.mint') this.selectedScriptLanguage = 'mint'
           else this.selectedScriptLanguage = 'lfr'
           self.isloading = false
@@ -322,6 +445,7 @@ export default {
       }
       this.selectedScriptLanguage = 'lfr'
       this.loadExampleScript()
+      this.markSavedBaseline()
       return
     }
 
@@ -341,6 +465,7 @@ export default {
       if (file) {
         this.fileobject = { id: file.id, name: file.name, ext: file.ext }
         this.code = file.content || ''
+        this.markSavedBaseline()
         if ((file.ext || '').toLowerCase() === '.mint') this.selectedScriptLanguage = 'mint'
         if ((file.ext || '').toLowerCase() === '.lfr') this.selectedScriptLanguage = 'lfr'
       }
@@ -354,6 +479,9 @@ export default {
         const ext = (response.data.ext || '').toLowerCase()
         if (ext === '.mint') this.selectedScriptLanguage = 'mint'
         if (ext === '.lfr') this.selectedScriptLanguage = 'lfr'
+        if (this.lastSavedFileName === '' && response.data && response.data.name) {
+          this.lastSavedFileName = response.data.name
+        }
       })
       .catch((error) => { console.log(error) })
 
@@ -364,6 +492,7 @@ export default {
           alert('Cannot open file in default editor')
         } else {
           this.code = response.data
+          this.markSavedBaseline()
         }
       })
       .catch((error) => { console.log(error) })
@@ -376,6 +505,13 @@ export default {
     //   .error((error) => {
     //     console.log(error)
     //   })
+  },
+  beforeRouteLeave (to, from, next) {
+    this.discardUnsavedEditorChanges()
+    next()
+  },
+  beforeDestroy () {
+    this.discardUnsavedEditorChanges()
   },
   data () {
     return {
@@ -432,6 +568,16 @@ export default {
       selectedExistingWorkspaceId: null,
       existingWorkspacesList: [],
       editableFileBaseName: '',
+      isRenamingFile: false,
+      renameFileBaseName: '',
+      moveWorkspaceDialog: false,
+      moveWorkspaceTargetId: null,
+      importWorkspaceDialog: false,
+      importWorkspaceTargetId: null,
+      importWorkspacesList: [],
+      pendingImport: null,
+      lastSavedCode: '',
+      lastSavedFileName: '',
       snackbar: false,
       snackbarText: '',
       snackbarColor: 'success',
@@ -440,14 +586,13 @@ export default {
   watch: {
     fileobject: {
       handler (n) {
-        if (n && n.name) this.editableFileBaseName = n.name.replace(/\.[^.]+$/, '') || n.name
-        else this.editableFileBaseName = ''
+        const base = n && n.name
+          ? (n.name.replace(/\.[^.]+$/, '') || n.name)
+          : ''
+        this.editableFileBaseName = base
+        if (!this.isRenamingFile) this.renameFileBaseName = base || this.newScriptBaseName || 'New Script'
       },
       immediate: true,
-    },
-    selectedScriptLanguage (newVal, oldVal) {
-      if (oldVal == null || newVal === oldVal) return
-      this.handleScriptLanguageChange(newVal)
     },
     editorLanguage () {
       this.$nextTick(() => this.updateLfrFlowVarDecorations())
@@ -459,16 +604,64 @@ export default {
       if (!ws || !ws.name) return 'None'
       return ws.name
     },
-    newScriptWorkspaceSubtitle () {
-      const ws = this.resolvedEditorWorkspace()
-      if (!ws || !ws.name) {
-        return 'Current workspace: None. Workspace name and notes can be set when you Save.'
+    currentFileDisplayName () {
+      return this.currentEditorFileName()
+    },
+    transferWorkspaceDialogTitle () {
+      return this.workspaceActionIsMove ? 'Move to another workspace' : 'Copy to another workspace'
+    },
+    moveCreatesNewWorkspace () {
+      return this.moveWorkspaceTargetId === '__create_new__'
+    },
+    moveWorkspaceSelectItems () {
+      const items = (this.existingWorkspacesList || []).map((w) => ({
+        text: w.name || 'Workspace',
+        value: w._id,
+      }))
+      if (items.length) items.push({ divider: true })
+      items.push({ text: 'Create new workspace', value: '__create_new__' })
+      return items
+    },
+    canConfirmMoveWorkspace () {
+      if (this.moveCreatesNewWorkspace) {
+        return !!(this.newWorkspaceName || '').trim()
       }
-      return 'Current workspace: ' + ws.name
+      const id = this.moveWorkspaceTargetId
+      if (id == null || id === '' || id === '__none__') return false
+      return this.existingWorkspacesList.some((w) => String(w._id) === String(id))
+    },
+    moveWorkspaceHint () {
+      if (this.workspaceActionIsMove) {
+        return 'The original file will be removed from the current workspace after it is saved in the destination. The file name stays the same.'
+      }
+      return 'A copy is saved in the destination. The original file stays in the current workspace. The file name stays the same.'
+    },
+    importCreatesNewWorkspace () {
+      return this.importWorkspaceTargetId === '__create_new__'
+    },
+    importWorkspaceSelectItems () {
+      const items = (this.importWorkspacesList || []).map((w) => ({
+        text: w.name || 'Workspace',
+        value: w._id,
+      }))
+      if (items.length) items.push({ divider: true })
+      items.push({ text: 'Create new workspace', value: '__create_new__' })
+      return items
+    },
+    canConfirmImportWorkspace () {
+      if (this.importCreatesNewWorkspace) {
+        return !!(this.newWorkspaceName || '').trim()
+      }
+      const id = this.importWorkspaceTargetId
+      if (id == null || id === '' || id === '__none__') return false
+      return this.importWorkspacesList.some((w) => String(w._id) === String(id))
     },
     editorOptionsWithTheme () {
       const theme = this.editorLanguage === 'lfr' ? 'lfrTheme' : this.editorLanguage === 'mint' ? 'mintTheme' : 'vs'
       return { ...this.editorOptions, theme }
+    },
+    canSwitchToMint () {
+      return this.selectedScriptLanguage === 'lfr'
     },
     editorLanguage () {
       if (this.selectedScriptLanguage === 'mint' || this.selectedScriptLanguage === 'lfr') return this.selectedScriptLanguage
@@ -553,6 +746,35 @@ export default {
 
   },
   methods: {
+    markSavedBaseline () {
+      this.lastSavedCode = this.code == null ? '' : String(this.code)
+      this.lastSavedFileName = (this.fileobject && this.fileobject.name) || this.currentEditorFileName()
+    },
+    isEditorDirty () {
+      const codeNow = this.code == null ? '' : String(this.code)
+      const nameNow = (this.fileobject && this.fileobject.name) || this.currentEditorFileName()
+      if (codeNow !== String(this.lastSavedCode || '')) return true
+      if (nameNow !== String(this.lastSavedFileName || '')) return true
+      return false
+    },
+    discardUnsavedEditorChanges () {
+      if (this.isRenamingFile) this.cancelRenameFile()
+      // Unsaved buffer edits are never written unless Save file / Save and synthesize
+      // (or Rename Confirm / Compile to MINT / Move-Copy destination write). Leaving
+      // the Editor therefore keeps the last saved store content as-is.
+      if (!this.isEditorDirty()) return
+      this.code = this.lastSavedCode == null ? '' : String(this.lastSavedCode)
+      if (this.lastSavedFileName) {
+        if (this.fileobject) {
+          this.fileobject.name = this.lastSavedFileName
+          const ext = (this.lastSavedFileName.match(/\.[^.]+$/) || [''])[0]
+          if (ext) this.fileobject.ext = ext
+        }
+        this.editableFileBaseName = this.stripFileBaseName(this.lastSavedFileName)
+        this.renameFileBaseName = this.editableFileBaseName
+        this.newScriptBaseName = this.editableFileBaseName
+      }
+    },
     applyEditorWorkspace (ws) {
       const full = (ws && ws._id && this.$store.getters.isGuest)
         ? (guestStore.getWorkspace(ws._id) || ws)
@@ -574,110 +796,172 @@ export default {
       this.snackbarColor = color
       this.snackbar = true
     },
-    // Build the starter editor content shown when the user switches language
-    // but the workspace has no same-named file in the target language. We
-    // surface the situation inline (top comment) AND as a snackbar, then
-    // drop in the full language example so the user has something runnable.
-    buildLanguageStarterTemplate (lang, baseName) {
-      const prettyLang = lang === 'mint' ? 'MINT' : 'LFR'
-      const safeBase = (baseName && baseName.trim()) || 'your script'
-      const example = lang === 'mint' ? EXAMPLE_MINT_SCRIPT : EXAMPLE_LFR_SCRIPT
-      const header = [
-        `// No matching .${lang} file was found in this workspace for "${safeBase}".`,
-        `// Write your ${prettyLang} definition below — the example that follows`,
-        '// is a starting point you can modify or delete.',
-        '',
-        '',
-      ].join('\n')
-      return header + example
+    mintFileFromJob (job, fallbackName) {
+      const wanted = String(fallbackName || '').toLowerCase()
+      const files = (job && Array.isArray(job.generatedFiles)) ? job.generatedFiles : []
+      const mints = files.filter((f) => f && f.name && /\.mint$/i.test(f.name) && f.content != null)
+      if (!mints.length) return null
+      return mints.find((f) => String(f.name).toLowerCase() === wanted) || mints[0]
     },
-    toggleScriptLanguage () {
-      this.selectedScriptLanguage = this.selectedScriptLanguage === 'mint' ? 'lfr' : 'mint'
+    openMintInEditor (file, content) {
+      const name = (file && file.name) || 'script.mint'
+      this.selectedScriptLanguage = 'mint'
+      this.fileobject = {
+        id: file && file.id,
+        name,
+        ext: '.mint',
+      }
+      this.editableFileBaseName = String(name).replace(/\.[^.]+$/, '') || name
+      this.renameFileBaseName = this.editableFileBaseName
+      this.isRenamingFile = false
+      this.code = content == null ? '' : String(content)
+      this.markSavedBaseline()
+      if (file && file.id) this.$store.commit('SET_CURRENT_FILE', file.id)
     },
-    handleScriptLanguageChange (newLang) {
-      const targetExt = '.' + String(newLang || '').toLowerCase()
-      const currentName = String((this.fileobject && this.fileobject.name) || '')
-
-      // No file open / no workspace: fall back to the bundled example. This
-      // is "new script from scratch", not a missing-sibling situation, so we
-      // don't show the snack here.
+    async switchToMint () {
+      if (this.selectedScriptLanguage !== 'lfr') return
       if (!this.fileobject || !this.fileobject.id) {
-        this.loadExampleScript()
+        alert('Save the LFR file first, then use Compile to MINT.')
         return
       }
+      // Use the editor buffer for compile without touching the LFR file's last-modified time.
 
-      const ws = this.currentworkspace
-      const wid = ws && ws._id
-      if (!wid) {
-        this.loadExampleScript()
-        return
+      this.isloading = true
+      const config = { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
+      await ensureServerGuestSession(axios)
+      let componentBundle = []
+      try {
+        const compRes = await axios.get('/api/v1/componentFiles', config)
+        componentBundle = (compRes.data && Array.isArray(compRes.data.components))
+          ? compRes.data.components
+          : []
+      } catch (_) {
+        componentBundle = []
       }
 
-      const pickSibling = (files) => {
-        const matches = (files || []).filter((f) => {
-          if (!f) return false
-          const ext = String(f.ext || '').toLowerCase()
-          const nameExt = (String(f.name || '').match(/\.[0-9a-z]+$/i) || [''])[0].toLowerCase()
-          return ext === targetExt || nameExt === targetExt
-        })
-        if (matches.length === 0) return null
-        const baseName = currentName.replace(/\.[^.]+$/, '')
-        return matches.find((f) => String(f.name || '').replace(/\.[^.]+$/, '') === baseName) || matches[0]
+      const compileName = this.fileobject.name || this.currentEditorFileName()
+      const currentUser = this.$store.getters.currentUser || {}
+      const currentWorkspace = this.resolveCompileWorkspace()
+      const mintStem = String(compileName).replace(/\.[^.]+$/, '') || 'design'
+      const mintName = /_fromLFR$/i.test(mintStem) ? `${mintStem}.mint` : `${mintStem}_fromLFR.mint`
+      const workspaceLabel = (currentWorkspace && currentWorkspace.name) || 'workspace'
+      const data = {
+        sourcefileid: this.fileobject.id,
+        sourcefilename: compileName,
+        workspace: currentWorkspace._id,
+        workspaceName: currentWorkspace.name || '',
+        user: currentUser.email,
+        componentBundle,
+        sourceContent: this.code || '',
+        compileMode: 'lfrToMint',
       }
 
-      const showMissingSiblingNotice = () => {
-        const baseName = currentName.replace(/\.[^.]+$/, '') || currentName
-        const prettyLang = newLang === 'mint' ? 'MINT' : 'LFR'
-        this.showSnack(
-          `No same-named .${newLang} file found for "${baseName}" in this workspace — showing a ${prettyLang} starter you can edit.`,
-          'warning',
-        )
-        this.code = this.buildLanguageStarterTemplate(newLang, baseName)
-      }
-
-      if (this.$store.getters.isGuest) {
-        const files = guestStore.getFiles(wid) || []
-        const sibling = pickSibling(files)
-        if (sibling) {
-          this.$store.commit('SET_CURRENT_FILE', sibling.id)
-          this.fileobject = { id: sibling.id, name: sibling.name, ext: sibling.ext }
-          this.editableFileBaseName = String(sibling.name || '').replace(/\.[^.]+$/, '') || sibling.name
-          this.code = sibling.content || ''
+      try {
+        const workspaces = await this.loadWorkspacesForImportIndex(config)
+        const index = buildWorkspaceLfrIndex(workspaces)
+        const resolved = collectImportLfr(this.code || '', index)
+        if (!resolved.ok) {
+          alert(formatImportResolveError(resolved))
+          this.isloading = false
           return
         }
-        showMissingSiblingNotice()
+        data.importLfr = resolved.importLfr || []
+      } catch (err) {
+        console.error(err)
+        alert('Could not check LFR import files. Please try again.')
+        this.isloading = false
         return
       }
 
-      const config = { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
-      const self = this
-      axios.get('/api/v1/files', { params: { id: wid }, ...config })
-        .then((res) => {
-          const ids = res.data || []
-          return Promise.all(ids.map((fid) =>
-            axios.get('/api/v1/file', { params: { id: fid }, ...config }).then((r) => r.data)
-          ))
-        })
-        .then((files) => {
-          const sibling = pickSibling(files)
-          if (!sibling) {
-            showMissingSiblingNotice()
-            return null
+      try {
+        const response = await axios.post('/api/v1/mushroommapper', data, config)
+        const jobid = response.data
+        const job = await pollCompileJobUntilSettled(axios, jobid, { timeoutMs: 180000 })
+        if (!job) {
+          alert('LFR → MINT timed out. Check Jobs for the compile log.')
+          this.isloading = false
+          return
+        }
+        const status = String(job.status || '').toLowerCase()
+        if (status !== 'done' && status !== 'success' && status !== 'complete') {
+          const detail = job.error || job.log || 'compile failed'
+          alert('LFR → MINT failed. ' + String(detail).slice(0, 400))
+          this.isloading = false
+          return
+        }
+        const minted = this.mintFileFromJob(job, mintName)
+        if (!minted || !String(minted.content || '').trim()) {
+          alert('Compile finished, but no MINT file was produced.')
+          this.isloading = false
+          return
+        }
+        // Only write/update the generated *_fromLFR.mint — do not bump last-modified
+        // on the source LFR or any existing handwritten .mint in the workspace.
+        const finalMintName = mintName
+        const mintContent = minted.content
+        const wsId = currentWorkspace._id
+        if (this.$store.getters.isGuest) {
+          const bareStemMint = `${mintStem}.mint`
+          if (bareStemMint.toLowerCase() !== finalMintName.toLowerCase()) {
+            guestStore.deleteFilesByNames(wsId, [bareStemMint])
           }
-          self.fileobject = sibling
-          self.editableFileBaseName = String(sibling.name || '').replace(/\.[^.]+$/, '') || sibling.name
-          self.$store.commit('SET_CURRENT_FILE', sibling.id)
-          return axios.get('/api/v1/fs', { params: { id: sibling.id }, ...config })
+          const file = guestStore.upsertFileByName(wsId, finalMintName, mintContent, {
+            touchWorkspace: true,
+          })
+          this.openMintInEditor(file || { name: finalMintName }, mintContent)
+        } else {
+          const filesRes = await axios.get('/api/v1/files', { params: { id: wsId }, ...config })
+          const ids = filesRes.data || []
+          const metas = await Promise.all(ids.map((fid) =>
+            axios.get('/api/v1/file', { params: { id: fid }, ...config }).then((r) => r.data).catch(() => null)
+          ))
+          let hit = metas.find((f) => f && f.name === finalMintName)
+          if (!hit) {
+            const created = await axios.post('/api/v1/file', {
+              workspaceid: wsId,
+              file_name: finalMintName,
+              ext: '.mint',
+            }, config)
+            const fileId = created.data && created.data.id
+            if (fileId) {
+              await axios.put('/api/v1/file', { fileid: fileId, text: mintContent, name: finalMintName }, config)
+              hit = { id: fileId, name: finalMintName, ext: '.mint' }
+            }
+          } else {
+            await axios.put('/api/v1/file', { fileid: hit.id, text: mintContent, name: finalMintName }, config)
+          }
+          const bare = metas.find((f) => f && f.name === `${mintStem}.mint` && f.name !== finalMintName)
+          if (bare && bare.id) {
+            await axios.delete('/api/v1/file', {
+              data: { fileid: bare.id, workspaceid: wsId },
+              ...config,
+            }).catch(() => null)
+          }
+          this.openMintInEditor(hit || { name: finalMintName }, mintContent)
+        }
+        this.$root.$emit('neptune-job-outputs-changed', {
+          workspaceId: job.workspaceId || wsId,
+          expand: true,
         })
-        .then((r) => {
-          if (r && typeof r.data === 'string') self.code = r.data
-        })
-        .catch(() => { showMissingSiblingNotice() })
+        this.showSnack(
+          'Compiled LFR to MINT. ' + finalMintName + ' is generated in the workspace: ' + workspaceLabel,
+          'success'
+        )
+      } catch (error) {
+        console.error(error)
+        const status = error && error.response && error.response.status
+        const body = error && error.response && error.response.data
+        const detail = (body && (body.error || body.message)) || error.message || ''
+        const suffix = status ? ` (HTTP ${status}${detail ? ': ' + detail : ''})` : (detail ? ` (${detail})` : '')
+        alert('LFR → MINT failed. Could not start compile.' + suffix)
+      }
+      this.isloading = false
     },
     loadExampleScript () {
       const lang = (this.selectedScriptLanguage || 'lfr').toLowerCase()
       if (this.$store.getters.isGuest) {
         this.code = lang === 'mint' ? EXAMPLE_MINT_SCRIPT : EXAMPLE_LFR_SCRIPT
+        this.markSavedBaseline()
         return
       }
       axios.get('/api/v1/exampleScript', {
@@ -690,9 +974,11 @@ export default {
             this.code = res.data.code
             if (res.data.lang) this.selectedScriptLanguage = res.data.lang
           }
+          this.markSavedBaseline()
         })
         .catch(() => {
           this.code = ''
+          this.markSavedBaseline()
         })
     },
     fetchComponentLibraryAndUpdateLfrHighlighting () {
@@ -824,66 +1110,190 @@ export default {
     createfile: function(event) {
       console.log("TEST");
     },
+    stripFileBaseName (raw) {
+      return String(raw || '').trim().replace(/\.(mint|lfr|uf|v)$/i, '')
+    },
+    currentEditorFileBaseName () {
+      if (this.fileobject && this.fileobject.name) {
+        return this.stripFileBaseName(this.fileobject.name) || 'script'
+      }
+      return this.stripFileBaseName(this.newScriptBaseName) || 'script'
+    },
+    currentEditorFileName () {
+      return this.currentEditorFileBaseName() + '.' + this.selectedScriptLanguage
+    },
+    startRenameFile () {
+      this.renameFileBaseName = this.currentEditorFileBaseName()
+      this.isRenamingFile = true
+      this.$nextTick(() => {
+        const field = this.$refs.renameFilenameInput
+        if (field && typeof field.focus === 'function') field.focus()
+        else if (field && field.$el && field.$el.querySelector) {
+          const input = field.$el.querySelector('input')
+          if (input) input.focus()
+        }
+      })
+    },
+    cancelRenameFile () {
+      this.isRenamingFile = false
+      this.renameFileBaseName = this.currentEditorFileBaseName()
+    },
+    workspaceHasFileName (workspace, fileName, exceptFileId) {
+      const wsId = workspace && (workspace._id || workspace.id)
+      let files = (workspace && workspace.files) || []
+      if (this.$store.getters.isGuest && wsId) {
+        files = guestStore.getFiles(wsId) || files
+      }
+      return files.some((f) => (
+        f && f.name === fileName && (exceptFileId == null || String(f.id) !== String(exceptFileId))
+      ))
+    },
+    confirmRenameFile () {
+      const nextName = this.stripFileBaseName(this.renameFileBaseName) || ''
+      if (!nextName) {
+        alert('Enter a file name. The extension is fixed to .' + this.selectedScriptLanguage + '.')
+        return Promise.resolve(false)
+      }
+      const newName = nextName + '.' + this.selectedScriptLanguage
+      const oldName = (this.fileobject && this.fileobject.name) || ''
+      if (oldName && oldName === newName) {
+        this.isRenamingFile = false
+        return Promise.resolve(true)
+      }
+      let ws = this.resolvedEditorWorkspace()
+      if (ws && ws._id) this.applyEditorWorkspace(ws)
+      ws = this.resolvedEditorWorkspace()
+      const wsId = ws && (ws._id || ws.id)
+      if (ws && this.workspaceHasFileName(ws, newName, this.fileobject && this.fileobject.id)) {
+        alert('A file named "' + newName + '" already exists in this workspace.')
+        return Promise.resolve(false)
+      }
+      this.newScriptBaseName = nextName
+      this.editableFileBaseName = nextName
+      this.isRenamingFile = false
+      if (!(this.fileobject && this.fileobject.id && wsId)) {
+        if (this.fileobject) {
+          this.fileobject.name = newName
+          this.fileobject.ext = '.' + this.selectedScriptLanguage
+        }
+        this.lastSavedFileName = newName
+        return Promise.resolve(true)
+      }
+      // Rename takes effect immediately (no Save file). Keep last-saved body; discard only unsaved text edits on leave.
+      const contentToKeep = this.lastSavedCode == null ? '' : String(this.lastSavedCode)
+      const applyRename = () => {
+        this.fileobject.name = newName
+        this.fileobject.ext = '.' + this.selectedScriptLanguage
+        this.lastSavedFileName = newName
+        this.removeDuplicateFileByName(ws, oldName, this.fileobject.id)
+        this.$root.$emit('neptune-job-outputs-changed', { workspaceId: wsId })
+        this.showSnack('Renamed to ' + newName + '.', 'success')
+        return true
+      }
+      if (this.$store.getters.isGuest) {
+        const updated = guestStore.renameFile
+          ? guestStore.renameFile(wsId, this.fileobject.id, newName, contentToKeep)
+          : guestStore.updateFile(wsId, this.fileobject.id, contentToKeep, newName)
+        if (!updated) {
+          alert('Could not rename file. Please try again.')
+          return Promise.resolve(false)
+        }
+        applyRename()
+        return Promise.resolve(true)
+      }
+      const config = { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
+      return axios.put('/api/v1/file', {
+        fileid: this.fileobject.id,
+        text: contentToKeep,
+        name: newName,
+      }, config)
+        .then(() => applyRename())
+        .catch((err) => {
+          const msg = (err.response && err.response.data && (err.response.data.error || err.response.data.message)) || err.message
+          alert('Could not rename file. ' + (msg ? String(msg) : 'Please try again.'))
+          return false
+        })
+    },
+    removeDuplicateFileByName (workspace, fileName, keepFileId) {
+      if (!workspace || !fileName || !keepFileId) return
+      const wsId = workspace._id || workspace.id
+      if (!wsId) return
+      if (this.$store.getters.isGuest) {
+        ;(guestStore.getFiles(wsId) || []).slice().forEach((f) => {
+          if (f && f.name === fileName && String(f.id) !== String(keepFileId)) {
+            guestStore.deleteFile(wsId, f.id)
+          }
+        })
+        return
+      }
+      const config = { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
+      axios.get('/api/v1/files', { params: { id: wsId }, ...config })
+        .then((res) => {
+          const ids = res.data || []
+          return Promise.all(ids.map((fid) =>
+            axios.get('/api/v1/file', { params: { id: fid }, ...config }).then((r) => r.data).catch(() => null)
+          ))
+        })
+        .then((metas) => {
+          const dupes = (metas || []).filter((f) => (
+            f && f.name === fileName && String(f.id) !== String(keepFileId)
+          ))
+          return Promise.all(dupes.map((f) => axios.delete('/api/v1/file', {
+            data: { fileid: f.id, workspaceid: wsId },
+            ...config,
+          }).catch(() => null)))
+        })
+        .catch(() => {})
+    },
+    persistCurrentFile ({ navigate } = {}) {
+      const ws = this.resolvedEditorWorkspace()
+      if (ws && ws._id) this.applyEditorWorkspace(ws)
+      if (!(this.fileobject && this.fileobject.id && this.currentworkspace && this.currentworkspace._id)) {
+        return Promise.resolve(false)
+      }
+      const newName = this.currentEditorFileName()
+      const applyName = () => {
+        this.fileobject.name = newName
+        this.fileobject.ext = '.' + this.selectedScriptLanguage
+        this.editableFileBaseName = this.stripFileBaseName(newName)
+        this.renameFileBaseName = this.editableFileBaseName
+        this.markSavedBaseline()
+        if (navigate) this.goToDashboardWorkspace(this.currentworkspace)
+        return true
+      }
+      if (this.$store.getters.isGuest) {
+        guestStore.updateFile(this.currentworkspace._id, this.fileobject.id, this.code, newName)
+        applyName()
+        return Promise.resolve(true)
+      }
+      const config = { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
+      const payload = { fileid: this.fileobject.id, text: this.code, name: newName }
+      return axios.put('/api/v1/file', payload, config)
+        .then(() => applyName())
+        .catch((err) => {
+          const msg = (err.response && err.response.data && (err.response.data.error || err.response.data.message)) || err.message
+          alert('Could not save file. ' + (msg ? String(msg) : 'Please try again.'))
+          return false
+        })
+    },
     saveFile () {
       if (this.fileobject.id && this.currentworkspace && this.currentworkspace._id) {
-        const ext = '.' + this.selectedScriptLanguage
-        const base = (this.editableFileBaseName || this.fileobject.name || 'script').trim().replace(/\.(mint|lfr)$/i, '') || 'script'
-        const newName = base + ext
-        const config = { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
-        if (this.$store.getters.isGuest) {
-          guestStore.updateFile(this.currentworkspace._id, this.fileobject.id, this.code, newName)
-          this.fileobject.name = newName
-          this.goToDashboardWorkspace(this.currentworkspace)
-          return
-        }
-        const payload = { fileid: this.fileobject.id, text: this.code }
-        if (newName !== (this.fileobject.name || '')) payload.name = newName
-        axios.put('/api/v1/file', payload, config)
-          .then(() => {
-            this.fileobject.name = newName
-            this.goToDashboardWorkspace(this.currentworkspace)
-          })
-          .catch((err) => {
-            const msg = (err.response && err.response.data && (err.response.data.error || err.response.data.message)) || err.message
-            alert('Could not save file. ' + (msg ? String(msg) : 'Please try again.'))
-          })
+        this.persistCurrentFile({ navigate: true })
       } else {
         this.openNewWorkspaceDialog(false)
       }
     },
     saveFileAndCompile () {
       if (!this.fileobject.id) {
-        alert('Save the file first (e.g. Save file to a new workspace), then use Save file and compile.')
+        alert('Save the file first (use Save file), then use Save and synthesize.')
         return
       }
-      const ext = '.' + this.selectedScriptLanguage
-      const base = (this.editableFileBaseName || this.fileobject.name || 'script').trim().replace(/\.(mint|lfr)$/i, '') || 'script'
-      const newName = base + ext
-      const config = { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
-      if (this.$store.getters.isGuest) {
-        guestStore.updateFile(this.currentworkspace._id, this.fileobject.id, this.code, newName)
-        this.fileobject.name = newName
-        this.compilefile()
-        return
-      }
-      const payload = { fileid: this.fileobject.id, text: this.code }
-      if (newName !== (this.fileobject.name || '')) payload.name = newName
-      axios.put('/api/v1/file', payload, config)
-        .then(() => {
-          this.fileobject.name = newName
-          this.compilefile()
-        })
-        .catch((err) => {
-          const msg = (err.response && err.response.data && (err.response.data.error || err.response.data.message)) || err.message
-          alert('Could not save file. ' + (msg ? String(msg) : 'Please try again.'))
-        })
+      this.persistCurrentFile({ navigate: false }).then((ok) => {
+        if (ok) this.compilefile()
+      })
     },
     defaultSaveAsFileBaseName () {
-      const name = String((this.fileobject && this.fileobject.name) || '')
-      const stripped = name.replace(/\.(mint|lfr|uf|v)$/i, '')
-      if (stripped) return stripped
-      const fromEditor = String(this.editableFileBaseName || this.newScriptBaseName || '').trim()
-      return fromEditor || 'script'
+      return this.currentEditorFileBaseName()
     },
     resolvedSaveAsFileName () {
       const ext = '.' + this.selectedScriptLanguage
@@ -953,7 +1363,9 @@ export default {
         alert('Save the file first (use Save file from the Save file menu), then use Compile.')
         return
       }
-      this.compilefile()
+      this.persistCurrentFile({ navigate: false }).then((ok) => {
+        if (ok) this.compilefile()
+      })
     },
     openExistingWorkspaceDialog (isMove) {
       this.prepareWorkspaceFileDialog(!!isMove)
@@ -961,19 +1373,127 @@ export default {
         this.applyExistingWorkspaceChoices(guestStore.getWorkspacesSortedForDashboard())
         return
       }
+      this.loadOtherWorkspaces()
+        .then((list) => this.applyExistingWorkspaceChoices(list))
+        .catch(() => this.applyExistingWorkspaceChoices([]))
+    },
+    loadOtherWorkspaces () {
+      if (this.$store.getters.isGuest) {
+        return Promise.resolve(this.filterOtherWorkspaces(guestStore.getWorkspacesSortedForDashboard()))
+      }
       const config = { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
-      axios.get('/api/v1/workspaces', config)
+      return axios.get('/api/v1/workspaces', config)
         .then((res) => {
           const ids = res.data || []
           return Promise.all(ids.map((wid) =>
             axios.get('/api/v1/workspace', { params: { workspace_id: wid }, ...config }).then((w) => w.data)
           ))
         })
-        .then((list) => {
-          this.applyExistingWorkspaceChoices(list.filter(Boolean))
+        .then((list) => this.filterOtherWorkspaces(list.filter(Boolean)))
+    },
+    applyMoveWorkspaceChoices (list) {
+      this.existingWorkspacesList = list || []
+      if (this.existingWorkspacesList.length) {
+        this.moveWorkspaceTargetId = this.existingWorkspacesList[0]._id
+      } else {
+        this.moveWorkspaceTargetId = '__create_new__'
+      }
+      this.newWorkspaceName = ''
+      this.newWorkspaceNotes = ''
+      this.moveWorkspaceDialog = true
+    },
+    openTransferWorkspacePicker (isMove) {
+      this.workspaceActionIsMove = !!isMove
+      this.saveAsFileBaseName = this.currentEditorFileBaseName()
+      // Do not auto-save the current buffer into the source workspace (modified time
+      // only updates on Save file / Save and synthesize / Rename Confirm).
+      this.loadOtherWorkspaces()
+        .then((list) => this.applyMoveWorkspaceChoices(list))
+        .catch(() => this.applyMoveWorkspaceChoices([]))
+    },
+    adoptMovedFile (workspace, fileId, fileName) {
+      const ext = '.' + this.selectedScriptLanguage
+      this.applyEditorWorkspace(workspace)
+      this.fileobject = {
+        id: fileId,
+        name: fileName,
+        ext,
+      }
+      this.editableFileBaseName = this.stripFileBaseName(fileName)
+      this.renameFileBaseName = this.editableFileBaseName
+      this.newScriptBaseName = this.editableFileBaseName
+      this.isRenamingFile = false
+      this.markSavedBaseline()
+      if (fileId) this.$store.commit('SET_CURRENT_FILE', fileId)
+    },
+    createFileInWorkspace (workspace, fileName) {
+      const ext = '.' + this.selectedScriptLanguage
+      const wsId = workspace && (workspace._id || workspace.id)
+      if (!wsId) return Promise.reject(new Error('No destination workspace'))
+      if (this.workspaceHasFileName(workspace, fileName, null)) {
+        return Promise.reject(new Error('A file named "' + fileName + '" already exists in that workspace.'))
+      }
+      if (this.$store.getters.isGuest) {
+        const file = guestStore.createFile(wsId, fileName, ext)
+        if (!file) return Promise.reject(new Error('Could not create the file in that workspace.'))
+        guestStore.updateFile(wsId, file.id, this.code)
+        return Promise.resolve({ workspace: guestStore.getWorkspace(wsId) || workspace, fileId: file.id })
+      }
+      const config = { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
+      return axios.post('/api/v1/file', { workspaceid: wsId, file_name: fileName, ext }, config)
+        .then((res) => {
+          const fileId = res.data && res.data.id
+          const after = fileId && this.code
+            ? axios.put('/api/v1/file', { fileid: fileId, text: this.code }, config)
+            : Promise.resolve()
+          return after.then(() => ({ workspace, fileId }))
         })
-        .catch(() => {
-          this.applyExistingWorkspaceChoices([])
+    },
+    confirmTransferWorkspacePicker () {
+      if (!this.canConfirmMoveWorkspace) return
+      const fileName = this.currentEditorFileName()
+      const actionLabel = this.workspaceActionIsMove ? 'Moved' : 'Copied'
+      const afterTransfer = (workspace, fileId) => {
+        const sourceWsId = this.currentworkspace && this.currentworkspace._id
+        const wasMove = this.workspaceActionIsMove
+        return this.removeOriginalFileIfMoving().then(() => {
+          if (wasMove) {
+            this.adoptMovedFile(workspace, fileId, fileName)
+          }
+          this.moveWorkspaceDialog = false
+          const destId = workspace && (workspace._id || workspace.id)
+          if (destId) this.$root.$emit('neptune-job-outputs-changed', { workspaceId: destId })
+          if (wasMove && sourceWsId && String(sourceWsId) !== String(destId)) {
+            this.$root.$emit('neptune-job-outputs-changed', { workspaceId: sourceWsId })
+          }
+          this.showSnack(actionLabel + ' file to ' + (workspace.name || 'workspace') + '.', 'success')
+        })
+      }
+      if (this.moveCreatesNewWorkspace) {
+        const name = (this.newWorkspaceName || '').trim() || 'New Workspace'
+        const notes = (this.newWorkspaceNotes || '').trim()
+        if (this.$store.getters.isGuest) {
+          const ws = guestStore.createWorkspace(name, notes)
+          return this.createFileInWorkspace(ws, fileName)
+            .then(({ workspace, fileId }) => afterTransfer(workspace, fileId))
+            .catch((err) => alert(err && err.message ? err.message : 'Could not ' + (this.workspaceActionIsMove ? 'move' : 'copy') + ' the file.'))
+        }
+        const config = { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
+        return axios.post('/api/v1/workspace', { name, notes }, config)
+          .then((res) => this.createFileInWorkspace(res.data, fileName))
+          .then(({ workspace, fileId }) => afterTransfer(workspace, fileId))
+          .catch((err) => {
+            const msg = (err.response && err.response.data && (err.response.data.error || err.response.data.message)) || (err && err.message)
+            alert('Could not ' + (this.workspaceActionIsMove ? 'move' : 'copy') + ' the file. ' + (msg ? String(msg) : 'Please try again.'))
+          })
+      }
+      const dest = this.existingWorkspacesList.find((w) => String(w._id) === String(this.moveWorkspaceTargetId))
+      if (!dest) return
+      return this.createFileInWorkspace(dest, fileName)
+        .then(({ workspace, fileId }) => afterTransfer(workspace, fileId))
+        .catch((err) => {
+          const msg = (err.response && err.response.data && (err.response.data.error || err.response.data.message)) || (err && err.message)
+          alert('Could not ' + (this.workspaceActionIsMove ? 'move' : 'copy') + ' the file. ' + (msg ? String(msg) : 'Please try again.'))
         })
     },
     confirmSaveToExistingWorkspace () {
@@ -1087,7 +1607,8 @@ export default {
         componentBundle = []
       }
 
-      const ext = this.fileobject.name.match(/\.[0-9a-z]+$/i) ? this.fileobject.name.match(/\.[0-9a-z]+$/i)[0] : ''
+      const compileName = this.fileobject.name || this.currentEditorFileName()
+      const ext = compileName.match(/\.[0-9a-z]+$/i) ? compileName.match(/\.[0-9a-z]+$/i)[0] : ''
       let endpoint = ''
       if (ext === '.uf' || ext === '.mint') {
         endpoint = '/api/v1/fluigi'
@@ -1105,7 +1626,7 @@ export default {
       const currentWorkspace = this.resolveCompileWorkspace()
       const data = {
         sourcefileid: this.fileobject.id,
-        sourcefilename: this.fileobject.name,
+        sourcefilename: compileName,
         workspace: currentWorkspace._id,
         workspaceName: currentWorkspace.name || '',
         user: currentUser.email,
@@ -1140,7 +1661,7 @@ export default {
           self.$store.commit('ingestJobSnapshots', [{
             id: jobid,
             status: 'running',
-            sourceFilename: self.fileobject && self.fileobject.name,
+            sourceFilename: compileName,
             workspaceName: currentWorkspace.name || '',
             workspaceId: currentWorkspace._id,
           }])
@@ -1231,9 +1752,7 @@ export default {
         .catch((error) => { console.log(error) })
     },
     downloadfile (event) {
-      const ext = '.' + (this.selectedScriptLanguage || 'mint')
-      const baseName = (this.editableFileBaseName || this.fileobject.name || this.newScriptBaseName || 'script').trim().replace(/\.(mint|lfr)$/i, '') || 'script'
-      const fileName = baseName + ext
+      const fileName = this.currentEditorFileName()
 
       if (this.$store.getters.isGuest) {
         const blob = new Blob([this.code || ''], { type: 'text/plain;charset=utf-8' })
@@ -1273,7 +1792,7 @@ export default {
           const url = window.URL.createObjectURL(blob)
           const link = document.createElement('a')
           link.href = url
-          link.setAttribute('download', self.fileobject.name || fileName)
+          link.setAttribute('download', fileName || self.fileobject.name)
           document.body.appendChild(link)
           link.click()
           document.body.removeChild(link)
@@ -1292,13 +1811,26 @@ export default {
         this.selectedScriptLanguage = 'mint'
       }
     },
-    importFile (event) {
+    loadAllWorkspaces () {
+      if (this.$store.getters.isGuest) {
+        return Promise.resolve(guestStore.getWorkspacesSortedForDashboard() || [])
+      }
+      const config = { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
+      return axios.get('/api/v1/workspaces', config)
+        .then((res) => {
+          const ids = res.data || []
+          return Promise.all(ids.map((wid) =>
+            axios.get('/api/v1/workspace', { params: { workspace_id: wid }, ...config }).then((w) => w.data)
+          ))
+        })
+        .then((list) => list.filter(Boolean))
+    },
+    onImportFileChosen (event) {
       const input = event.target
       const file = input.files && input.files[0]
       if (!file) return
       const reader = new FileReader()
-      const self = this
-      reader.onload = async () => {
+      reader.onload = () => {
         const content = reader.result
         const name = file.name
         const ext = (name.match(/\.[0-9a-z]+$/i) && name.match(/\.[0-9a-z]+$/i)[0]) || ''
@@ -1308,70 +1840,120 @@ export default {
           input.value = ''
           return
         }
-
-        let wsId = self.currentworkspace && self.currentworkspace._id
-        if (!wsId) {
-          if (self.$store.getters.isGuest) {
-            const w = guestStore.getOrCreateUploadWorkspace()
-            self.currentworkspace = w
-            self.$store.commit('SET_WORKSPACE', w)
-            wsId = w._id
-          } else {
-            const config = { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
-            try {
-              const idsRes = await axios.get('/api/v1/workspaces', config)
-              const ids = idsRes.data || []
-              let found = null
-              for (const wid of ids) {
-                // eslint-disable-next-line no-await-in-loop
-                const res = await axios.get('/api/v1/workspace', { params: { workspace_id: wid }, ...config })
-                if (res.data && String(res.data.name || '').trim() === 'uploaded files') {
-                  found = res.data
-                  break
-                }
-              }
-              const w = found
-                ? found
-                : (await axios.post('/api/v1/workspace', { name: 'uploaded files' }, config)).data
-              self.currentworkspace = w
-              self.$store.commit('SET_WORKSPACE', w)
-              wsId = w._id
-            } catch (err) {
-              const msg = (err.response && err.response.data && (err.response.data.error || err.response.data.message)) || err.message
-              alert('Could not create a workspace for import. ' + (msg ? String(msg) : 'Please try again.'))
-              input.value = ''
-              return
-            }
-          }
-        }
-
-        if (self.$store.getters.isGuest) {
-          const f = guestStore.createFile(wsId, name, ext)
-          if (f) guestStore.updateFile(wsId, f.id, content)
-          self.fileobject = { id: f.id, name: f.name, ext: f.ext }
-          self.code = content
-          self.applyScriptLanguageFromImportExt(ext)
-          self.$store.commit('SET_WORKSPACE', self.currentworkspace)
-        } else {
-          const config = { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
-          axios.post('/api/v1/file', { workspaceid: wsId, file_name: name, ext }, config)
-            .then((res) => {
-              const fileId = res.data.id
-              return axios.put('/api/v1/file', { fileid: fileId, text: content }, config).then(() => res.data)
-            })
-            .then((f) => {
-              self.fileobject = { id: f.id, name: f.name, ext: f.ext }
-              self.code = content
-              self.applyScriptLanguageFromImportExt(ext)
-            })
-            .catch((err) => {
-              const msg = (err.response && err.response.data && (err.response.data.error || err.response.data.message)) || err.message
-              alert('Import failed. ' + (msg ? String(msg) : 'Please try again.'))
-            })
-        }
+        this.pendingImport = { name, ext, content }
         input.value = ''
+        this.newWorkspaceName = ''
+        this.newWorkspaceNotes = ''
+        this.loadAllWorkspaces()
+          .then((list) => {
+            this.importWorkspacesList = list || []
+            if (this.importWorkspacesList.length) {
+              const curId = this.currentworkspace && this.currentworkspace._id
+              const prefer = curId
+                ? this.importWorkspacesList.find((w) => String(w._id) === String(curId))
+                : null
+              this.importWorkspaceTargetId = (prefer || this.importWorkspacesList[0])._id
+            } else {
+              this.importWorkspaceTargetId = '__create_new__'
+            }
+            this.importWorkspaceDialog = true
+          })
+          .catch(() => {
+            this.importWorkspacesList = []
+            this.importWorkspaceTargetId = '__create_new__'
+            this.importWorkspaceDialog = true
+          })
       }
       reader.readAsText(file, 'UTF-8')
+    },
+    cancelImportWorkspacePicker () {
+      this.importWorkspaceDialog = false
+      this.pendingImport = null
+      this.newWorkspaceName = ''
+      this.newWorkspaceNotes = ''
+    },
+    finishImportIntoWorkspace (workspace, fileMeta) {
+      this.applyEditorWorkspace(workspace)
+      this.fileobject = {
+        id: fileMeta.id,
+        name: fileMeta.name,
+        ext: fileMeta.ext,
+      }
+      this.code = this.pendingImport ? this.pendingImport.content : ''
+      this.applyScriptLanguageFromImportExt(fileMeta.ext)
+      this.editableFileBaseName = this.stripFileBaseName(fileMeta.name)
+      this.renameFileBaseName = this.editableFileBaseName
+      this.newScriptBaseName = this.editableFileBaseName
+      this.isRenamingFile = false
+      this.markSavedBaseline()
+      if (fileMeta.id) this.$store.commit('SET_CURRENT_FILE', fileMeta.id)
+      this.pendingImport = null
+      this.importWorkspaceDialog = false
+      this.showSnack('Imported into ' + (workspace.name || 'workspace') + '.', 'success')
+    },
+    confirmImportWorkspacePicker () {
+      if (!this.canConfirmImportWorkspace || !this.pendingImport) return
+      const { name, ext, content } = this.pendingImport
+      const placeInto = (workspace) => {
+        const wsId = workspace && (workspace._id || workspace.id)
+        if (!wsId) {
+          alert('No destination workspace.')
+          return Promise.resolve()
+        }
+        if (this.workspaceHasFileName(workspace, name, null)) {
+          alert('A file named "' + name + '" already exists in that workspace.')
+          return Promise.resolve()
+        }
+        if (this.$store.getters.isGuest) {
+          const f = guestStore.createFile(wsId, name, ext)
+          if (!f) {
+            alert('Could not create the file in that workspace.')
+            return Promise.resolve()
+          }
+          guestStore.updateFile(wsId, f.id, content)
+          this.finishImportIntoWorkspace(guestStore.getWorkspace(wsId) || workspace, f)
+          return Promise.resolve()
+        }
+        const config = { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
+        return axios.post('/api/v1/file', { workspaceid: wsId, file_name: name, ext }, config)
+          .then((res) => {
+            const fileId = res.data && res.data.id
+            const after = fileId
+              ? axios.put('/api/v1/file', { fileid: fileId, text: content }, config)
+              : Promise.resolve()
+            return after.then(() => ({
+              id: fileId,
+              name: (res.data && res.data.name) || name,
+              ext: (res.data && res.data.ext) || ext,
+            }))
+          })
+          .then((fileMeta) => {
+            this.finishImportIntoWorkspace(workspace, fileMeta)
+          })
+          .catch((err) => {
+            const msg = (err.response && err.response.data && (err.response.data.error || err.response.data.message)) || err.message
+            alert('Import failed. ' + (msg ? String(msg) : 'Please try again.'))
+          })
+      }
+
+      if (this.importCreatesNewWorkspace) {
+        const wsName = (this.newWorkspaceName || '').trim() || 'New Workspace'
+        const notes = (this.newWorkspaceNotes || '').trim()
+        if (this.$store.getters.isGuest) {
+          const ws = guestStore.createWorkspace(wsName, notes)
+          return placeInto(ws)
+        }
+        const config = { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
+        return axios.post('/api/v1/workspace', { name: wsName, notes }, config)
+          .then((res) => placeInto(res.data))
+          .catch((err) => {
+            const msg = (err.response && err.response.data && (err.response.data.error || err.response.data.message)) || err.message
+            alert('Could not create workspace. ' + (msg ? String(msg) : 'Please try again.'))
+          })
+      }
+      const dest = this.importWorkspacesList.find((w) => String(w._id) === String(this.importWorkspaceTargetId))
+      if (!dest) return
+      return placeInto(dest)
     },
     focusTerminal () {
       const textarea = document.querySelector('#terminal .xterm-helper-textarea')
@@ -1510,9 +2092,9 @@ export default {
 }
 /* Save → Compile → Import: blues light→deep (muted, not pale); Export green */
 .editor-page .editor-toolbar .editor-toolbar-btn-1 { background-color: #0092b3 !important; border-color: #0092b3 !important; }
-.editor-page .editor-toolbar .editor-toolbar-btn-2 { background-color: #007fa1 !important; border-color: #007fa1 !important; }
+.editor-page .editor-toolbar .editor-toolbar-btn-2 { background-color: #006994 !important; border-color: #006994 !important; }
 .editor-page .editor-toolbar .editor-toolbar-btn-3 { background-color: #50c878 !important; border-color: #50c878 !important; }
-.editor-page .editor-toolbar .editor-toolbar-btn-4 { background-color: #006994 !important; border-color: #006994 !important; }
+.editor-page .editor-toolbar .editor-toolbar-btn-4 { background-color: #fb8c00 !important; border-color: #fb8c00 !important; }
 .editor-page .editor-toolbar .editor-toolbar-btn-6 { background-color: #00CAE3 !important; border-color: #00CAE3 !important; }
 .editor-page .editor-toolbar .editor-toolbar-btn-delete { color: #fff !important; }
 /* File name: label +2pt (16pt); text inside box matches */
@@ -1532,14 +2114,35 @@ export default {
 .editor-page .v-card .v-list-item__subtitle:not(.editor-workspace-subtitle) {
   font-size: var(--neptune-fs-small, 12.75pt) !important;
 }
-.editor-page .v-card .v-list-item__subtitle.editor-workspace-subtitle,
-.editor-page .v-card .editor-workspace-subtitle.v-list-item__subtitle {
+.editor-page .editor-file-meta {
+  padding: 16px 20px 8px;
+}
+.editor-page .editor-meta-row {
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.editor-page .editor-workspace-subtitle {
   font-size: var(--neptune-fs-body, 14pt) !important;
   color: #006994 !important;
+  font-weight: 500;
+  line-height: 1.4;
 }
-.theme--dark .editor-page .v-card .v-list-item__subtitle.editor-workspace-subtitle,
-.theme--dark .editor-page .v-card .editor-workspace-subtitle.v-list-item__subtitle {
+.theme--dark .editor-page .editor-workspace-subtitle {
   color: #00ACC1 !important;
+}
+.editor-page .editor-meta-action-btn {
+  text-transform: none !important;
+  letter-spacing: normal !important;
+  font-size: var(--neptune-fs-body, 14pt) !important;
+  color: #ffffff !important;
+}
+.editor-page .editor-meta-action-btn--filled {
+  background-color: #006994 !important;
+  border-color: #006994 !important;
+}
+.editor-page .editor-meta-action-btn--confirm {
+  background-color: #4caf50 !important;
+  border-color: #4caf50 !important;
 }
 .editor-page .v-card-title,
 .editor-page .v-card-text.subtitle-1 {
@@ -1589,9 +2192,13 @@ export default {
   text-transform: none !important;
   letter-spacing: normal !important;
   font-size: var(--neptune-fs-body, 14pt) !important;
+  background-color: #006994 !important;
+  border-color: #006994 !important;
+  color: #ffffff !important;
 }
 .script-language-switch-btn .v-btn__content {
   font-size: var(--neptune-fs-body, 14pt) !important;
+  color: #ffffff !important;
 }
 
 /* Programming area: double padding from border */

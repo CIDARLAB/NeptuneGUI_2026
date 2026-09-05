@@ -135,11 +135,24 @@ yarn lint
 ## Quick test flow (recommended)
 
 ```bash
-npm install
-npm run dev
-# Open http://localhost:8081 and click through: Landing, Login, Register, Dashboard, etc.
+npm ci
+npm run backend:install
+npm run start
+# Open http://localhost:8081 → Continue as Guest
+```
 
-# Optional:
+Guest UI smoke (align with **README.md** / **RUN_LFR.md**):
+
+1. **Dashboard** — expand Example; open notes; open an `.lfr` via file name.
+2. **Editor** — **Rename** Confirm; edit then leave without Save (unsaved text discarded); **Save file**; **Move** / **Copy** to another workspace (stays in Editor; name unchanged).
+3. **Compile to MINT** on an LFR → workspace gets `*_fromLFR.mint` (no PR JSON).
+4. **Save and synthesize** → Jobs row + stamped PR JSON / MINT; **Alerts** when done/fail; Jobs **Apply** weights refresh **Total**.
+5. **Component Library** — open default component in 3DuF; DIY mixer `edgeBend*`.
+6. **Export / Import** workspaces ZIP (includes `jobs.json` and typed folders).
+
+Optional automated:
+
+```bash
 npm run test:unit
 # E2E: run "npm run serve" first, then "npm run test:e2e"
 ```
@@ -148,5 +161,6 @@ npm run test:unit
 
 ## Notes
 
-- **Dev proxy**: `vue.config.js` `devServer.proxy` sends `/api` to `http://localhost:8080` and `/socket.io` to `http://localhost:3000`. Change these if Neptune_2026 uses other ports.
+- Prefer **`npm run start`** (GUI **8081** + data API **8080**). Local fluigi uses sibling `Neptune_2026` / `NEPTUNE_2026_ROOT` when `NEPTUNE_COMPILE_URL` is unset (see **RUN_LFR.md**).
+- **Dev proxy**: `vue.config.js` `devServer.proxy` sends `/api` to `http://localhost:8080` and `/socket.io` to `http://localhost:3000`. Change these if your stack uses other ports.
 - **Tests**: Example E2E/unit tests target Neptune pages (e.g. `#login`, Neptune logo). Adjust `tests/e2e/specs/test.js` and `tests/unit/example.spec.js` if the UI changes.

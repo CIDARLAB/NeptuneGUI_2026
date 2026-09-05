@@ -78,6 +78,25 @@ export async function syncServerEphemeralStateAfterGuiPageLoad (axiosInstance) {
 
 export const EXAMPLE_WORKSPACE_NAME = 'Example'
 
+export const EXAMPLE_WORKSPACE_NOTES = [
+  'This workspace has two LFR examples:',
+  '• flow_only_demo.lfr — flow layer only (mixer + ports).',
+  '• flow_and_control_demo.lfr — flow plus control valves.',
+  '',
+  'MINT files come in two kinds:',
+  '• *_fromLFR.mint — compiler output from the matching LFR (primitives-server / library defaults).',
+  '• Handwritten .mint (no _fromLFR suffix) — the same netlist, with some 3DuF geometry edited by hand.',
+  '',
+  'After you change a handwritten MINT and compile it, the PR JSON (and the 3DuF drawing) will differ from the LFR-generated result.',
+  '',
+  'In flow_and_control_demo.mint, PORT radius and CHANNEL width differ from the LFR / primitives-server defaults. Mixer channelWidth matches the FLOW pipes (400), and edgeBend1/edgeBend2 are 200 (half that width) so the mixer ends have no lip. VALVE3D keeps library defaults (gap 600):',
+  '• PORT portRadius: LFR default 1000 → 700 (smaller I/O circles in 3DuF)',
+  '• CHANNEL channelWidth: LFR default 600 (FLOW and CONTROL, same as VALVE3D gap) → 400 (thinner pipes)',
+  '• MIXER channelWidth 400 with edgeBend1/edgeBend2 200 (half the attached FLOW channelWidth)',
+  '',
+  'The compiled flow_and_control_demo_fromLFR.mint uses portRadius=1000, FLOW channelWidth=800, CONTROL channelWidth=600, valveRadius=1200.',
+].join('\n')
+
 /** Zip / download: never write "[object Object]" when file.content is a parsed JSON object. */
 export function fileContentForZipExport (content) {
   if (content == null || content === '') return ''
@@ -162,6 +181,16 @@ function createWorkspace (name, notes) {
   return workspace
 }
 
+function updateWorkspaceNotes (workspaceId, notes) {
+  const data = load()
+  const w = data.workspaces.find(ws => String(ws._id) === String(workspaceId))
+  if (!w) return null
+  w.notes = notes == null ? '' : String(notes)
+  w.updated_at = new Date().toISOString()
+  save(data)
+  return w
+}
+
 function deleteWorkspace (workspaceId) {
   const data = load()
   data.workspaces = data.workspaces.filter(w => String(w._id) !== String(workspaceId))
@@ -207,19 +236,36 @@ function createFile (workspaceId, fileName, ext) {
   return file
 }
 
-function updateFile (workspaceId, fileId, content, newName) {
+function updateFile (workspaceId, fileId, content, newName, options = {}) {
   const data = load()
   const w = data.workspaces.find(ws => String(ws._id) === String(workspaceId))
   if (!w || !w.files) return null
   const f = w.files.find(x => String(x.id) === String(fileId))
   if (!f) return null
   const now = new Date().toISOString()
+  const oldName = f.name
+  const touch = options.touch !== false
+  const touchWorkspace = options.touchWorkspace !== false
   f.content = content
   if (newName != null && String(newName).trim() !== '') f.name = String(newName).trim()
-  f.updated_at = now
-  w.updated_at = now
+  if (touch) f.updated_at = now
+  if (touchWorkspace) w.updated_at = now
+  // After an in-place rename, drop any leftover rows that still use the old name.
+  if (oldName && f.name !== oldName) {
+    w.files = w.files.filter((x) => !(
+      x && x.name === oldName && String(x.id) !== String(fileId)
+    ))
+  }
   save(data)
   return f
+}
+
+/** Rename a file in place (same id). Optionally keep content unchanged. */
+function renameFile (workspaceId, fileId, newName, content) {
+  const existing = getFile(workspaceId, fileId)
+  if (!existing) return null
+  const body = content != null ? content : existing.content
+  return updateFile(workspaceId, fileId, body, newName)
 }
 
 function deleteFile (workspaceId, fileId) {
@@ -230,15 +276,16 @@ function deleteFile (workspaceId, fileId) {
   save(data)
 }
 
-function upsertFileByName (workspaceId, fileName, content) {
+function upsertFileByName (workspaceId, fileName, content, options = {}) {
   const existing = (getFiles(workspaceId) || []).find(f => f && f.name === fileName)
   if (existing) {
-    return updateFile(workspaceId, existing.id, content)
+    return updateFile(workspaceId, existing.id, content, null, options)
   }
   const ext = (String(fileName).match(/\.[^.]+$/) || [''])[0]
   const created = createFile(workspaceId, fileName, ext)
   if (!created) return null
-  return updateFile(workspaceId, created.id, content)
+  // createFile already stamped created/updated; refresh content without double-bumping if touch=false
+  return updateFile(workspaceId, created.id, content, null, options)
 }
 
 function findFileByName (workspaceId, fileName) {
@@ -413,6 +460,10 @@ function syncExampleDemoFiles (wid) {
     extras.push(f)
   }
 
+  // Only seed a brand-new empty Example workspace. If the user renamed or
+  // deleted a seed file, do not recreate the old name on the next load.
+  const createMissingSeeds = ws.files.length === 0
+
   const nextFiles = []
   for (const spec of EXAMPLE_SEED_SPECS) {
     const existing = existingByName.get(spec.name)
@@ -429,6 +480,7 @@ function syncExampleDemoFiles (wid) {
       nextFiles.push(existing)
       continue
     }
+    if (!createMissingSeeds) continue
     const id = String(data.nextFileId++)
     nextFiles.push({
       id,
@@ -442,7 +494,7 @@ function syncExampleDemoFiles (wid) {
   }
   nextFiles.push(...extras)
 
-  if (changed) {
+  if (changed || nextFiles.length !== ws.files.length) {
     ws.files = nextFiles
     ws.updated_at = now
     save(data)
@@ -481,10 +533,13 @@ function ensureExampleWorkspace () {
   migrateDxJsonSeedFilenames()
   let ex = load().workspaces.find(w => String(w.name || '').trim() === EXAMPLE_WORKSPACE_NAME)
   if (!ex) {
-    createWorkspace(EXAMPLE_WORKSPACE_NAME, '')
+    createWorkspace(EXAMPLE_WORKSPACE_NAME, EXAMPLE_WORKSPACE_NOTES)
     ex = load().workspaces.find(w => String(w.name || '').trim() === EXAMPLE_WORKSPACE_NAME)
   }
   if (!ex) return
+  if (!String(ex.notes || '').trim()) {
+    updateWorkspaceNotes(ex._id, EXAMPLE_WORKSPACE_NOTES)
+  }
   syncExampleDemoFiles(ex._id)
   repairCorruptedKnownJsonSeeds()
 }
@@ -522,12 +577,14 @@ export default {
   getWorkspace,
   getWorkspaces,
   createWorkspace,
+  updateWorkspaceNotes,
   deleteWorkspace,
   getFiles,
   getFile,
   findWorkspaceContainingFile,
   createFile,
   updateFile,
+  renameFile,
   upsertFileByName,
   findFileByName,
   deleteFilesByNames,

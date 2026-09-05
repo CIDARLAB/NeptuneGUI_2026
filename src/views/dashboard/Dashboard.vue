@@ -66,6 +66,21 @@
         </div>
       </v-col>
 
+      <v-dialog v-model="notesDialog" max-width="560px">
+        <v-card class="dashboard-notes-dialog">
+          <v-card-title class="headline">{{ notesDialogWorkspaceName }} notes</v-card-title>
+          <v-card-text>
+            <div
+              class="workspace-notes-body"
+              :class="{ 'workspace-notes-body--empty': !notesDialogText }"
+            >{{ notesDialogText || 'No notes were written for this workspace.' }}</div>
+          </v-card-text>
+          <v-card-actions>
+            <v-spacer />
+            <v-btn text color="primary" @click="notesDialog = false">Close</v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
       <v-dialog v-model="namingDialog" max-width="520px" persistent>
         <v-card class="dashboard-naming-dialog">
           <v-card-title class="headline">Apply LFR naming convention?</v-card-title>
@@ -162,6 +177,23 @@
                     </v-btn>
                   </template>
                   <span>Delete this workspace and its files</span>
+                </v-tooltip>
+
+                <v-tooltip bottom>
+                  <template v-slot:activator="{ attrs, on }">
+                    <v-btn
+                      v-bind="attrs"
+                      text
+                      icon
+                      color="#212121"
+                      class="workspace-card-action-btn workspace-card-note-btn"
+                      v-on="on"
+                      @click="openWorkspaceNotes(workspace)"
+                    >
+                      <v-icon color="#212121">mdi-note-text-outline</v-icon>
+                    </v-btn>
+                  </template>
+                  <span>View notes written when this workspace was created</span>
                 </v-tooltip>
               </div>
             </div>
@@ -558,6 +590,9 @@
         namingDialogOriginal: '',
         namingDialogNormalized: '',
         namingDialogResolver: null,
+        notesDialog: false,
+        notesDialogWorkspaceName: '',
+        notesDialogText: '',
     }),
     computed: {
       totalSales () {
@@ -1186,6 +1221,12 @@
             })
             .catch((error) => { console.log(error) })
         },
+        openWorkspaceNotes (workspace) {
+          const ws = workspace || {}
+          this.notesDialogWorkspaceName = ws.name || 'Workspace'
+          this.notesDialogText = String(ws.notes || '').trim()
+          this.notesDialog = true
+        },
         deleteworkspace (wid) {
           if (this.$store.getters.isGuest) {
             guestStore.deleteWorkspace(wid)
@@ -1400,6 +1441,22 @@
     }
     #dashboard .workspace-card-action-btn:hover {
         opacity: 1;
+    }
+    .dashboard-notes-dialog .workspace-notes-body {
+        white-space: pre-wrap;
+        font-size: var(--neptune-fs-body, 14pt);
+        line-height: 1.55;
+        color: rgba(0, 0, 0, 0.82);
+    }
+    .dashboard-notes-dialog .workspace-notes-body--empty {
+        color: rgba(0, 0, 0, 0.54);
+        font-style: italic;
+    }
+    .theme--dark .dashboard-notes-dialog .workspace-notes-body {
+        color: rgba(255, 255, 255, 0.87);
+    }
+    .theme--dark .dashboard-notes-dialog .workspace-notes-body--empty {
+        color: rgba(255, 255, 255, 0.54);
     }
 
     /* Create workspace hint — same body size as LLM prompts */

@@ -330,6 +330,10 @@ def ensure_primitives_server() -> bool:
         return False
 
 
+def _is_lfr_compile(compile_type: str) -> bool:
+    return compile_type in ("lfr", "lfrToMint")
+
+
 def build_fluigi_cmd(
     compile_type: str,
     src_path: Path,
@@ -337,7 +341,9 @@ def build_fluigi_cmd(
     component_paths: dict | None,
 ) -> list[str]:
     """Build fluigi CLI with component-library / pre-load from the bundle."""
-    if compile_type == "lfr":
+    if compile_type == "lfrToMint":
+        cmd = ["fluigi", "compile_lfr", "-o", str(output_dir), str(src_path)]
+    elif compile_type == "lfr":
         cmd = ["fluigi", "synthesize", "-o", str(output_dir), str(src_path)]
     else:
         cmd = ["fluigi", "synthesizeFromMINT", "-o", str(output_dir), str(src_path)]
@@ -347,12 +353,29 @@ def build_fluigi_cmd(
 
     # 3DuF visualization JSON is not a fluigi entity library.
     # Default LFR modules already live in pylfr/library.
-    if compile_type == "lfr" and component_paths.get("import_lfr_root"):
+    if _is_lfr_compile(compile_type) and component_paths.get("import_lfr_root"):
         cmd.extend(["--pre-load", str(component_paths["import_lfr_root"])])
-    elif compile_type == "lfr" and component_paths.get("workspace_lfr_root"):
+    elif _is_lfr_compile(compile_type) and component_paths.get("workspace_lfr_root"):
         cmd.extend(["--pre-load", str(component_paths["workspace_lfr_root"])])
 
     return cmd
+
+
+def _pick_primary_mint(outputs: dict) -> tuple[str, str] | None:
+    ranked: list[tuple[int, str]] = []
+    for name in outputs:
+        base = Path(name).name
+        if not base.lower().endswith(".mint"):
+            continue
+        if re.search(r"_fromLFR(?:\(\d{12}\))?\.mint$", base, re.I):
+            ranked.append((0, name))
+        else:
+            ranked.append((1, name))
+    if not ranked:
+        return None
+    ranked.sort(key=lambda item: (item[0], item[1]))
+    name = ranked[0][1]
+    return name, outputs[name]
 
 
 def _pick_primary_pr_json(outputs: dict) -> tuple[str, str] | None:
@@ -495,13 +518,23 @@ def run_compile(
                 except Exception:
                     pass
 
-            primary = _pick_primary_pr_json(outputs)
+            if compile_type == "lfrToMint":
+                outputs = {
+                    name: text
+                    for name, text in outputs.items()
+                    if not str(name).lower().endswith(".json")
+                }
+                primary = None
+                mint = _pick_primary_mint(outputs)
+                evaluation = None
+                success = result.returncode == 0 and mint is not None
+            else:
+                primary = _pick_primary_pr_json(outputs)
+                evaluation = None
+                if result.returncode == 0 and primary:
+                    evaluation = _compute_evaluation(primary[1], Path(primary[0]).name)
+                success = result.returncode == 0 and primary is not None
             log_text = _collect_log_text(outputs, result.stdout, result.stderr)
-            evaluation = None
-            if result.returncode == 0 and primary:
-                evaluation = _compute_evaluation(primary[1], Path(primary[0]).name)
-
-            success = result.returncode == 0 and primary is not None
             job_store[job_id] = {
                 "status": "done" if success else "error",
                 "returncode": result.returncode,
@@ -551,7 +584,7 @@ def api():
             "workspaceName": body.get("workspaceName") or "",
             "compileType": compile_type,
         }
-        ext = "lfr" if compile_type == "lfr" else "mint"
+        ext = "lfr" if compile_type in ("lfr", "lfrToMint") else "mint"
         run_compile.spawn(
             job_id,
             body.get("sourceContent", ""),
@@ -568,7 +601,14 @@ def api():
     @web.post("/api/v1/mushroommapper")
     async def compile_lfr(request: Request):
         body = await request.json()
-        return JSONResponse(content=_spawn(body, "lfr"))
+        mode = str((body or {}).get("compileMode") or (body or {}).get("compileType") or "").strip()
+        compile_type = "lfrToMint" if mode in ("lfrToMint", "mintOnly") else "lfr"
+        return JSONResponse(content=_spawn(body, compile_type))
+
+    @web.post("/api/v1/lfrToMint")
+    async def compile_lfr_to_mint(request: Request):
+        body = await request.json()
+        return JSONResponse(content=_spawn(body, "lfrToMint"))
 
     @web.post("/api/v1/fluigi")
     async def compile_mint(request: Request):

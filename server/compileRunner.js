@@ -30,8 +30,12 @@ function sanitizeLfrFileName (name) {
   return base
 }
 
+function isLfrCompileType (compileType) {
+  return compileType === 'lfr' || compileType === 'lfrToMint'
+}
+
 function sanitizeSourceFilename (name, compileType) {
-  const fallback = compileType === 'lfr' ? 'input.lfr' : 'input.mint'
+  const fallback = isLfrCompileType(compileType) ? 'input.lfr' : 'input.mint'
   const base = path.basename(String(name || '').trim()) || fallback
   if (base === '.' || base === '..') return fallback
   return base.replace(/[^\w.\-]+/g, '_')
@@ -114,9 +118,15 @@ function writeImportLfrTree (tmpdir, bundle) {
 }
 
 function buildFluigiCmd (compileType, srcPath, outputDir, componentPaths) {
-  const args = compileType === 'lfr'
-    ? ['synthesize', '-o', outputDir, srcPath]
-    : ['synthesizeFromMINT', '-o', outputDir, srcPath]
+  let args
+  if (compileType === 'lfrToMint') {
+    // compile_lfr only: LFR → MINT (+ unplaced JSON which we discard). No P&R.
+    args = ['compile_lfr', '-o', outputDir, srcPath]
+  } else if (compileType === 'lfr') {
+    args = ['synthesize', '-o', outputDir, srcPath]
+  } else {
+    args = ['synthesizeFromMINT', '-o', outputDir, srcPath]
+  }
 
   if (!componentPaths) return args
 
@@ -124,7 +134,7 @@ function buildFluigiCmd (compileType, srcPath, outputDir, componentPaths) {
   // --component-library hangs place-and-route on PORT/VALVE3D lookups.
   // Default LFR modules already live in pylfr/library — only pre-load
   // files the Editor actually imported.
-  if (compileType === 'lfr' && componentPaths.importLfrRoot) {
+  if (isLfrCompileType(compileType) && componentPaths.importLfrRoot) {
     args.push('--pre-load', componentPaths.importLfrRoot)
   }
   return args
@@ -164,6 +174,28 @@ function collectOutputFiles (outputDir) {
   }
   walk(outputDir)
   return outputs
+}
+
+function pickPrimaryMint (outputs) {
+  const names = Object.keys(outputs || {})
+  const ranked = []
+  for (const name of names) {
+    const base = path.basename(name)
+    if (!/\.mint$/i.test(base)) continue
+    if (/_fromLFR(?:\(\d{12}\))?\.mint$/i.test(base)) ranked.push([0, name])
+    else ranked.push([1, name])
+  }
+  if (!ranked.length) return null
+  ranked.sort((a, b) => a[0] - b[0] || a[1].localeCompare(b[1]))
+  const name = ranked[0][1]
+  return { name, basename: path.basename(name), text: outputs[name] }
+}
+
+function siblingMintFileName (sourceFilename) {
+  const base = path.basename(String(sourceFilename || 'design').trim()) || 'design'
+  const stem = base.replace(/\.[^.]+$/, '') || 'design'
+  if (/_fromLFR$/i.test(stem)) return `${stem}.mint`
+  return `${stem}_fromLFR.mint`
 }
 
 function pickPrimaryPrJson (outputs) {
@@ -329,8 +361,16 @@ async function runLocalCompile ({
       timeoutMs: timeoutMs || 3500000,
       env: process.env,
     })
-    const outputs = collectOutputFiles(outputDir)
-    const primaryJson = pickPrimaryPrJson(outputs)
+    let outputs = collectOutputFiles(outputDir)
+    if (compileType === 'lfrToMint') {
+      const kept = {}
+      Object.keys(outputs).forEach((name) => {
+        if (/\.json$/i.test(name)) return
+        kept[name] = outputs[name]
+      })
+      outputs = kept
+    }
+    const primaryJson = compileType === 'lfrToMint' ? null : pickPrimaryPrJson(outputs)
     const log = collectLogText(outputs, result.stdout, result.stderr, result.error)
     return {
       returncode: result.returncode,
@@ -352,14 +392,17 @@ async function runLocalCompile ({
 
 function logFileNameFor (sourceFilename, compileType) {
   const stem = String(sourceFilename || 'design').replace(/\.[^.]+$/, '') || 'design'
-  const suffix = compileType === 'lfr' ? '_fromLFR.log' : '_fromMINT.log'
+  const suffix = isLfrCompileType(compileType) ? '_fromLFR.log' : '_fromMINT.log'
   return `${path.basename(stem)}${suffix}`
 }
 
 module.exports = {
   runLocalCompile,
   pickPrimaryPrJson,
+  pickPrimaryMint,
+  siblingMintFileName,
   collectLogText,
   logFileNameFor,
+  isLfrCompileType,
   capText,
 }

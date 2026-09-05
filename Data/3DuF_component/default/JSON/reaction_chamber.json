@@ -1,173 +1,80 @@
 {
   "name": "reaction_chamber",
-  "params": {
-    "width": 135000,
-    "length": 85000
-  },
-  "renderLayers": [
-    {
-      "id": "6ab51983-3de3-11f1-a242-89896c81f7a2",
-      "name": "RenderLayerFlow_1",
-      "modellayer": "4952d7a0-f16c-11eb-8c04-ff751cb31c4c",
-      "type": "FLOW",
-      "features": [
-        {
-          "id": "7026d660-3de3-11f1-a242-89896c81f7a2",
-          "name": "New Feature",
-          "macro": "Chamber",
-          "params": {
-            "position": [
-              40000,
-              20000
-            ],
-            "componentSpacing": 1000,
-            "width": 5000,
-            "length": 5000,
-            "height": 250,
-            "cornerRadius": 200,
-            "rotation": 0,
-            "mirrorByX": 0,
-            "mirrorByY": 0
-          },
-          "type": "XY",
-          "referenceID": "70274b90-3de3-11f1-a242-89896c81f7a2",
-          "dxfData": [],
-          "layerID": "4952d7a0-f16c-11eb-8c04-ff751cb31c4c"
-        }
-      ],
-      "color": "indigo"
-    },
-    {
-      "id": "6ab51984-3de3-11f1-a242-89896c81f7a2",
-      "name": "RenderLayerControl_1",
-      "modellayer": "4952feb0-f16c-11eb-8c04-ff751cb31c4c",
-      "type": "CONTROL",
-      "features": [],
-      "color": "red"
-    },
-    {
-      "id": "6ab51985-3de3-11f1-a242-89896c81f7a2",
-      "name": "RenderLayerIntegration_1",
-      "modellayer": "4952feb1-f16c-11eb-8c04-ff751cb31c4c",
-      "type": "INTEGRATION",
-      "features": [],
-      "color": "green"
-    }
-  ],
-  "layers": [
-    {
-      "id": "4952d7a0-f16c-11eb-8c04-ff751cb31c4c",
-      "name": "LayerFlow_1",
-      "type": "FLOW",
-      "group": "0",
-      "params": {
-        "z_offset": 0,
-        "flip": false
-      },
-      "features": [
-        {
-          "id": "7026d660-3de3-11f1-a242-89896c81f7a2",
-          "name": "New Feature",
-          "macro": "Chamber",
-          "params": {
-            "position": [
-              40000,
-              20000
-            ],
-            "componentSpacing": 1000,
-            "width": 5000,
-            "length": 5000,
-            "height": 250,
-            "cornerRadius": 200,
-            "rotation": 0,
-            "mirrorByX": 0,
-            "mirrorByY": 0
-          },
-          "type": "XY",
-          "referenceID": "70274b90-3de3-11f1-a242-89896c81f7a2",
-          "dxfData": [],
-          "layerID": "4952d7a0-f16c-11eb-8c04-ff751cb31c4c"
-        }
-      ]
-    },
-    {
-      "id": "4952feb0-f16c-11eb-8c04-ff751cb31c4c",
-      "name": "LayerControl_1",
-      "type": "CONTROL",
-      "group": "0",
-      "params": {
-        "z_offset": 0,
-        "flip": false
-      },
-      "features": []
-    },
-    {
-      "id": "4952feb1-f16c-11eb-8c04-ff751cb31c4c",
-      "name": "LayerIntegration_1",
-      "type": "INTEGRATION",
-      "group": "0",
-      "params": {
-        "z_offset": 0,
-        "flip": false
-      },
-      "features": []
-    }
-  ],
-  "groups": [],
   "components": [
     {
-      "id": "70274b90-3de3-11f1-a242-89896c81f7a2",
-      "name": "Chamber_1",
+      "name": "reaction_chamber_1",
+      "id": "reaction_chamber_1",
       "entity": "REACTION CHAMBER",
+      "layers": [
+        "0"
+      ],
       "params": {
-        "position": [
-          40000,
-          20000
-        ],
         "componentSpacing": 1000,
         "width": 5000,
-        "length": 5000,
+        "length": 5000.0,
         "height": 250,
         "cornerRadius": 200,
-        "rotation": 0,
-        "mirrorByX": 0,
-        "mirrorByY": 0
+        "rotation": 0.0,
+        "mirrorByX": 0.0,
+        "mirrorByY": 0.0,
+        "position": [
+          15000.0,
+          20000.0
+        ],
+        "ID": "reaction_chamber_1"
       },
-      "x-span": 5000,
-      "y-span": 5000,
       "ports": [
-        {
-          "x": 0,
-          "y": -2500,
-          "layer": "FLOW",
-          "label": "1"
-        },
         {
           "x": 2500,
           "y": 0,
-          "layer": "FLOW",
-          "label": "2"
+          "label": "1",
+          "layer": "FLOW"
+        },
+        {
+          "x": 5000,
+          "y": 2500,
+          "label": "2",
+          "layer": "FLOW"
+        },
+        {
+          "x": 2500,
+          "y": 5000,
+          "label": "3",
+          "layer": "FLOW"
         },
         {
           "x": 0,
           "y": 2500,
-          "layer": "FLOW",
-          "label": "3"
-        },
-        {
-          "x": -2500,
-          "y": 0,
-          "layer": "FLOW",
-          "label": "4"
+          "label": "4",
+          "layer": "FLOW"
         }
       ],
-      "layers": [
-        "4952d7a0-f16c-11eb-8c04-ff751cb31c4c"
-      ]
+      "x-span": 5000,
+      "y-span": 5000
     }
   ],
   "connections": [],
-  "valves": [],
+  "params": {
+    "x-span": 76200,
+    "y-span": 76200,
+    "length": 76200,
+    "flowPortCount": 0,
+    "controlPortCount": 0,
+    "width": 76200
+  },
+  "layers": [
+    {
+      "name": "FLOW_0",
+      "id": "0",
+      "type": "FLOW",
+      "params": {},
+      "group": "0"
+    }
+  ],
   "features": [],
-  "version": "1.2"
+  "version": "1.2",
+  "valves": [],
+  "isPnR": false,
+  "layoutConstraints": [],
+  "IsPlacedAndRouted": true
 }

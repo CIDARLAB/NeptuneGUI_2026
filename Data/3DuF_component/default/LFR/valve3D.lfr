@@ -1,7 +1,6 @@
-// Matches valve3D.json:
-// FLOW  Port_1 --CHANNEL_1--> Port_2, with two VALVE3D on CHANNEL_1.
-// CONTROL  Valve3D_control_3 --CHANNEL_2 (crossSection=0)--> Port_3
-//          Valve3D_control_1 --CHANNEL_3 (crossSection=1)--> Port_5
+// Minimal VALVE3D showcase matching valve3D.mint / valve3D.json:
+// FLOW: Port_1 --CHANNEL_1--> Port_2 with two VALVE3D on CHANNEL_1.
+// CONTROL: Port_3 --> Valve3D_control_3, Port_5 --> Valve3D_control_1.
 module valve3D(
     finput Port_1,
     foutput Port_2,

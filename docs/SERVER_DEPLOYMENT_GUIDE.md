@@ -1,6 +1,6 @@
 # Neptune GUI + Compute — Server Deployment & Integration Guide (English)
 
-This guide is for engineers deploying and operating **NeptuneGUI_2026** (Vue frontend + Express data server) together with the **Compute backend** (Modal `modal_app.py` running Neptune_2026 / fluigi). It covers architecture, Primitives Server placement, the **Compile** request/response contract, and the **Jobs** UI behavior.
+This guide is for engineers deploying and operating **NeptuneGUI_2026** (Vue frontend + Express data server) together with the **Compute backend** (Modal `modal_app.py` running Neptune_2026 / fluigi). It covers architecture, Primitives Server placement, the **Save and synthesize** / **Compile to MINT** request/response contract, and the **Jobs** UI behavior.
 
 ---
 
@@ -17,9 +17,9 @@ Express Data Server (NeptuneGUI, :8080)
     ▼
 Modal Compute API (modal_app.py)
     │  Per worker: fluigi + 3DuF primitives (container-scoped reuse)
-    │  Write bundle to temp dir → fluigi synthesize / synthesizeFromMINT
+    │  Write bundle to temp dir → fluigi synthesize / synthesizeFromMINT / compile_lfr
     ▼
-Outputs: *_PR.json, evaluation breakdown, logs; per-job temp dirs removed
+Outputs: *_PR.json (full synthesize), *_fromLFR.mint (mint-only), evaluation breakdown, logs; per-job temp dirs removed
     │
     ▼
 Express persists result JSON into user workspace (Fly volume Data/)
@@ -118,11 +118,19 @@ So: **primitives must be reachable at compile time** unless every entity is alre
 
 ---
 
-## 4. Compile button — data flow
+## 4. Compile / synthesize — data flow
+
+Editor actions:
+
+| UI | Route / mode | Fluigi |
+|----|--------------|--------|
+| **Save and synthesize** (`.lfr`) | `POST /api/v1/mushroommapper` (`compileType` / mode `lfr`) | `fluigi synthesize` |
+| **Save and synthesize** (`.mint`) | `POST /api/v1/fluigi` (`mint`) | `fluigi synthesizeFromMINT` |
+| **Compile to MINT** (`.lfr` only) | `POST /api/v1/mushroommapper` with `compileMode: "lfrToMint"` (aliases `mintOnly`, or `POST /api/v1/lfrToMint`) | `fluigi compile_lfr` — success = primary `*_fromLFR.mint`; unplaced JSON discarded; **no** PR JSON / evaluation |
 
 ### 4.1 Frontend → Express
 
-`POST /api/v1/mushroommapper` (`.lfr` / `.v`) or `POST /api/v1/fluigi` (`.mint` / `.uf`)
+`POST /api/v1/mushroommapper` (`.lfr` / `.v` / `lfrToMint`) or `POST /api/v1/fluigi` (`.mint` / `.uf`)
 
 Editor fetches `/api/v1/componentFiles` first, then posts:
 
@@ -134,6 +142,7 @@ Editor fetches `/api/v1/componentFiles` first, then posts:
   "configfilename": "config.json",
   "workspace": "<current workspace _id>",
   "user": "<email or guest>",
+  "compileMode": "lfrToMint",
   "componentBundle": [ /* see below */ ],
   "evaluationWeights": {
     "area": 0.2,
@@ -146,7 +155,7 @@ Editor fetches `/api/v1/componentFiles` first, then posts:
 }
 ```
 
-> **Note:** `componentBundle` and Express merge logic are **implemented**. `evaluationWeights` is the **target contract** (Jobs page weights should be sent with compile so compute can return scored breakdown; until wired, compute uses defaults and the GUI can still recompute Total from returned components).
+> **Note:** `compileMode` / `compileType` of `lfrToMint` or `mintOnly` selects MINT-only. Omit them (or use full synthesize routes) for place-and-route. `componentBundle` and Express merge logic are **implemented**. `evaluationWeights` is the **target contract** (Jobs page weights should be sent with full synthesize so compute can return scored breakdown; until wired, compute uses defaults and the GUI can still recompute Total from returned components). Workspace create (`POST /api/v1/workspace`) accepts optional **`notes`**.
 
 #### Each `componentBundle` entry (slimmed by `toCompileComponentBundle` before Modal)
 
@@ -156,7 +165,7 @@ Editor fetches `/api/v1/componentFiles` first, then posts:
 | `name` | Display name |
 | `source` | `default` / `tmp` / `custom` |
 | `sourceType` | Origin type |
-| `params` | User-edited numeric params from Library DIY |
+| `params` | User-edited numeric params from Library DIY (mixer allows `edgeBend` / `edgeBend1` / `edgeBend2`) |
 | `jsonScript` | Full 3DuF/ParchMint JSON string |
 | `lfrScript` | Component LFR module (for LFR `import`) |
 | `mintScript` | Component MINT snippet |
@@ -171,7 +180,7 @@ Express `proxyCompile` adds:
 
 ### 4.2 Express → Modal
 
-`POST {NEPTUNE_COMPILE_URL}/api/v1/mushroommapper` or `/api/v1/fluigi`
+`POST {NEPTUNE_COMPILE_URL}/api/v1/mushroommapper` or `/api/v1/fluigi` (and the same `compileMode` for mint-only)
 
 Body = enriched payload above. Response = **job UUID** (JSON string).
 
@@ -181,15 +190,20 @@ Body = enriched payload above. Response = **job UUID** (JSON string).
    - `3DuF_component/default/JSON/*.json`
    - `LFR/*.lfr`, `MINT/*.mint`
 2. `ensure_primitives_server()` (container reuse)
-3. fluigi:
+3. fluigi (by mode):
    ```bash
+   # Full LFR synthesize:
    fluigi synthesize -o <out> <source>
+   # Full MINT synthesize:
+   fluigi synthesizeFromMINT -o <out> <source>
+   # Compile to MINT only:
+   fluigi compile_lfr -o <out> <source>
    # LFR only, and only if the Editor sent importLfr:
    #   --pre-load <tmp>/import_lfr
    ```
    Do **not** pass 3DuF visualization JSON as `--component-library`.
-4. Collect files under `output/` (including `*_fromLFR_PR.json` or `*_fromMINT_PR.json`). TREE-PLACE uses `dump_intermediates=False` in `fluigi/place_and_route.py` (only the PR JSON; no `Neptune_2026/Benchmarks/` tree/result/PNG or cluster dumps). Set that argument to `True` to restore the full inspection set.
-5. Run `compute_layout_evaluation_scores()` on primary `*_PR.json`
+4. Collect files under `output/`. Full synthesize prefers `*_fromLFR_PR.json` / `*_fromMINT_PR.json`. TREE-PLACE uses `dump_intermediates=False` in `fluigi/place_and_route.py` (only the PR JSON; no `Neptune_2026/Benchmarks/` tree/result/PNG or cluster dumps). Set that argument to `True` to restore the full inspection set. **Mint-only** keeps the primary `*_fromLFR.mint` and discards unplaced JSON.
+5. Run `compute_layout_evaluation_scores()` on primary `*_PR.json` (**skipped** for `lfrToMint`)
 6. **Remove this job’s temp directory**; keep job metadata in `job_store` until Express fetches and persists. Express then stamps generated names `{stem}(YYYYMMDDHHMM).ext` and writes them into the originating workspace.
 
 ### 4.4 Modal → Express → persistence (target behavior)
@@ -247,6 +261,7 @@ On failure: `status: "error"`, `stderr` contains fluigi log tail.
 
 | Method | Path | Notes |
 |--------|------|-------|
+| `POST` | `/api/v1/lfrToMint` | Same as mushroommapper with `compileMode: "lfrToMint"` |
 | `GET` | `/api/v1/jobs` | Job ids for current session |
 | `GET` | `/api/v1/jobs?full=1` | Full job records (ZIP export / restore) |
 | `GET` | `/api/v1/job?id=<uuid>` | Job detail — query param **`id`**, not `job_id` |

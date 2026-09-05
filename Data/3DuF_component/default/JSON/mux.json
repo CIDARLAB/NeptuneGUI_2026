@@ -1,313 +1,156 @@
 {
   "name": "mux",
-  "params": {
-    "width": 135000,
-    "length": 85000
-  },
-  "renderLayers": [
-    {
-      "id": "c4ff4ea3-3de4-11f1-80da-4716ccd71c9a",
-      "name": "RenderLayerFlow_1",
-      "modellayer": "4952d7a0-f16c-11eb-8c04-ff751cb31c4c",
-      "type": "FLOW",
-      "features": [
-        {
-          "id": "d1186230-3de4-11f1-80da-4716ccd71c9a",
-          "name": "New Feature",
-          "macro": "Mux",
-          "params": {
-            "position": [
-              39962.79844045862,
-              19904.487818650774
-            ],
-            "componentSpacing": 1000,
-            "flowChannelWidth": 800,
-            "rotation": 0,
-            "spacing": 4000,
-            "in": 1,
-            "out": 8,
-            "width": 1600,
-            "length": 1600,
-            "height": 250,
-            "stageLength": 4000,
-            "controlChannelWidth": 400,
-            "mirrorByX": 0,
-            "mirrorByY": 0
-          },
-          "type": "XY",
-          "referenceID": "d11bbd90-3de4-11f1-80da-4716ccd71c9a",
-          "dxfData": [],
-          "layerID": "4952d7a0-f16c-11eb-8c04-ff751cb31c4c"
-        }
-      ],
-      "color": "indigo"
-    },
-    {
-      "id": "c4ff4ea4-3de4-11f1-80da-4716ccd71c9a",
-      "name": "RenderLayerControl_1",
-      "modellayer": "4952feb0-f16c-11eb-8c04-ff751cb31c4c",
-      "type": "CONTROL",
-      "features": [
-        {
-          "id": "d11b9680-3de4-11f1-80da-4716ccd71c9a",
-          "name": "New Feature",
-          "macro": "Mux_control",
-          "params": {
-            "position": [
-              39962.79844045862,
-              19904.487818650774
-            ],
-            "componentSpacing": 1000,
-            "flowChannelWidth": 800,
-            "rotation": 0,
-            "spacing": 4000,
-            "in": 1,
-            "out": 8,
-            "width": 1600,
-            "length": 1600,
-            "height": 250,
-            "stageLength": 4000,
-            "controlChannelWidth": 400,
-            "mirrorByX": 0,
-            "mirrorByY": 0
-          },
-          "type": "XY",
-          "referenceID": "d11bbd90-3de4-11f1-80da-4716ccd71c9a",
-          "dxfData": [],
-          "layerID": "4952feb0-f16c-11eb-8c04-ff751cb31c4c"
-        }
-      ],
-      "color": "red"
-    },
-    {
-      "id": "c4ff4ea5-3de4-11f1-80da-4716ccd71c9a",
-      "name": "RenderLayerIntegration_1",
-      "modellayer": "4952feb1-f16c-11eb-8c04-ff751cb31c4c",
-      "type": "INTEGRATION",
-      "features": [],
-      "color": "green"
-    }
-  ],
-  "layers": [
-    {
-      "id": "4952d7a0-f16c-11eb-8c04-ff751cb31c4c",
-      "name": "LayerFlow_1",
-      "type": "FLOW",
-      "group": "0",
-      "params": {
-        "z_offset": 0,
-        "flip": false
-      },
-      "features": [
-        {
-          "id": "d1186230-3de4-11f1-80da-4716ccd71c9a",
-          "name": "New Feature",
-          "macro": "Mux",
-          "params": {
-            "position": [
-              39962.79844045862,
-              19904.487818650774
-            ],
-            "componentSpacing": 1000,
-            "flowChannelWidth": 800,
-            "rotation": 0,
-            "spacing": 4000,
-            "in": 1,
-            "out": 8,
-            "width": 1600,
-            "length": 1600,
-            "height": 250,
-            "stageLength": 4000,
-            "controlChannelWidth": 400,
-            "mirrorByX": 0,
-            "mirrorByY": 0
-          },
-          "type": "XY",
-          "referenceID": "d11bbd90-3de4-11f1-80da-4716ccd71c9a",
-          "dxfData": [],
-          "layerID": "4952d7a0-f16c-11eb-8c04-ff751cb31c4c"
-        }
-      ]
-    },
-    {
-      "id": "4952feb0-f16c-11eb-8c04-ff751cb31c4c",
-      "name": "LayerControl_1",
-      "type": "CONTROL",
-      "group": "0",
-      "params": {
-        "z_offset": 0,
-        "flip": false
-      },
-      "features": [
-        {
-          "id": "d11b9680-3de4-11f1-80da-4716ccd71c9a",
-          "name": "New Feature",
-          "macro": "Mux_control",
-          "params": {
-            "position": [
-              39962.79844045862,
-              19904.487818650774
-            ],
-            "componentSpacing": 1000,
-            "flowChannelWidth": 800,
-            "rotation": 0,
-            "spacing": 4000,
-            "in": 1,
-            "out": 8,
-            "width": 1600,
-            "length": 1600,
-            "height": 250,
-            "stageLength": 4000,
-            "controlChannelWidth": 400,
-            "mirrorByX": 0,
-            "mirrorByY": 0
-          },
-          "type": "XY",
-          "referenceID": "d11bbd90-3de4-11f1-80da-4716ccd71c9a",
-          "dxfData": [],
-          "layerID": "4952feb0-f16c-11eb-8c04-ff751cb31c4c"
-        }
-      ]
-    },
-    {
-      "id": "4952feb1-f16c-11eb-8c04-ff751cb31c4c",
-      "name": "LayerIntegration_1",
-      "type": "INTEGRATION",
-      "group": "0",
-      "params": {
-        "z_offset": 0,
-        "flip": false
-      },
-      "features": []
-    }
-  ],
-  "groups": [],
   "components": [
     {
-      "id": "d11bbd90-3de4-11f1-80da-4716ccd71c9a",
-      "name": "Mux_1",
+      "name": "mux_1",
+      "id": "mux_1",
       "entity": "MUX",
+      "layers": [
+        "0"
+      ],
       "params": {
-        "position": [
-          39962.79844045862,
-          19904.487818650774
-        ],
         "componentSpacing": 1000,
         "flowChannelWidth": 800,
-        "rotation": 0,
-        "spacing": 4000,
+        "spacing": 4000.0,
         "in": 1,
         "out": 8,
         "width": 1600,
-        "length": 1600,
+        "length": 1600.0,
         "height": 250,
         "stageLength": 4000,
         "controlChannelWidth": 400,
-        "mirrorByX": 0,
-        "mirrorByY": 0
+        "rotation": 0.0,
+        "mirrorByX": 0.0,
+        "mirrorByY": 0.0,
+        "position": [
+          15000.0,
+          20000.0
+        ],
+        "ID": "mux_1"
       },
-      "x-span": 47200,
-      "y-span": 18400,
       "ports": [
         {
-          "x": 0,
+          "x": 23600,
           "y": 0,
-          "layer": "FLOW",
-          "label": "1"
+          "label": "1",
+          "layer": "FLOW"
         },
         {
-          "x": 17500,
+          "x": 41100,
           "y": 18400,
-          "layer": "FLOW",
-          "label": "2"
+          "label": "2",
+          "layer": "FLOW"
         },
         {
-          "x": 12500,
+          "x": 36100,
           "y": 18400,
-          "layer": "FLOW",
-          "label": "3"
+          "label": "3",
+          "layer": "FLOW"
         },
         {
-          "x": 7500,
+          "x": 31100,
           "y": 18400,
-          "layer": "FLOW",
-          "label": "4"
+          "label": "4",
+          "layer": "FLOW"
         },
         {
-          "x": 2500,
+          "x": 26100,
           "y": 18400,
-          "layer": "FLOW",
-          "label": "5"
+          "label": "5",
+          "layer": "FLOW"
         },
         {
-          "x": -2500,
+          "x": 21100,
           "y": 18400,
-          "layer": "FLOW",
-          "label": "6"
+          "label": "6",
+          "layer": "FLOW"
         },
         {
-          "x": -7500,
+          "x": 16100,
           "y": 18400,
-          "layer": "FLOW",
-          "label": "7"
+          "label": "7",
+          "layer": "FLOW"
         },
         {
-          "x": -12500,
+          "x": 11100,
           "y": 18400,
-          "layer": "FLOW",
-          "label": "8"
+          "label": "8",
+          "layer": "FLOW"
         },
         {
-          "x": -17500,
+          "x": 6100,
           "y": 18400,
-          "layer": "FLOW",
-          "label": "9"
+          "label": "9",
+          "layer": "FLOW"
         },
         {
-          "x": -23600,
+          "x": 5600,
           "y": 5800,
-          "layer": "CONTROL",
-          "label": "10"
+          "label": "10",
+          "layer": "CONTROL"
         },
         {
-          "x": 23600,
+          "x": 41600,
           "y": 7800,
-          "layer": "CONTROL",
-          "label": "11"
+          "label": "11",
+          "layer": "CONTROL"
         },
         {
-          "x": -23600,
+          "x": 5600,
           "y": 10600,
-          "layer": "CONTROL",
-          "label": "12"
+          "label": "12",
+          "layer": "CONTROL"
         },
         {
-          "x": 23600,
+          "x": 41600,
           "y": 12600,
-          "layer": "CONTROL",
-          "label": "13"
+          "label": "13",
+          "layer": "CONTROL"
         },
         {
-          "x": -23600,
+          "x": 5600,
           "y": 15400,
-          "layer": "CONTROL",
-          "label": "14"
+          "label": "14",
+          "layer": "CONTROL"
         },
         {
-          "x": 23600,
+          "x": 41600,
           "y": 17400,
-          "layer": "CONTROL",
-          "label": "15"
+          "label": "15",
+          "layer": "CONTROL"
         }
       ],
-      "layers": [
-        "4952d7a0-f16c-11eb-8c04-ff751cb31c4c",
-        "4952feb0-f16c-11eb-8c04-ff751cb31c4c"
-      ]
+      "x-span": 47200.0,
+      "y-span": 18400.0
     }
   ],
   "connections": [],
+  "params": {
+    "x-span": 76200,
+    "y-span": 76200,
+    "length": 76200.0,
+    "flowPortCount": 0,
+    "controlPortCount": 0,
+    "width": 76200.0
+  },
+  "layers": [
+    {
+      "name": "FLOW_0",
+      "id": "0",
+      "type": "FLOW",
+      "params": {},
+      "group": "0"
+    },
+    {
+      "id": "1",
+      "name": "CONTROL_0",
+      "type": "CONTROL",
+      "group": "0"
+    }
+  ],
+  "version": "1.2",
   "valves": [],
-  "features": [],
-  "version": "1.2"
+  "isPnR": false,
+  "layoutConstraints": [],
+  "IsPlacedAndRouted": true
 }

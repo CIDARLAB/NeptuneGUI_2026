@@ -1,1 +1,63 @@
-{"name": "port", "params": {"width": 50000, "length": 20000}, "renderLayers": [{"id": "7ba54fe3-4760-11f1-aab3-412ebded333e", "name": "RenderLayerFlow_1", "modellayer": "4952d7a0-f16c-11eb-8c04-ff751cb31c4c", "type": "FLOW", "features": [{"id": "9b72f1b0-4760-11f1-aab3-412ebded333e", "name": "New Feature", "macro": "Port", "params": {"position": [25000, 10000], "componentSpacing": 1000, "portRadius": 1000, "height": 1100, "rotation": 0, "mirrorByX": 0, "mirrorByY": 0}, "type": "XY", "referenceID": "9b738df0-4760-11f1-aab3-412ebded333e", "dxfData": [], "layerID": "4952d7a0-f16c-11eb-8c04-ff751cb31c4c"}], "color": "indigo"}, {"id": "7ba54fe4-4760-11f1-aab3-412ebded333e", "name": "RenderLayerControl_1", "modellayer": "4952feb0-f16c-11eb-8c04-ff751cb31c4c", "type": "CONTROL", "features": [], "color": "red"}, {"id": "7ba54fe5-4760-11f1-aab3-412ebded333e", "name": "RenderLayerIntegration_1", "modellayer": "4952feb1-f16c-11eb-8c04-ff751cb31c4c", "type": "INTEGRATION", "features": [], "color": "green"}], "layers": [{"id": "4952d7a0-f16c-11eb-8c04-ff751cb31c4c", "name": "LayerFlow_1", "type": "FLOW", "group": "0", "params": {"z_offset": 0, "flip": false}, "features": [{"id": "9b72f1b0-4760-11f1-aab3-412ebded333e", "name": "New Feature", "macro": "Port", "params": {"position": [25000, 10000], "componentSpacing": 1000, "portRadius": 1000, "height": 1100, "rotation": 0, "mirrorByX": 0, "mirrorByY": 0}, "type": "XY", "referenceID": "9b738df0-4760-11f1-aab3-412ebded333e", "dxfData": [], "layerID": "4952d7a0-f16c-11eb-8c04-ff751cb31c4c"}]}, {"id": "4952feb0-f16c-11eb-8c04-ff751cb31c4c", "name": "LayerControl_1", "type": "CONTROL", "group": "0", "params": {"z_offset": 0, "flip": false}, "features": []}, {"id": "4952feb1-f16c-11eb-8c04-ff751cb31c4c", "name": "LayerIntegration_1", "type": "INTEGRATION", "group": "0", "params": {"z_offset": 0, "flip": false}, "features": []}], "groups": [], "components": [{"id": "9b738df0-4760-11f1-aab3-412ebded333e", "name": "Port_2", "entity": "PORT", "params": {"position": [25000, 10000], "componentSpacing": 1000, "portRadius": 1000, "height": 1100, "rotation": 0, "mirrorByX": 0, "mirrorByY": 0}, "x-span": 2000, "y-span": 2000, "ports": [{"x": 0, "y": 0, "layer": "FLOW", "label": "1"}], "layers": ["4952d7a0-f16c-11eb-8c04-ff751cb31c4c"]}], "connections": [], "valves": [], "features": [], "version": "1.2"}
+{
+  "name": "port",
+  "components": [
+    {
+      "name": "port_1",
+      "id": "port_1",
+      "entity": "PORT",
+      "layers": [
+        "0"
+      ],
+      "params": {
+        "componentSpacing": 1000.0,
+        "portRadius": 1000.0,
+        "height": 1100.0,
+        "position": [
+          15000.0,
+          20000.0
+        ],
+        "ID": "port_1",
+        "rotation": 0
+      },
+      "ports": [
+        {
+          "x": 1000,
+          "y": 1000,
+          "label": "1",
+          "layer": "FLOW"
+        }
+      ],
+      "x-span": 2000.0,
+      "y-span": 2000.0
+    }
+  ],
+  "connections": [],
+  "params": {
+    "x-span": 76200,
+    "y-span": 76200,
+    "length": 76200.0,
+    "flowPortCount": 1,
+    "controlPortCount": 0,
+    "width": 76200.0
+  },
+  "layers": [
+    {
+      "name": "FLOW_0",
+      "id": "0",
+      "type": "FLOW",
+      "params": {},
+      "group": "0"
+    },
+    {
+      "id": "1",
+      "name": "CONTROL_0",
+      "type": "CONTROL",
+      "group": "0"
+    }
+  ],
+  "version": "1.2",
+  "valves": [],
+  "isPnR": false,
+  "layoutConstraints": [],
+  "IsPlacedAndRouted": true
+}

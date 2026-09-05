@@ -93,7 +93,7 @@
               </div>
               <v-btn
                 small
-                outlined
+                text
                 color="primary"
                 class="solutions-parameter-spec-btn ml-3"
                 :href="evaluationMetricSpecUrl"
@@ -118,7 +118,8 @@
             <v-btn
               color="success"
               small
-              outlined
+              depressed
+              class="solutions-refresh-btn white--text"
               @click="onRefreshClick"
             >
               <v-icon left small>mdi-refresh</v-icon>
@@ -184,7 +185,7 @@
               <v-btn
                 v-else
                 small
-                outlined
+                text
                 color="primary"
                 :disabled="!item.hasJson"
                 @click="openJsonDialog(item)"
@@ -198,7 +199,7 @@
               <v-btn
                 v-else-if="item.hasLog"
                 small
-                outlined
+                text
                 color="primary"
                 @click="openLogDialog(item)"
               >
@@ -212,7 +213,7 @@
               <v-btn
                 v-else
                 small
-                outlined
+                text
                 color="primary"
                 :disabled="!item.hasJson"
                 @click="openRowIn3DuF(item)"
@@ -1505,6 +1506,17 @@ export default {
     align-items: center
     gap: 12px
     flex-wrap: wrap
+
+  .solutions-refresh-btn
+    color: #ffffff !important
+
+  .solutions-jobs-table ::v-deep .v-btn--text,
+  .solutions-parameter-spec-btn
+    text-transform: none !important
+    letter-spacing: normal !important
+    border: 0 !important
+    box-shadow: none !important
+    background: transparent !important
 
   .solutions-formula-inputs
     display: flex

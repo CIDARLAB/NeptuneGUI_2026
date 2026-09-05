@@ -7,22 +7,24 @@
 // Compile this .mint (fluigi synthesizeFromMINT) and open *_fromMINT_PR.json
 // in 3DuF: the values below are what you see on the canvas.
 //
-// Only PORT radius and CHANNEL width differ from the LFR / 3DuF library defaults.
-// Mixer and VALVE3D keep those defaults (channelWidth and gap are both 600).
+// PORT radius and CHANNEL width differ from the LFR / 3DuF library defaults.
+// Mixer channelWidth matches the attached FLOW pipes, and edgeBend1/edgeBend2
+// are each half that width so the mixer ends meet the pipes with no lip.
+// VALVE3D keeps library defaults (gap 600).
 // Try changing one number at a time:
 //
-//   PORT portRadius     LFR default 1000 → 700 here
-//                       Smaller circle at each I/O in 3DuF.
+//   PORT portRadius      LFR default 1000 → 700 here
+//                        Smaller circle at each I/O in 3DuF.
 //   CHANNEL channelWidth LFR default 600 (FLOW and CONTROL, same as VALVE3D gap)
-//                       → 400 here. Thinner pipes in 3DuF.
-//   MIXER channelWidth   keep 600 (library / primitives default).
+//                        → 400 here. Thinner pipes in 3DuF.
+//   MIXER channelWidth   400 (same as FLOW CHANNEL). edgeBend1/edgeBend2 = 200.
 //   VALVE3D valveRadius  keep 1200. gap/width/length stay 600 / 2400 / 2400.
 
 DEVICE flow_and_control_demo
 
 LAYER FLOW
 
-MIXER mixer_1 componentSpacing=1000.0 channelWidth=600.0 bendSpacing=1230.0 numberOfBends=1.0 rotation=0.0 bendLength=2460.0 height=250.0 mirrorByX=0.0 mirrorByY=0.0 ;
+MIXER mixer_1 componentSpacing=1000.0 channelWidth=400.0 bendSpacing=1230.0 numberOfBends=1.0 rotation=0.0 bendLength=2460.0 height=250.0 mirrorByX=0.0 mirrorByY=0.0 edgeBend1=200.0 edgeBend2=200.0 ;
 PORT port_1 componentSpacing=1000.0 portRadius=700.0 height=1100.0 ;
 PORT port_2 componentSpacing=1000.0 portRadius=700.0 height=1100.0 ;
 PORT port_3 componentSpacing=1000.0 portRadius=700.0 height=1100.0 ;

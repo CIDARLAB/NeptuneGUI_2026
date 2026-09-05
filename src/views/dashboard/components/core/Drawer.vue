@@ -630,8 +630,8 @@
         letter-spacing: normal !important
 
       .drawer-import-rect-btn
-        background-color: #006994 !important
-        border-color: #006994 !important
+        background-color: #fb8c00 !important
+        border-color: #fb8c00 !important
         color: #ffffff !important
 
       .drawer-export-text

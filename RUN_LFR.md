@@ -1,6 +1,6 @@
 # Run LFR in NeptuneGUI and store output in Data
 
-Edit LFR in the Editor, click **Compile**, and keep the resulting MINT / JSON / log / evaluation files in the current workspace (and on the Jobs page).
+Edit LFR in the Editor, use **Save and synthesize** (full place-and-route) or **Compile to MINT** (MINT only), and keep the resulting files in the current workspace (and on the Jobs page).
 
 ## Prerequisites
 
@@ -26,35 +26,41 @@ Keep the 3DuF **primitives** server reachable for fluigi (typically `http://loca
 
 ## Compile an LFR file
 
-1. **Dashboard** → open a workspace → open or create an `.lfr` file.
-2. **Editor:** set **Script language** to **LFR**, edit, **Save**, then **Compile**.
-3. On success the workspace receives:
+1. **Dashboard** → open a workspace → open or create an `.lfr` file (script language is fixed by the extension).
+2. **Editor:** edit, then either:
+   - **Save file** (writes the buffer), then **Save and synthesize** for full place-and-route, or
+   - **Compile to MINT** for LFR → MINT only (no PR JSON / no evaluation scores).
+3. On **Save and synthesize** success the workspace receives stamped generated names `{stem}(YYYYMMDDHHMM).ext` for:
    - `*_fromLFR.mint`
-   - `*_fromLFR.json` (unplaced)
    - `*_fromLFR_PR.json` (placed and routed)
-   - matching `.log` and `*_evaluation.json`
-4. Web Compile stamps those generated names as `{stem}(YYYYMMDDHHMM).ext`. Built-in example seeds are **not** stamped.
-5. **Jobs** lists the run (auto-refresh every 10 s). **Delete** on the job or the primary JSON removes the job and sibling generated files (JSON / MINT / log / eval).
+   - matching `.log` and `*_evaluation.json` (kept with the job / backup zip; Dashboard hides log/eval sidecars)
+4. On **Compile to MINT** success the workspace receives / opens `*_fromLFR.mint` (unplaced intermediate JSON is discarded). Built-in example seeds are **not** timestamp-stamped.
+5. **Jobs** lists the run (auto-refresh every 10 s). **Delete** on the job or the primary JSON removes the job and sibling generated files (JSON / MINT / log / eval). **Alerts** shows done/fail when a processing job finishes.
 
 TREE-PLACE is invoked with `dump_intermediates=False` (hardcoded in `fluigi/place_and_route.py`): only `{stem}_PR.json` is written to the compile output directory. No `Neptune_2026/Benchmarks/` tree / result / PNG / cluster dumps; disconnected clusters stay in memory. Set that one argument to `True` to restore the full inspection set (geometry unchanged). English P&R docs: `Neptune_2026/PRalgorithm/README.md`; Chinese: `readme_cn.md`.
 
-## Editor save and move
+## Editor save, rename, move, and copy
 
-From **Save file**:
+Toolbar actions that write the buffer: **Save file**, **Save and synthesize**, **Compile to MINT**, **Rename** Confirm, **Move** / **Copy** destination write. Leaving the Editor discards unsaved text edits.
 
-| Action | Original file | Destination |
-|--------|---------------|-------------|
-| Save file | Updated in place | Same workspace; Dashboard then expands that workspace |
-| Save file to a new workspace | Unchanged | New workspace; dialog asks workspace name, notes, and **file name** (default: current name) |
-| Save file to an existing workspace | Unchanged | Chosen workspace (current workspace is omitted). If none remain, the menu shows “No existing workspace can be selected” and Save is disabled |
-| Move file to a new / existing workspace | Removed after a successful copy | Same dialogs as Save |
+| Action | Original file | Destination / navigation |
+|--------|---------------|--------------------------|
+| Save file | Updated in place | Same workspace; then Dashboard expands that workspace |
+| Rename (Confirm) | Renamed immediately | Same workspace; keeps last-saved body (does not auto-save unsaved edits) |
+| Move to another workspace | Removed after a successful write | Existing or new workspace (+ notes); **file name unchanged**; stays in Editor |
+| Copy to another workspace | Unchanged | Existing or new workspace (+ notes); **file name unchanged**; stays in Editor |
+| Import | — | Pick existing or new workspace (+ notes) for the uploaded file |
 
-After save or move, the GUI opens **Dashboard** with the destination workspace expanded. Clicking an LFR/MINT file name in that list opens the Editor (same as the pen button).
+New-workspace dialogs ask for workspace **name** and optional **notes**. Notes are viewable later from the Dashboard workspace card. Existing-workspace menus omit the current workspace; if none remain, the control explains that no other workspace can be selected.
 
-### Fluigi flags used by Compile
+### Fluigi flags used by synthesize / Compile to MINT
 
-- LFR → `fluigi synthesize -o <out> <source>`
-- MINT → `fluigi synthesizeFromMINT -o <out> <source>`
+| Editor action | `compileMode` / type | Fluigi |
+|---------------|----------------------|--------|
+| Save and synthesize (`.lfr`) | `lfr` | `fluigi synthesize -o <out> <source>` |
+| Save and synthesize (`.mint`) | `mint` | `fluigi synthesizeFromMINT -o <out> <source>` |
+| Compile to MINT (`.lfr` only) | `lfrToMint` (alias `POST /api/v1/lfrToMint`) | `fluigi compile_lfr -o <out> <source>` — success = primary `*_fromLFR.mint` |
+
 - `--pre-load` is added **only** when the Editor actually sent `` `import `` modules (`importLfr`). Default LFR modules already live in `pylfr/library`.
 - **3DuF visualization JSON is not passed as `--component-library`.** That path is not a fluigi entity library and hangs place-and-route on PORT/VALVE3D lookups.
 
@@ -65,7 +71,11 @@ After save or move, the GUI opens **Dashboard** with the destination workspace e
 ```
 
 - `WorkspaceName` is the **exact Dashboard workspace name**.
-- On **Compile**, the Editor sends only the referenced files as `importLfr`. Missing paths or circular imports block compile before fluigi runs.
+- On synthesize / Compile to MINT, the Editor sends only the referenced files as `importLfr`. Missing paths or circular imports block compile before fluigi runs.
+
+### Example workspace
+
+Guest **Example** seeds `flow_only_demo` and `flow_and_control_demo` (LFR, handwritten MINT, `*_fromLFR.mint`, PR JSON). Workspace notes explain the demos and that `*_fromLFR.mint` is compiler output while the plain `.mint` is handwritten. Missing seed files are recreated only if Example is empty (renames/deletes stick).
 
 ## Workspace backup
 
@@ -95,4 +105,6 @@ Guest sessions are not kept on the server after refresh: workspaces, uploads, DI
 ## If LFR does not save or compile
 
 - **Save:** **PUT /api/v1/file** should return 200.
-- **Compile:** **POST /api/v1/mushroommapper** (LFR) or **POST /api/v1/fluigi** (MINT). Confirm Neptune_2026 is at `NEPTUNE_2026_ROOT` and primitives are up. Check the job log on **Jobs**.
+- **Save and synthesize:** **POST /api/v1/mushroommapper** (LFR) or **POST /api/v1/fluigi** (MINT).
+- **Compile to MINT:** **POST /api/v1/mushroommapper** with `compileMode: "lfrToMint"` (or **POST /api/v1/lfrToMint**).
+- Confirm Neptune_2026 is at `NEPTUNE_2026_ROOT` and primitives are up. Check the job log on **Jobs**.
