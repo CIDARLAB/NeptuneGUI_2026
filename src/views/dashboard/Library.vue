@@ -24,9 +24,10 @@
                   outlined
                   color="primary"
                   class="component-library-spec-btn ml-3"
+                  tag="a"
                   :href="namingSpecUrl"
                   target="_blank"
-                  rel="noopener"
+                  rel="noopener noreferrer"
                 >
                   <v-icon left small>mdi-github</v-icon>
                   View full spec
@@ -191,35 +192,102 @@
           <p class="caption grey--text text--darken-1 mb-3">
             The name above is shown in LFR form (lowercase snake_case). Reference it as-is in LFR; in MINT use the uppercase form.
           </p>
-          <div v-if="diyParamKeys.length === 0" class="grey--text text--darken-1">
+          <div v-if="isChannelDiy">
+            <v-select
+              v-model="diyChannelProfile"
+              :items="channelProfileOptions"
+              label="Channel profile"
+              outlined
+              dense
+              class="mb-2"
+              @change="onChannelProfileChange"
+            />
+            <template v-if="diyChannelProfile === 'ROUNDED CHANNEL'">
+              <v-text-field
+                v-model="diyForm.channelRadius"
+                label="channelRadius"
+                outlined
+                dense
+                class="mb-2"
+              >
+                <template v-slot:append-outer>
+                  <v-tooltip bottom max-width="360">
+                    <template v-slot:activator="{ on, attrs }">
+                      <v-icon
+                        small
+                        class="diy-param-help-icon"
+                        v-bind="attrs"
+                        v-on="on"
+                        tabindex="0"
+                      >
+                        mdi-help-circle-outline
+                      </v-icon>
+                    </template>
+                    <span>{{ diyParamDescription('channelRadius') }}</span>
+                  </v-tooltip>
+                </template>
+              </v-text-field>
+            </template>
+            <template v-else>
+              <v-text-field
+                v-for="key in channelRectParamKeys"
+                :key="key"
+                v-model="diyForm[key]"
+                :label="key"
+                outlined
+                dense
+                class="mb-2"
+              >
+                <template v-slot:append-outer>
+                  <v-tooltip bottom max-width="360">
+                    <template v-slot:activator="{ on, attrs }">
+                      <v-icon
+                        small
+                        class="diy-param-help-icon"
+                        v-bind="attrs"
+                        v-on="on"
+                        tabindex="0"
+                      >
+                        mdi-help-circle-outline
+                      </v-icon>
+                    </template>
+                    <span>{{ diyParamDescription(key) }}</span>
+                  </v-tooltip>
+                </template>
+              </v-text-field>
+            </template>
+          </div>
+          <div v-else-if="diyParamKeys.length === 0" class="grey--text text--darken-1">
             No editable numeric parameters were found for this component.
           </div>
-          <v-text-field
-            v-for="key in diyParamKeys"
-            :key="key"
-            v-model="diyForm[key]"
-            :label="key"
-            outlined
-            dense
-            class="mb-2"
-          >
-            <template v-slot:append-outer>
-              <v-tooltip bottom max-width="360">
-                <template v-slot:activator="{ on, attrs }">
-                  <v-icon
-                    small
-                    class="diy-param-help-icon"
-                    v-bind="attrs"
-                    v-on="on"
-                    tabindex="0"
-                  >
-                    mdi-help-circle-outline
-                  </v-icon>
-                </template>
-                <span>{{ diyParamDescription(key) }}</span>
-              </v-tooltip>
-            </template>
-          </v-text-field>
+          <template v-else>
+            <v-text-field
+              v-for="key in diyParamKeys"
+              :key="key"
+              v-model="diyForm[key]"
+              :label="key"
+              outlined
+              dense
+              class="mb-2"
+            >
+              <template v-slot:append-outer>
+                <v-tooltip bottom max-width="360">
+                  <template v-slot:activator="{ on, attrs }">
+                    <v-icon
+                      small
+                      class="diy-param-help-icon"
+                      v-bind="attrs"
+                      v-on="on"
+                      tabindex="0"
+                    >
+                      mdi-help-circle-outline
+                    </v-icon>
+                  </template>
+                  <span>{{ diyParamDescription(key) }}</span>
+                </v-tooltip>
+              </template>
+            </v-text-field>
+          </template>
         </v-card-text>
         <v-card-actions>
           <v-spacer />
@@ -324,6 +392,12 @@ export default {
       diyBusy: false,
       diyComponent: null,
       diyForm: {},
+      diyChannelProfile: 'CHANNEL',
+      channelProfileOptions: [
+        { text: 'CHANNEL', value: 'CHANNEL' },
+        { text: 'ROUNDED CHANNEL', value: 'ROUNDED CHANNEL' },
+      ],
+      channelRectParamKeys: ['channelWidth', 'height'],
       guestSessionBootstrapped: false,
       removeBusySyntax: null,
       namingSpecUrl: LFR_NAMING_SPEC_URL,
@@ -345,6 +419,11 @@ export default {
         picoinjector: 'Injects picoliter volumes of reagent into passing droplets.',
       },
       diyParamDescriptionsByComponent: {
+        channel: {
+          channelwidth: 'Drawn width of the channel in the flow-layer plane (same as 3DuF CHANNEL).',
+          height: 'Extruded depth of the rectangular channel cross-section (same as 3DuF CHANNEL).',
+          channelradius: 'Radius of a circular channel cross-section; width and depth follow this radius (same as 3DuF ROUNDED CHANNEL).',
+        },
         valve: {
           rotation: 'Valve orientation in degrees; rotates the valve geometry around its insertion point.',
           gap: 'Flow-gap opening used by the valve geometry; larger values increase the open passage size.',
@@ -369,6 +448,7 @@ export default {
         length: 'Overall length of the feature/component geometry in layout units.',
         height: 'Feature height (z dimension) used in multilayer/3D rendering context.',
         radius: 'Radius used to construct circular geometry elements.',
+        channelradius: 'Radius of a circular channel cross-section; width and depth follow this radius (same as 3DuF).',
         valveradius: 'Valve radius used to construct the valve body geometry.',
         rotation: 'Rotation angle in degrees applied to the feature/component orientation.',
         gap: 'Gap/opening size that controls spacing between two relevant geometry boundaries.',
@@ -385,6 +465,10 @@ export default {
     }
   },
   computed: {
+    isChannelDiy () {
+      const syntax = String((this.diyComponent && (this.diyComponent.syntax || this.diyComponent.name)) || '').toLowerCase()
+      return syntax === 'channel'
+    },
     diyParamKeys () {
       return Object.keys(this.diyForm).sort()
     },
@@ -643,12 +727,76 @@ export default {
         'application/json'
       )
     },
+    isChannelSyntax (itemOrSyntax) {
+      const syntax = typeof itemOrSyntax === 'string'
+        ? itemOrSyntax
+        : ((itemOrSyntax && (itemOrSyntax.syntax || itemOrSyntax.name)) || '')
+      return String(syntax).toLowerCase() === 'channel'
+    },
+    /**
+     * Map stored channel params into the DIY form the same way 3DuF does:
+     * rectangular → channelWidth + height; rounded → channelRadius (half width).
+     */
+    populateChannelDiyForm (params) {
+      const src = (params && typeof params === 'object') ? params : {}
+      const channelWidth = Number(src.channelWidth)
+      const height = Number(src.height)
+      const crossSection = Number(src.crossSection)
+      const rounded = Number.isFinite(crossSection) && crossSection >= 0.5
+      this.diyChannelProfile = rounded ? 'ROUNDED CHANNEL' : 'CHANNEL'
+      if (rounded) {
+        const radius = Number.isFinite(channelWidth) ? channelWidth / 2 : ''
+        this.diyForm = { channelRadius: String(radius) }
+      } else {
+        this.diyForm = {
+          channelWidth: Number.isFinite(channelWidth) ? String(channelWidth) : '',
+          height: Number.isFinite(height) ? String(height) : '',
+        }
+      }
+    },
+    populateDiyFormFromComponent (component) {
+      const src = (component && component.params && typeof component.params === 'object') ? component.params : {}
+      if (this.isChannelSyntax(component)) {
+        this.populateChannelDiyForm(src)
+        return
+      }
+      const next = {}
+      Object.keys(src).forEach((k) => {
+        if (k === 'crossSection') return
+        next[k] = String(src[k])
+      })
+      this.diyForm = next
+      this.diyChannelProfile = 'CHANNEL'
+    },
+    onChannelProfileChange (newProfile) {
+      if (newProfile === 'ROUNDED CHANNEL') {
+        const width = Number(this.diyForm.channelWidth)
+        const height = Number(this.diyForm.height)
+        const baseWidth = Number.isFinite(width)
+          ? width
+          : (Number.isFinite(height) ? height : NaN)
+        // Match 3DuF: switching to rounded makes depth follow width, then edit radius.
+        if (Number.isFinite(baseWidth)) {
+          this.diyForm = { channelRadius: String(baseWidth / 2) }
+        } else {
+          this.diyForm = { channelRadius: '' }
+        }
+        return
+      }
+      const radius = Number(this.diyForm.channelRadius)
+      if (Number.isFinite(radius)) {
+        const diameter = radius * 2
+        this.diyForm = {
+          channelWidth: String(diameter),
+          height: String(diameter),
+        }
+      } else {
+        this.diyForm = { channelWidth: '', height: '' }
+      }
+    },
     openDiyDialog (item) {
       this.diyComponent = item
-      const next = {}
-      const src = (item && item.params && typeof item.params === 'object') ? item.params : {}
-      Object.keys(src).forEach((k) => { next[k] = String(src[k]) })
-      this.diyForm = next
+      this.populateDiyFormFromComponent(item)
       this.diyDialog = true
     },
     closeDiyDialog () {
@@ -656,6 +804,7 @@ export default {
       this.diyBusy = false
       this.diyComponent = null
       this.diyForm = {}
+      this.diyChannelProfile = 'CHANNEL'
     },
     updateComponentInList (nextComponent) {
       if (!nextComponent || !nextComponent.syntax) return
@@ -665,10 +814,7 @@ export default {
       if (idx === -1) return
       this.$set(this.components, idx, nextComponent)
       this.diyComponent = nextComponent
-      const next = {}
-      const src = (nextComponent.params && typeof nextComponent.params === 'object') ? nextComponent.params : {}
-      Object.keys(src).forEach((k) => { next[k] = String(src[k]) })
-      this.diyForm = next
+      this.populateDiyFormFromComponent(nextComponent)
       if (
         this.fileDialog &&
         this.fileDialogItem &&
@@ -679,8 +825,36 @@ export default {
       }
     },
     buildNumericParamsFromForm () {
+      if (this.isChannelDiy) {
+        if (this.diyChannelProfile === 'ROUNDED CHANNEL') {
+          const raw = String(this.diyForm.channelRadius == null ? '' : this.diyForm.channelRadius).trim()
+          if (!raw.length) return { error: 'Parameter "channelRadius" cannot be empty.' }
+          const radius = Number(raw)
+          if (!Number.isFinite(radius)) return { error: 'Parameter "channelRadius" must be numeric.' }
+          if (radius <= 0) return { error: 'Parameter "channelRadius" must be positive.' }
+          const diameter = radius * 2
+          return {
+            params: {
+              channelWidth: diameter,
+              height: diameter,
+              crossSection: 1,
+            },
+          }
+        }
+        const params = {}
+        for (const k of this.channelRectParamKeys) {
+          const raw = String(this.diyForm[k] == null ? '' : this.diyForm[k]).trim()
+          if (!raw.length) return { error: `Parameter "${k}" cannot be empty.` }
+          const n = Number(raw)
+          if (!Number.isFinite(n)) return { error: `Parameter "${k}" must be numeric.` }
+          params[k] = n
+        }
+        params.crossSection = 0
+        return { params }
+      }
       const params = {}
       for (const k of Object.keys(this.diyForm)) {
+        if (k === 'crossSection') continue
         const raw = String(this.diyForm[k]).trim()
         if (!raw.length) return { error: `Parameter "${k}" cannot be empty.` }
         const n = Number(raw)
@@ -1014,6 +1188,7 @@ export default {
 
 .component-library-table .syntax-cell-help {
   color: rgba(0, 105, 148, 0.6);
+  cursor: inherit;
   outline: none;
   transition: color 120ms ease;
 }
@@ -1133,7 +1308,7 @@ export default {
 
 .component-library-diy-dialog .diy-param-help-icon {
   color: rgba(0, 105, 148, 0.6);
-  cursor: help;
+  cursor: inherit;
   transition: color 120ms ease;
 }
 

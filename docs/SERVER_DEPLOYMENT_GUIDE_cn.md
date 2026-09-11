@@ -126,7 +126,7 @@ Editor 动作：
 |----|-------------|--------|
 | **Save and synthesize**（`.lfr`） | `POST /api/v1/mushroommapper`（`lfr`） | `fluigi synthesize` |
 | **Save and synthesize**（`.mint`） | `POST /api/v1/fluigi`（`mint`） | `fluigi synthesizeFromMINT` |
-| **Compile to MINT**（仅 `.lfr`） | `POST /api/v1/mushroommapper` 且 `compileMode: "lfrToMint"`（别名 `mintOnly`，或 `POST /api/v1/lfrToMint`） | `fluigi compile_lfr` — 成功以主输出 `*_fromLFR.mint` 为准；丢弃未布局 JSON；**无** PR JSON / 评估 |
+| **Compile to MINT**（仅 `.lfr`） | `POST /api/v1/mushroommapper` 且 `compileMode: "lfrToMint"`（别名 `mintOnly`，或 `POST /api/v1/lfrToMint`） | `fluigi compile_lfr` — 成功以主输出 `*_fromLFR.mint` 为准；丢弃未布局 JSON；**无** PR JSON / 评估；**不出现在 Jobs** |
 
 ### 4.1 前端 → Express（`POST /api/v1/mushroommapper` 或 `/api/v1/fluigi`）
 
@@ -153,7 +153,7 @@ Editor 在 compile 前拉取 `/api/v1/componentFiles`，组装请求体：
 }
 ```
 
-> **说明：** `compileMode` / `compileType` 为 `lfrToMint` 或 `mintOnly` 时走仅转 MINT。省略则走完整布局。`componentBundle` 与 Express 侧 merge 逻辑 **已实现**。`evaluationWeights` 为 **目标契约**（Jobs 页当前权重应随完整 synthesize 一并提交；若尚未传入，compute 使用默认权重，GUI 仍可用返回的分项按本地权重重算 Total）。创建 workspace（`POST /api/v1/workspace`）支持可选 **`notes`**。
+> **说明：** `compileMode` / `compileType` 为 `lfrToMint` 或 `mintOnly` 时走仅转 MINT。省略则走完整布局。仅转 MINT 的 job **不会**进入 `GET /api/v1/jobs` / Jobs 界面（workspace 仍写入 `*_fromLFR.mint`）。编译 `X.lfr` / `X_fromLFR.mint` **不会**覆盖手写 `X.mint`；从 MINT 做完整 synthesize 更新 PR JSON 等产物，不回写源 `.mint`。`componentBundle` 与 Express 侧 merge 逻辑 **已实现**。`evaluationWeights` 为 **目标契约**（Jobs 页当前权重应随完整 synthesize 一并提交；若尚未传入，compute 使用默认权重，GUI 仍可用返回的分项按本地权重重算 Total）。创建 workspace（`POST /api/v1/workspace`）支持可选 **`notes`**。`PUT /api/v1/file` 支持可选 **`forceTouch: true`** 以更新 Last Edited（普通 Save 不更新）。
 
 #### `componentBundle` 每项字段（发给 Modal 前由 `toCompileComponentBundle` 裁剪）
 
@@ -163,7 +163,7 @@ Editor 在 compile 前拉取 `/api/v1/componentFiles`，组装请求体：
 | `name` | 显示名 |
 | `source` | `default` / `tmp` / `custom` |
 | `sourceType` | 来源类型 |
-| `params` | 用户在 Library DIY 中修改的数值参数（mixer 允许 `edgeBend` / `edgeBend1` / `edgeBend2`） |
+| `params` | 用户在 Library DIY 中修改的数值参数（channel：`channelWidth` / `height` / `channelRadius` / `crossSection`；mixer：`edgeBend` / `edgeBend1` / `edgeBend2`） |
 | `jsonScript` | 完整 3DuF/ParchMint JSON 字符串 |
 | `lfrScript` | 组件 LFR 模块文本（LFR import 用） |
 | `mintScript` | 组件 MINT 片段 |
@@ -204,6 +204,8 @@ Express `proxyCompile` 会补充：
 4. 收集 `output/` 下文件。完整 synthesize 优先 `*_fromLFR_PR.json` / `*_fromMINT_PR.json`。TREE-PLACE 使用 `dump_intermediates=False`（写死在 `fluigi/place_and_route.py`：只写最终 PR JSON，不写 `Neptune_2026/Benchmarks/` 下 tree/result/PNG，也不为 cluster 落盘）。把该参数改为 `True` 即可恢复全部检查文件。**仅转 MINT** 保留主输出 `*_fromLFR.mint` 并丢弃未布局 JSON。
 5. 对主输出 `*_PR.json` 调用 `compute_layout_evaluation_scores()`（**`lfrToMint` 跳过**）
 6. **删除本 job 的临时目录**；job 元数据保留在 `job_store` 直至 Express 拉取并落盘。Express 将生成文件名加上 `{stem}(YYYYMMDDHHMM).ext` 时间戳，写入发起 compile 的 workspace。
+
+**超时：** 本地 `compileRunner.js` 与 Modal 子进程墙钟均为 **600 s**；Modal 函数超时 **700 s**。超时失败日志形如 `compile timed out after 600s (no results)`（本地会杀掉整个 fluigi 进程组）。空的 `` `import `` `.lfr` 桩文件仍会写入 compile 树。
 
 ### 4.4 Modal → Express → 持久化（目标行为）
 
@@ -272,17 +274,19 @@ Express 在 job 成功后应：
 
 路径：Dashboard → **Results / Jobs**（`Solutions.vue`）。
 
+**范围：** 仅 **Save and synthesize**（`lfr` / `mint`）。**Compile to MINT**（`lfrToMint`）不进入 create/restore/`GET /api/v1/jobs`，也不出现在表格。
+
 ### 5.1 表格列（在现有评估列基础上）
 
 | 列 | 说明 |
 |----|------|
-| Input File | 源 LFR/MINT 文件名 |
+| **Input File** | 源文件 stem（横向滚动时固定） |
+| **Input Format** | LFR / MINT / …（固定） |
 | Last Updated | job 完成时间 |
-| Output File | 主输出 JSON 名（优先 `*_PR.json`） |
-| **Workspace** | 生成 JSON 所在 workspace 名称（可点击跳转 Dashboard 该 workspace） |
+| **Workspace** | 生成 JSON 所在 workspace（可跳转 Dashboard；固定） |
 | Global Util. … Total | 六项分项 + 加权总分（见下） |
-| **JSON** | 按钮打开弹窗（见下） |
-| Action | 状态：Done / Ongoing / Fail |
+| **JSON** / Log / Visualization | 产物操作 |
+| Status | Done / Ongoing / Fail |
 | **Delete** | 最后一列：删除该 job **以及** 同次生成的 JSON / MINT / log / eval。删除对应 workspace 文件效果相同。 |
 
 表格每 **10 s** 自动刷新。**Refresh** 立即拉取并重置该计时器。`GET /api/v1/jobs?full=1` 返回完整 job 记录（ZIP 导出使用）。
@@ -334,11 +338,12 @@ Express 在 job 成功后应：
 | 现象 | 处理 |
 |------|------|
 | Component Library 为空 | 确认镜像含 `seed-data/`；拉取含 `dataLayer.js` 回退逻辑的代码并 redeploy |
-| Compile 501 | 未设置 `NEPTUNE_COMPILE_URL` |
+| Compile 501 | 未设置 `NEPTUNE_COMPILE_URL`（本地 fluigi 需 `NEPTUNE_2026_ROOT` / 同级克隆） |
 | Compile 502 | Modal 未部署或 URL 错误 |
+| `compile timed out after 600s (no results)` | P&R 超过墙钟；简化设计，或同步提高 `compileRunner.js` / `modal_app.py` 超时 |
 | 组件尺寸/端子错误 | Neptune_2026 `component_library.py` 未 push；Modal 镜像需重建 |
 | `Could not pull default values` | compute 容器内 primitives 未就绪；查 Modal 日志 `primitivesReused` |
-| Jobs 列表为空 | 检查 `/api/v1/jobs` 是否返回会话 job 列表；job 查询参数须为 `id=` |
+| Jobs 列表为空 | 检查 `/api/v1/jobs`；job 查询参数须为 `id=`；记住 **Compile to MINT** 不会出现在 Jobs |
 
 ---
 
@@ -348,9 +353,10 @@ Express 在 job 成功后应：
 - [ ] `modal deploy modal_app.py` 成功
 - [ ] Fly `NEPTUNE_COMPILE_URL` 指向最新 Modal URL
 - [ ] `fly deploy` 后日志显示 9 个默认组件
-- [ ] Editor Compile 返回 job id，Jobs 页出现新行
+- [ ] Editor **Save and synthesize** 返回 job id，Jobs 页出现新行；**Compile to MINT** 只写 workspace `*_fromLFR.mint`、不进 Jobs
 - [ ] 输出 JSON 落在正确 workspace，评估分项与 Total 显示正常
 - [ ] 修改权重 Apply 后 Total 列全部更新
+- [ ] 超时约 600 s 时出现 `compile timed out after 600s (no results)`
 
 ---
 
@@ -358,13 +364,17 @@ Express 在 job 成功后应：
 
 | 文件 | 说明 |
 |------|------|
-| `modal_app.py` | Compute、primitives 复用、fluigi 调用 |
-| `server/index.js` | compile 代理、evaluation 代理 |
+| `modal_app.py` | Compute、primitives 复用、fluigi（600s/700s 超时） |
+| `server/index.js` | compile 代理、Jobs 过滤（不含 `lfrToMint`）、evaluation 代理 |
+| `server/compileRunner.js` | 本地 fluigi 与进程组超时 |
 | `server/componentBundle.js` | bundle merge / 裁剪 |
-| `server/dataLayer.js` | Data 卷 + seed-data 回退 |
-| `src/views/dashboard/Editor.vue` | Compile 按钮 |
+| `server/dataLayer.js` | Data 卷 + seed-data 回退 + `forceTouch` |
+| `src/lib/workspaceFileTransfer.js` | Dashboard 对 lfr/mint/json 的 copy/move |
+| `src/lib/normalizeDeviceJsonFor3DuF.js` | 打开 3DuF 前的库预览画板归一化 |
+| `src/views/dashboard/Editor.vue` | Save / synthesize / Compile to MINT |
 | `src/views/dashboard/Solutions.vue` | Jobs 与评估权重 UI |
 | `fly.toml` | Fly 卷与端口 |
+| `Neptune_2026/fluigi/evaluation_metric.py` | 评估打分 |
 | `Neptune_2026/fluigi/evaluation_metric.py` | 评估算法 |
 
 ---

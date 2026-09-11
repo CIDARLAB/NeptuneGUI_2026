@@ -127,7 +127,6 @@ function normalizeImportLfr (list) {
       try { content = JSON.stringify(content) } catch (_) { content = '' }
     }
     content = String(content || '')
-    if (!content.trim()) return
     seen.add(pathKey)
     out.push({ path: pathKey, workspaceName, fileName, content })
   })

@@ -1,3 +1,5 @@
+import { normalizeDeviceJsonFor3DuF } from '@/lib/normalizeDeviceJsonFor3DuF'
+
 /** 3DuF app opened by Neptune “open in 3DuF” actions. Default is the public site; override for local 3DuF (e.g. http://localhost:8082). */
 export const THREE_DUF_APP_URL = 'https://3duf.org/'
 
@@ -8,6 +10,7 @@ export const THREE_DUF_APP_URL = 'https://3duf.org/'
 // attached, so a single postMessage lands immediately.
 let sharedWin = null
 let sharedMountedAt = 0
+let sharedReady = false
 
 // IDs of every pending scheduled postMessage. When a new "open and load"
 // call comes in (e.g. user clicked a second "Go to 3DuF" button), we MUST
@@ -15,6 +18,7 @@ let sharedMountedAt = 0
 // cold-start retry carrying the old payload lands after the new one and
 // silently reverts the canvas back to the previous design.
 let pendingSendTimeouts = []
+let readyListenerAttached = false
 
 function cancelPendingSends () {
   for (const id of pendingSendTimeouts) {
@@ -50,10 +54,35 @@ function doSend (win, targetOrigin, root, label) {
   }
 }
 
+function ensureReadyListener (targetOrigin) {
+  if (readyListenerAttached || typeof window === 'undefined') return
+  readyListenerAttached = true
+  window.addEventListener('message', (event) => {
+    try {
+      if (!event || !event.data || typeof event.data !== 'object') return
+      if (event.data.type !== 'threeduf-ready') return
+      // Accept ready from the 3DuF origin we opened (or same-origin local builds).
+      if (event.origin && event.origin !== targetOrigin && !String(event.origin).includes('3duf')) {
+        // Still accept if the open window is the source — local forks may use any host.
+        if (!sharedWin || event.source !== sharedWin) return
+      }
+      sharedReady = true
+      sharedMountedAt = Date.now()
+      console.info('[Neptune→3DuF] received threeduf-ready')
+    } catch (_) {}
+  })
+}
+
 function normalizeJsonPayload (jsonTextOrObject) {
-  if (jsonTextOrObject != null && typeof jsonTextOrObject === 'object') return jsonTextOrObject
+  if (jsonTextOrObject != null && typeof jsonTextOrObject === 'object') {
+    return normalizeDeviceJsonFor3DuF(jsonTextOrObject)
+  }
   if (typeof jsonTextOrObject === 'string') {
-    try { return JSON.parse(jsonTextOrObject) } catch (_) { return null }
+    try {
+      return normalizeDeviceJsonFor3DuF(JSON.parse(jsonTextOrObject))
+    } catch (_) {
+      return null
+    }
   }
   return null
 }
@@ -91,10 +120,8 @@ export function scheduleLoadDeviceJsonPostTo3DuF (win, jsonTextOrObject, targetO
  *     round-trip). User perceives it as instantaneous.
  *
  * Cold path (first click or after user closed the tab):
- *   - `window.open` creates the named tab, then we schedule two sends: at
- *     2.5 s and 6.5 s. The first usually wins; the second is an insurance
- *     policy against slow machines. They're far enough apart that the worst
- *     case reads as "load → apply", not flicker.
+ *   - Wait for `{ type: 'threeduf-ready' }` when available, with timed
+ *     fallbacks so older 3DuF builds still receive the JSON.
  *
  * @param {string|object} jsonTextOrObject  device JSON to load
  * @returns {{ ok: true, reused: boolean } | { ok: false, reason: string }}
@@ -105,9 +132,10 @@ export function openAndLoadDeviceIn3DuF (jsonTextOrObject) {
     return { ok: false, reason: 'invalid_json' }
   }
   const targetOrigin = new URL(THREE_DUF_APP_URL).origin
+  ensureReadyListener(targetOrigin)
 
   const canReuse = isWindowAlive(sharedWin) && sharedMountedAt > 0 &&
-    (Date.now() - sharedMountedAt) >= 800 // give brand-new tab a beat to mount
+    (sharedReady || (Date.now() - sharedMountedAt) >= 800)
 
   // Using a named target (not `_blank`) lets the browser focus the existing
   // tab instead of creating a new one every click.
@@ -118,6 +146,7 @@ export function openAndLoadDeviceIn3DuF (jsonTextOrObject) {
   if (win !== sharedWin) {
     sharedWin = win
     sharedMountedAt = Date.now()
+    sharedReady = false
   }
   try { win.focus() } catch (_) {}
 
@@ -126,27 +155,32 @@ export function openAndLoadDeviceIn3DuF (jsonTextOrObject) {
   // would land after we post B and silently revert the canvas to A.
   cancelPendingSends()
 
-  if (canReuse) {
-    // Listener is (almost certainly) already attached. Fire twice:
-    //   - 0 ms:   the common case — lands immediately, design switches fast.
-    //   - 350 ms: insurance. window.open(sameUrl, sameName) can briefly
-    //             remount the SPA in some browsers, detaching the listener
-    //             for a few hundred ms. Without this retry the second
-    //             "Go to 3DuF" click ends on a blank canvas because the
-    //             single 0 ms post was dropped.
+  if (canReuse && sharedReady) {
     doSend(win, targetOrigin, root, 'reuse-instant')
     schedule(() => doSend(win, targetOrigin, root, 'reuse-350ms'), 350)
     return { ok: true, reused: true }
   }
 
-  // Cold start: primary send is deliberately early so warm-cache cold
-  // starts feel near-instant (~700 ms total from click to paint on a
-  // typical machine). The fallback at 3000 ms covers cold network loads.
-  // Worst case is ONE flicker when the SPA happens to mount between the
-  // two sends — acceptable given the speed gain.
-  const delays = [700, 3000]
+  // Cold start / not-yet-ready: send on ready signal and with longer fallbacks.
+  const onReady = (event) => {
+    try {
+      if (!event || !event.data || event.data.type !== 'threeduf-ready') return
+      if (event.source && event.source !== win) return
+      sharedReady = true
+      sharedMountedAt = Date.now()
+      doSend(win, targetOrigin, root, 'ready')
+      window.removeEventListener('message', onReady)
+    } catch (_) {}
+  }
+  window.addEventListener('message', onReady)
+
+  const delays = [1200, 3000, 6000, 10000]
   delays.forEach((ms) => {
     schedule(() => doSend(win, targetOrigin, root, `${ms}ms`), ms)
   })
+  schedule(() => {
+    try { window.removeEventListener('message', onReady) } catch (_) {}
+  }, 12000)
+
   return { ok: true, reused: false }
 }

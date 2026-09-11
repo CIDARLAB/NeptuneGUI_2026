@@ -348,6 +348,31 @@
     </v-card>
   </v-dialog>
 
+  <!-- Missing / circular LFR import — block compile before backend -->
+  <v-dialog v-model="importResolveErrorDialog" max-width="560px" content-class="editor-dialog-surface">
+    <v-card class="editor-dialog-card">
+      <v-card-title class="editor-dialog-title">{{ importResolveErrorTitle }}</v-card-title>
+      <v-card-text>
+        <p class="mb-3" v-if="importResolveMissing.length">
+          These files are referenced by <code>`import</code> but were not found in the matching workspace. Compilation was not started.
+        </p>
+        <ul v-if="importResolveMissing.length" class="editor-import-missing-list mb-3">
+          <li v-for="(item, idx) in importResolveMissing" :key="idx">
+            <code>{{ item }}</code>
+          </li>
+        </ul>
+        <p class="caption mb-0" v-if="importResolveMissing.length">
+          Use WorkspaceName/file.lfr (exact Dashboard workspace name + filename) and check spelling.
+        </p>
+        <p class="mb-0 editor-import-error-body" v-else>{{ importResolveErrorBody }}</p>
+      </v-card-text>
+      <v-card-actions>
+        <v-spacer />
+        <v-btn color="primary" text @click="importResolveErrorDialog = false">Close</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+
   <v-snackbar v-model="snackbar" :color="snackbarColor" :timeout="5000" bottom>
     {{ snackbarText }}
   </v-snackbar>
@@ -581,6 +606,10 @@ export default {
       snackbar: false,
       snackbarText: '',
       snackbarColor: 'success',
+      importResolveErrorDialog: false,
+      importResolveErrorTitle: '',
+      importResolveErrorBody: '',
+      importResolveMissing: [],
     }
   },
   watch: {
@@ -796,6 +825,14 @@ export default {
       this.snackbarColor = color
       this.snackbar = true
     },
+    showImportResolveError (resolved) {
+      const missing = (resolved && resolved.missing) || []
+      const cycle = (resolved && resolved.cycle) || []
+      this.importResolveMissing = missing
+      this.importResolveErrorTitle = cycle.length ? 'Circular LFR import' : 'Missing LFR import files'
+      this.importResolveErrorBody = formatImportResolveError(resolved)
+      this.importResolveErrorDialog = true
+    },
     mintFileFromJob (job, fallbackName) {
       const wanted = String(fallbackName || '').toLowerCase()
       const files = (job && Array.isArray(job.generatedFiles)) ? job.generatedFiles : []
@@ -861,7 +898,7 @@ export default {
         const index = buildWorkspaceLfrIndex(workspaces)
         const resolved = collectImportLfr(this.code || '', index)
         if (!resolved.ok) {
-          alert(formatImportResolveError(resolved))
+          this.showImportResolveError(resolved)
           this.isloading = false
           return
         }
@@ -878,7 +915,7 @@ export default {
         const jobid = response.data
         const job = await pollCompileJobUntilSettled(axios, jobid, { timeoutMs: 180000 })
         if (!job) {
-          alert('LFR → MINT timed out. Check Jobs for the compile log.')
+          alert('LFR → MINT timed out. Check the compile log if shown, then try again.')
           this.isloading = false
           return
         }
@@ -901,12 +938,9 @@ export default {
         const mintContent = minted.content
         const wsId = currentWorkspace._id
         if (this.$store.getters.isGuest) {
-          const bareStemMint = `${mintStem}.mint`
-          if (bareStemMint.toLowerCase() !== finalMintName.toLowerCase()) {
-            guestStore.deleteFilesByNames(wsId, [bareStemMint])
-          }
           const file = guestStore.upsertFileByName(wsId, finalMintName, mintContent, {
             touchWorkspace: true,
+            forceTouch: true,
           })
           this.openMintInEditor(file || { name: finalMintName }, mintContent)
         } else {
@@ -924,18 +958,21 @@ export default {
             }, config)
             const fileId = created.data && created.data.id
             if (fileId) {
-              await axios.put('/api/v1/file', { fileid: fileId, text: mintContent, name: finalMintName }, config)
+              await axios.put('/api/v1/file', {
+                fileid: fileId,
+                text: mintContent,
+                name: finalMintName,
+                forceTouch: true,
+              }, config)
               hit = { id: fileId, name: finalMintName, ext: '.mint' }
             }
           } else {
-            await axios.put('/api/v1/file', { fileid: hit.id, text: mintContent, name: finalMintName }, config)
-          }
-          const bare = metas.find((f) => f && f.name === `${mintStem}.mint` && f.name !== finalMintName)
-          if (bare && bare.id) {
-            await axios.delete('/api/v1/file', {
-              data: { fileid: bare.id, workspaceid: wsId },
-              ...config,
-            }).catch(() => null)
+            await axios.put('/api/v1/file', {
+              fileid: hit.id,
+              text: mintContent,
+              name: finalMintName,
+              forceTouch: true,
+            }, config)
           }
           this.openMintInEditor(hit || { name: finalMintName }, mintContent)
         }
@@ -1251,24 +1288,25 @@ export default {
       if (!(this.fileobject && this.fileobject.id && this.currentworkspace && this.currentworkspace._id)) {
         return Promise.resolve(false)
       }
-      const newName = this.currentEditorFileName()
+      // Save never renames — rename only via Rename Confirm. This prevents Save on
+      // *_fromLFR.mint from renaming onto / bumping handwritten *.mint siblings.
       const applyName = () => {
-        this.fileobject.name = newName
-        this.fileobject.ext = '.' + this.selectedScriptLanguage
-        this.editableFileBaseName = this.stripFileBaseName(newName)
-        this.renameFileBaseName = this.editableFileBaseName
         this.markSavedBaseline()
         if (navigate) this.goToDashboardWorkspace(this.currentworkspace)
         return true
       }
       if (this.$store.getters.isGuest) {
-        guestStore.updateFile(this.currentworkspace._id, this.fileobject.id, this.code, newName)
+        guestStore.updateFile(this.currentworkspace._id, this.fileobject.id, this.code, null, {
+          touchWorkspace: false,
+        })
         applyName()
         return Promise.resolve(true)
       }
       const config = { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
-      const payload = { fileid: this.fileobject.id, text: this.code, name: newName }
-      return axios.put('/api/v1/file', payload, config)
+      return axios.put('/api/v1/file', {
+        fileid: this.fileobject.id,
+        text: this.code,
+      }, config)
         .then(() => applyName())
         .catch((err) => {
           const msg = (err.response && err.response.data && (err.response.data.error || err.response.data.message)) || err.message
@@ -1328,20 +1366,78 @@ export default {
       }
       this.existingWorkspaceDialog = true
     },
-    removeOriginalFileIfMoving () {
+    removeOriginalFileIfMoving (sourceSnapshot) {
       if (!this.workspaceActionIsMove) return Promise.resolve()
-      const fid = this.fileobject && this.fileobject.id
-      const wid = this.currentworkspace && this.currentworkspace._id
-      if (!fid || !wid) return Promise.resolve()
+      const snap = sourceSnapshot && typeof sourceSnapshot === 'object' ? sourceSnapshot : null
+      const fid = (snap && snap.fileId) || (this.fileobject && this.fileobject.id)
+      const fileName = (snap && snap.fileName) ||
+        (this.fileobject && this.fileobject.name) ||
+        this.currentEditorFileName()
+      let wid = (snap && snap.workspaceId) ||
+        (this.currentworkspace && this.currentworkspace._id)
       if (this.$store.getters.isGuest) {
-        guestStore.deleteFile(wid, fid)
+        if (fid) {
+          const hit = guestStore.findWorkspaceContainingFile(fid)
+          if (hit && hit._id) wid = hit._id
+        }
+        if (!wid) {
+          const resolved = this.resolvedEditorWorkspace()
+          if (resolved && resolved._id) wid = resolved._id
+        }
+        if (fid && wid) guestStore.deleteFile(wid, fid)
+        // Belt-and-suspenders: drop any same-name leftover in the source workspace.
+        if (wid && fileName) guestStore.deleteFilesByNames(wid, [fileName])
         return Promise.resolve()
       }
-      return axios.delete('/api/v1/file', {
-        data: { fileid: fid, workspaceid: wid },
+      const config = {
         withCredentials: true,
         headers: { 'Content-Type': 'application/json' },
-      }).catch((err) => {
+      }
+      if (!fid) {
+        // Fall back to deleting by name in the source workspace when id is missing.
+        if (!wid || !fileName) return Promise.resolve()
+        return axios.get('/api/v1/files', { params: { id: wid }, ...config })
+          .then((res) => {
+            const ids = res.data || []
+            return Promise.all(ids.map((id) =>
+              axios.get('/api/v1/file', { params: { id }, ...config }).then((r) => r.data).catch(() => null)
+            ))
+          })
+          .then((metas) => {
+            const hits = (metas || []).filter((f) => f && f.name === fileName && f.id)
+            return Promise.all(hits.map((f) => axios.delete('/api/v1/file', {
+              data: { fileid: f.id, workspaceid: wid },
+              ...config,
+            })))
+          })
+          .catch((err) => {
+            console.error(err)
+            alert('Saved to the destination, but could not remove the original file.')
+          })
+      }
+      const deleteById = (workspaceId) => axios.delete('/api/v1/file', {
+        data: { fileid: fid, workspaceid: workspaceId || undefined },
+        ...config,
+      })
+      return deleteById(wid).then(() => {
+        if (!wid || !fileName) return null
+        // Remove any same-name duplicate left behind in the source workspace.
+        return axios.get('/api/v1/files', { params: { id: wid }, ...config })
+          .then((res) => {
+            const ids = res.data || []
+            return Promise.all(ids.map((id) =>
+              axios.get('/api/v1/file', { params: { id }, ...config }).then((r) => r.data).catch(() => null)
+            ))
+          })
+          .then((metas) => {
+            const hits = (metas || []).filter((f) => f && f.name === fileName && f.id && String(f.id) !== String(fid))
+            return Promise.all(hits.map((f) => axios.delete('/api/v1/file', {
+              data: { fileid: f.id, workspaceid: wid },
+              ...config,
+            })))
+          })
+          .catch(() => null)
+      }).catch(() => deleteById(undefined)).catch((err) => {
         console.error(err)
         alert('Saved to the destination, but could not remove the original file.')
       })
@@ -1436,7 +1532,8 @@ export default {
       if (this.$store.getters.isGuest) {
         const file = guestStore.createFile(wsId, fileName, ext)
         if (!file) return Promise.reject(new Error('Could not create the file in that workspace.'))
-        guestStore.updateFile(wsId, file.id, this.code)
+        // Move/copy destination is a new file — force Last Edited even if body matches another copy.
+        guestStore.updateFile(wsId, file.id, this.code, null, { forceTouch: true, touchWorkspace: true })
         return Promise.resolve({ workspace: guestStore.getWorkspace(wsId) || workspace, fileId: file.id })
       }
       const config = { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
@@ -1444,7 +1541,7 @@ export default {
         .then((res) => {
           const fileId = res.data && res.data.id
           const after = fileId && this.code
-            ? axios.put('/api/v1/file', { fileid: fileId, text: this.code }, config)
+            ? axios.put('/api/v1/file', { fileid: fileId, text: this.code, forceTouch: true }, config)
             : Promise.resolve()
           return after.then(() => ({ workspace, fileId }))
         })
@@ -1453,10 +1550,18 @@ export default {
       if (!this.canConfirmMoveWorkspace) return
       const fileName = this.currentEditorFileName()
       const actionLabel = this.workspaceActionIsMove ? 'Moved' : 'Copied'
+      const resolvedSource = this.resolvedEditorWorkspace()
+      const sourceSnapshot = {
+        fileId: this.fileobject && this.fileobject.id,
+        fileName,
+        workspaceId: (resolvedSource && resolvedSource._id) ||
+          (this.currentworkspace && this.currentworkspace._id) ||
+          null,
+      }
       const afterTransfer = (workspace, fileId) => {
-        const sourceWsId = this.currentworkspace && this.currentworkspace._id
+        const sourceWsId = sourceSnapshot.workspaceId
         const wasMove = this.workspaceActionIsMove
-        return this.removeOriginalFileIfMoving().then(() => {
+        return this.removeOriginalFileIfMoving(sourceSnapshot).then(() => {
           if (wasMove) {
             this.adoptMovedFile(workspace, fileId, fileName)
           }
@@ -1507,7 +1612,7 @@ export default {
       if (this.$store.getters.isGuest) {
         const file = guestStore.createFile(wsId, fileName, ext)
         if (file) {
-          guestStore.updateFile(wsId, file.id, this.code)
+          guestStore.updateFile(wsId, file.id, this.code, null, { forceTouch: true, touchWorkspace: true })
           this.$store.commit('SET_CURRENT_FILE', file.id)
         }
         this.removeOriginalFileIfMoving().then(() => {
@@ -1521,7 +1626,7 @@ export default {
           const fileId = res.data.id
           if (fileId) this.$store.commit('SET_CURRENT_FILE', fileId)
           if (fileId && this.code) {
-            return axios.put('/api/v1/file', { fileid: fileId, text: this.code }, config)
+            return axios.put('/api/v1/file', { fileid: fileId, text: this.code, forceTouch: true }, config)
           }
         })
         .then(() => this.removeOriginalFileIfMoving())
@@ -1547,7 +1652,7 @@ export default {
         const ws = guestStore.createWorkspace(name, notes)
         const file = guestStore.createFile(ws._id, fileName, ext)
         if (file) {
-          guestStore.updateFile(ws._id, file.id, this.code)
+          guestStore.updateFile(ws._id, file.id, this.code, null, { forceTouch: true, touchWorkspace: true })
           this.$store.commit('SET_CURRENT_FILE', file.id)
         }
         this.removeOriginalFileIfMoving().then(() => {
@@ -1574,7 +1679,7 @@ export default {
         .then(({ workspace, workspaceId, fileId }) => {
           if (fileId) this.$store.commit('SET_CURRENT_FILE', fileId)
           const afterContent = fileId && this.code
-            ? axios.put('/api/v1/file', { fileid: fileId, text: this.code }, config)
+            ? axios.put('/api/v1/file', { fileid: fileId, text: this.code, forceTouch: true }, config)
             : Promise.resolve()
           return afterContent.then(() => ({ workspace, workspaceId }))
         })
@@ -1641,7 +1746,7 @@ export default {
           const index = buildWorkspaceLfrIndex(workspaces)
           const resolved = collectImportLfr(this.code || '', index)
           if (!resolved.ok) {
-            alert(formatImportResolveError(resolved))
+            this.showImportResolveError(resolved)
             self.isloading = false
             return
           }
@@ -1910,7 +2015,7 @@ export default {
             alert('Could not create the file in that workspace.')
             return Promise.resolve()
           }
-          guestStore.updateFile(wsId, f.id, content)
+          guestStore.updateFile(wsId, f.id, content, null, { forceTouch: true, touchWorkspace: true })
           this.finishImportIntoWorkspace(guestStore.getWorkspace(wsId) || workspace, f)
           return Promise.resolve()
         }
@@ -1919,7 +2024,7 @@ export default {
           .then((res) => {
             const fileId = res.data && res.data.id
             const after = fileId
-              ? axios.put('/api/v1/file', { fileid: fileId, text: content }, config)
+              ? axios.put('/api/v1/file', { fileid: fileId, text: content, forceTouch: true }, config)
               : Promise.resolve()
             return after.then(() => ({
               id: fileId,
@@ -2292,6 +2397,29 @@ export default {
 
 .editor-dialog-card .v-card__actions .v-btn {
   font-size: var(--neptune-fs-body, 14pt);
+}
+
+.editor-import-missing-list {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.editor-import-missing-list li {
+  margin: 4px 0;
+}
+
+.editor-import-missing-list code,
+.editor-dialog-card code {
+  font-family: var(--neptune-font-code), monospace;
+  background: rgba(0, 105, 148, 0.08);
+  color: #006994;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 0.95em;
+}
+
+.editor-import-error-body {
+  white-space: pre-wrap;
 }
 
 @media (max-width: 1280px) {

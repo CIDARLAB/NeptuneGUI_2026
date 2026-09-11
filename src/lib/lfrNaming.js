@@ -5,11 +5,11 @@
  * The validator accepts user-friendly input (mixed case, hyphens, spaces, CamelCase)
  * and reports both whether it is valid and the LFR-canonical form to use on save.
  *
- * See: docs/NAMING_AND_SYNTAX_SPEC_V1.md
+ * Spec: Neptune_2026/docs/NAMING_AND_SYNTAX_SPEC_V1.md
  */
 
 export const LFR_NAMING_SPEC_URL =
-  'https://github.com/CIDARLAB/NeptuneGUI_2026/blob/main/docs/NAMING_AND_SYNTAX_SPEC_V1.md'
+  'https://github.com/CIDARLAB/Neptune_2026/blob/main/docs/NAMING_AND_SYNTAX_SPEC_V1.md'
 
 const LFR_CANONICAL_RE = /^[a-z][a-z0-9_]*$/
 const PRE_NORMALIZE_ALLOWED_RE = /^[A-Za-z0-9_\- ]+$/

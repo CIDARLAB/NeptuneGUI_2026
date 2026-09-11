@@ -21,8 +21,8 @@
         "mirrorByX": 0.0,
         "mirrorByY": 0.0,
         "position": [
-          15000.0,
-          20000.0
+          40000.0,
+          40000.0
         ],
         "ID": "tree_1"
       },
@@ -88,26 +88,33 @@
   ],
   "connections": [],
   "params": {
-    "x-span": 76200,
-    "y-span": 76200,
-    "length": 76200.0,
+    "x-span": 80000.0,
+    "y-span": 80000.0,
+    "length": 80000.0,
     "flowPortCount": 0,
     "controlPortCount": 0,
-    "width": 76200.0
+    "width": 80000.0
   },
   "layers": [
     {
       "name": "FLOW_0",
       "id": "0",
       "type": "FLOW",
-      "params": {},
+      "params": {
+        "z_offset": 0,
+        "flip": false
+      },
       "group": "0"
     },
     {
       "id": "1",
       "name": "CONTROL_0",
       "type": "CONTROL",
-      "group": "0"
+      "group": "0",
+      "params": {
+        "z_offset": 0,
+        "flip": false
+      }
     }
   ],
   "version": "1.2",

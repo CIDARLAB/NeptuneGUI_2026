@@ -279,11 +279,13 @@ app.post('/api/v1/file', requireAuth, (req, res) => {
 })
 
 app.put('/api/v1/file', requireAuth, (req, res) => {
-  const { fileid, name, text } = req.body || {}
+  const { fileid, name, text, forceTouch } = req.body || {}
   if (!fileid) return res.status(400).json({ error: 'fileid required' })
   const workspaces = data.getWorkspaces(req.session)
   for (const w of workspaces) {
-    const updated = data.updateFileContent(req.session, w._id, fileid, text, name)
+    const updated = data.updateFileContent(req.session, w._id, fileid, text, name, {
+      forceTouch: !!forceTouch,
+    })
     if (updated) return res.json(updated)
   }
   res.status(404).json({ error: 'File not found' })
@@ -778,8 +780,11 @@ function restoreSessionJobs (session, jobs, { replace } = { replace: true }) {
     }
     record.files = relinkJobFiles(session, workspaceId, record)
     jobRecords.set(id, record)
-    recordSessionJob(session, id)
-    restored.push(id)
+    // Mint-only compiles stay out of the Jobs list (same as live createPendingJob).
+    if (record.compileType !== 'lfrToMint') {
+      recordSessionJob(session, id)
+      restored.push(id)
+    }
   })
   return restored
 }
@@ -814,18 +819,19 @@ function shouldSaveCompileOutput (relPath) {
   return ext === '.mint'
 }
 
-function upsertWorkspaceFile (session, workspaceId, fileName, content, workspaceName) {
+function upsertWorkspaceFile (session, workspaceId, fileName, content, workspaceName, options = {}) {
   if (!session || !workspaceId || !fileName) return null
   data.ensureWorkspace(session, workspaceId, workspaceName)
   const existingList = data.getFiles(session, workspaceId) || []
   const existing = existingList.find(f => f && f.name === fileName)
+  const opts = { forceTouch: options.forceTouch !== false }
   if (existing) {
-    return data.updateFileContent(session, workspaceId, existing.id, content) || existing
+    return data.updateFileContent(session, workspaceId, existing.id, content, null, opts) || existing
   }
   const ext = path.extname(fileName) || ''
   const created = data.createFile(session, workspaceId, fileName, ext)
   if (!created) return null
-  return data.updateFileContent(session, workspaceId, created.id, content) || created
+  return data.updateFileContent(session, workspaceId, created.id, content, null, opts) || created
 }
 
 function removeHiddenCompileArtifactsFromWorkspace (session, workspaceId) {
@@ -896,7 +902,10 @@ function createPendingJob (session, meta) {
     session,
   }
   jobRecords.set(id, record)
-  recordSessionJob(session, id)
+  // Compile-to-MINT only updates the editor workspace; keep it out of the Jobs list.
+  if (meta.compileType !== 'lfrToMint') {
+    recordSessionJob(session, id)
+  }
   return record
 }
 
@@ -933,6 +942,18 @@ function applyCompileResult (record, result, session) {
     if (!fileName || content == null) return
     if (seen.has(fileName)) return
     if (!shouldKeepCompileGeneratedFile(fileName)) return
+    // Never clobber handwritten X.mint when compiling X.lfr / X_fromLFR.mint.
+    if (/\.mint$/i.test(fileName) && !/_fromLFR(?:\(\d{12}\))?\.mint$/i.test(fileName)) {
+      const src = String(record.sourceFilename || '')
+      const srcStem = src.replace(/\.[^.]+$/, '')
+      const bareStem = String(fileName).replace(/\.[^.]+$/, '')
+      if (/_fromLFR$/i.test(srcStem) || /\.(lfr|v)$/i.test(src)) {
+        const expectedBare = /_fromLFR$/i.test(srcStem)
+          ? srcStem.replace(/_fromLFR$/i, '')
+          : srcStem
+        if (bareStem.toLowerCase() === expectedBare.toLowerCase()) return
+      }
+    }
     seen.add(fileName)
     generatedFiles.push({ name: fileName, content: String(content) })
     const writeWorkspace = toWorkspace !== false && isWorkspaceVisibleFileName(fileName)
@@ -966,6 +987,9 @@ function applyCompileResult (record, result, session) {
       const unstamped = record.outputFileName.replace(/\(\d{12}\)(?=\.[^.]+$)/, '')
       if (base === unstamped || base === record.outputFileName) return
     }
+    // synthesizeFromMINT must not write .mint back into the workspace (only PR JSON).
+    // Writing a bare <device>.mint here would clobber handwritten siblings like flow_only_demo.mint.
+    if (ext === '.mint' && !isLfrCompileType(record.compileType)) return
     // LFR compiles must expose MINT as *_fromLFR.mint (not bare <stem>.mint).
     if (ext === '.mint' && isLfrCompileType(record.compileType)) {
       const preferred = siblingMintFileName(record.sourceFilename || base)
@@ -1225,7 +1249,11 @@ app.post('/api/v1/lfrToMint', requireAuth, (req, res) => {
   proxyCompile(req, res, '/api/v1/mushroommapper', 'lfrToMint')
 })
 app.get('/api/v1/jobs', requireAuth, (req, res) => {
-  const ids = sessionJobs.get(sessionKey(req.session)) || []
+  const ids = (sessionJobs.get(sessionKey(req.session)) || []).filter((id) => {
+    const record = jobRecords.get(id)
+    // Hide mint-only compiles from Jobs (and drop any legacy session entries).
+    return !record || record.compileType !== 'lfrToMint'
+  })
   if (String(req.query.full || '') === '1') {
     return res.json(ids.map((id) => jobRecords.get(id)).filter(Boolean).map(publicJobRecord))
   }
@@ -1519,7 +1547,8 @@ function findDiySourceNode (syntax, jsonObj) {
 // Keep only DIY params that affect 3DuF geometry rendering for built-in components.
 // Derived from each corresponding 3DuF component class render2D()/transformRender().
 const DIY_RENDER_PARAM_ALLOWLIST = {
-  channel: new Set(['channelWidth', 'crossSection']),
+  // crossSection is set via the CHANNEL / ROUNDED CHANNEL profile UI (not shown as a raw field).
+  channel: new Set(['channelWidth', 'height', 'crossSection']),
   mixer: new Set(['bendLength', 'bendSpacing', 'channelWidth', 'numberOfBends', 'edgeBend', 'edgeBend1', 'edgeBend2', 'rotation', 'mirrorByX', 'mirrorByY']),
   mux: new Set([
     'controlChannelWidth',

@@ -14,8 +14,8 @@
         "portRadius": 1000.0,
         "height": 1100.0,
         "position": [
-          6000.0,
-          10600.0
+          20000.0,
+          22300.0
         ],
         "ID": "port_1",
         "rotation": 0,
@@ -44,8 +44,8 @@
         "portRadius": 1000.0,
         "height": 1100.0,
         "position": [
-          6000.0,
-          6000.0
+          20000.0,
+          17700.0
         ],
         "ID": "port_2",
         "rotation": 0,
@@ -81,34 +81,34 @@
         "connectionSpacing": 1600,
         "channelWidth": 600,
         "crossSection": 0,
-        "height": 250,
+        "height": 600,
         "start": [
-          6000.0,
-          10600.0
+          20000.0,
+          22300.0
         ],
         "end": [
-          6000.0,
-          6000.0
+          20000.0,
+          17700.0
         ],
         "wayPoints": [
           [
-            6000.0,
-            10600.0
+            20000.0,
+            22300.0
           ],
           [
-            6000.0,
-            6000.0
+            20000.0,
+            17700.0
           ]
         ],
         "segments": [
           [
             [
-              6000.0,
-              10600.0
+              20000.0,
+              22300.0
             ],
             [
-              6000.0,
-              6000.0
+              20000.0,
+              17700.0
             ]
           ]
         ],
@@ -127,12 +127,12 @@
           },
           "wayPoints": [
             [
-              6000.0,
-              10600.0
+              20000.0,
+              22300.0
             ],
             [
-              6000.0,
-              6000.0
+              20000.0,
+              17700.0
             ]
           ]
         }
@@ -141,26 +141,33 @@
     }
   ],
   "params": {
-    "x-span": 12000.0,
-    "y-span": 16600.0,
-    "length": 76200,
+    "x-span": 40000.0,
+    "y-span": 40000.0,
+    "length": 40000.0,
     "flowPortCount": 2,
     "controlPortCount": 0,
-    "width": 76200
+    "width": 40000.0
   },
   "layers": [
     {
       "name": "FLOW_0",
       "id": "0",
       "type": "FLOW",
-      "params": {},
+      "params": {
+        "z_offset": 0,
+        "flip": false
+      },
       "group": "0"
     },
     {
       "id": "1",
       "name": "CONTROL_0",
       "type": "CONTROL",
-      "group": "0"
+      "group": "0",
+      "params": {
+        "z_offset": 0,
+        "flip": false
+      }
     }
   ],
   "features": [],

@@ -26,8 +26,8 @@ Data/
 
 ## Bundled library and examples
 
-- **`3DuF_component/default`**: ~9 built-in types (channel, mixer, mux, port, reaction_chamber, tree, valve3D, …). Default FLOW `channelWidth` is **600**. Mixer defaults include **edgeBend1/edgeBend2**. Reaction chamber MINT/LFR use entity **`REACTION CHAMBER`**. JSON is compiler-aligned P&R device shape for Library / 3DuF open.
-- **`example/`**: Guest **Example** workspace seeds `flow_only_demo` and `flow_and_control_demo` (LFR, handwritten `.mint`, compiler `*_fromLFR.mint`, PR JSON). Workspace notes explain the demos. Missing seed files are recreated only when Example is empty (user renames/deletes stick).
+- **`3DuF_component/default`**: ~9 built-in types (channel, mixer, mux, port, reaction_chamber, tree, valve3D, …). Default JSON boards are **40 000×40 000** (tree/mux **80 000**). FLOW `channelWidth` and channel **height** default **600**. Mixer defaults include **edgeBend1/edgeBend2**. Reaction chamber MINT/LFR use entity **`REACTION CHAMBER`**. valve3D control ports use layer **CONTROL**. Layer params include `z_offset` / `flip` where applicable. JSON is compiler-aligned P&R device shape for Library / 3DuF open (Neptune normalizes board framing before postMessage).
+- **`example/`**: Guest **Example** workspace seeds `flow_only_demo` and `flow_and_control_demo` (LFR, handwritten `.mint`, compiler `*_fromLFR.mint`, PR JSON). Workspace notes explain the demos. Missing seed files are recreated only when Example is empty; existing seed **content and timestamps are not overwritten** on sync. Compiling `X.lfr` never clobbers handwritten `X.mint`.
 
 ## Rules
 

@@ -81,6 +81,62 @@
           </v-card-actions>
         </v-card>
       </v-dialog>
+      <v-dialog v-model="transferDialog" max-width="480px" persistent>
+        <v-card class="dashboard-transfer-dialog">
+          <v-card-title class="headline">{{ transferDialogTitle }}</v-card-title>
+          <v-card-text>
+            <p class="caption mb-3" v-if="pendingTransferFile && pendingTransferFile.name">
+              File: <strong>{{ pendingTransferFile.name }}</strong>
+            </p>
+            <v-select
+              v-model="transferTargetId"
+              :items="transferSelectItems"
+              label="Workspace"
+              outlined
+              dense
+              hide-details="auto"
+              color="primary"
+              class="mb-3"
+            />
+            <template v-if="transferCreatesNewWorkspace">
+              <v-text-field
+                v-model="newTransferWorkspaceName"
+                label="Workspace name"
+                outlined
+                dense
+                hide-details="auto"
+                color="primary"
+                class="mb-3"
+              />
+              <v-textarea
+                v-model="newTransferWorkspaceNotes"
+                label="Notes (optional)"
+                outlined
+                dense
+                rows="2"
+                hide-details="auto"
+                color="primary"
+                class="mb-3"
+              />
+            </template>
+            <p class="caption mt-2 mb-0">{{ transferHint }}</p>
+          </v-card-text>
+          <v-card-actions>
+            <v-spacer />
+            <v-btn color="primary" text :disabled="transferBusy" @click="transferDialog = false">Cancel</v-btn>
+            <v-btn
+              color="success"
+              text
+              :disabled="!canConfirmTransfer || transferBusy"
+              :loading="transferBusy"
+              @click="confirmTransferWorkspacePicker"
+            >{{ transferIsMove ? 'Move' : 'Copy' }}</v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
+      <v-snackbar v-model="snackbar" :color="snackbarColor" :timeout="5000" bottom>
+        {{ snackbarText }}
+      </v-snackbar>
       <v-dialog v-model="namingDialog" max-width="520px" persistent>
         <v-card class="dashboard-naming-dialog">
           <v-card-title class="headline">Apply LFR naming convention?</v-card-title>
@@ -121,7 +177,7 @@
         <base-material-workspace-chart-card
           class="workspace-dashboard-chart-card"
           :id="workspace._id"
-          color="info"
+          color="primary"
           type="Line"
           :name="workspace.name"
         >
@@ -258,7 +314,7 @@
                       md="4"
                       lg="3"
                       xl="2"
-                      v-for="(file, i) in files" :key="`grid-${i}`"
+                      v-for="(file, i) in files" :key="`grid-${file.id || file.name || i}`"
                   >
                       <base-material-workspace-stats-card
                           class="file-grid-card"
@@ -273,6 +329,8 @@
                           v-on:onFileDeleted="onWorkspaceFileDeleted"
                           @view3duf="openJsonIn3DuF($event)"
                           @importComponentJson="importWorkspaceJsonToComponentLibrary($event)"
+                          @copyFile="openTransferWorkspacePicker($event, false)"
+                          @moveFile="openTransferWorkspacePicker($event, true)"
                       />
                   </v-col>
 
@@ -326,7 +384,7 @@
                           </tr>
                         </thead>
                         <tbody>
-                          <tr v-for="(file, i) in sortedFilesForList" :key="`list-${i}`">
+                          <tr v-for="(file, i) in sortedFilesForList" :key="`list-${file.id || file.name || i}`">
                             <td class="file-list-name-cell file-list-col-name">
                               <div class="file-list-name-scroll">
                                 <button
@@ -423,6 +481,46 @@
                                     </v-btn>
                                   </template>
                                   <span>Open this file in the Editor</span>
+                                </v-tooltip>
+
+                                <v-tooltip
+                                  v-if="canTransferFile(file)"
+                                  bottom
+                                >
+                                  <template v-slot:activator="{ on, attrs }">
+                                    <v-btn
+                                      text
+                                      icon
+                                      small
+                                      color="primary"
+                                      v-bind="attrs"
+                                      v-on="on"
+                                      @click="openTransferWorkspacePicker(file, false)"
+                                    >
+                                      <v-icon small>mdi-content-copy</v-icon>
+                                    </v-btn>
+                                  </template>
+                                  <span>Copy to another workspace</span>
+                                </v-tooltip>
+
+                                <v-tooltip
+                                  v-if="canTransferFile(file)"
+                                  bottom
+                                >
+                                  <template v-slot:activator="{ on, attrs }">
+                                    <v-btn
+                                      text
+                                      icon
+                                      small
+                                      color="primary"
+                                      v-bind="attrs"
+                                      v-on="on"
+                                      @click="openTransferWorkspacePicker(file, true)"
+                                    >
+                                      <v-icon small>mdi-file-move-outline</v-icon>
+                                    </v-btn>
+                                  </template>
+                                  <span>Move to another workspace</span>
                                 </v-tooltip>
 
                                 <v-tooltip bottom>
@@ -523,6 +621,12 @@
   import { validateAndNormalizeLfrName } from '@/lib/lfrNaming'
   import { deleteLinkedJobForWorkspaceFile, fetchFullJobs, persistGuestJobOutputs, pruneHiddenCompileArtifactsFromWorkspace } from '@/lib/jobResultSync'
   import { filterWorkspaceVisibleFiles } from '@/lib/compileOutputFiles'
+  import {
+    canCopyMoveWorkspaceFile,
+    copyOrMoveWorkspaceFile,
+    createWorkspaceForTransfer,
+    loadWorkspacesForPicker,
+  } from '@/lib/workspaceFileTransfer'
 
   export default {
     name: 'DashboardDashboard',
@@ -593,6 +697,17 @@
         notesDialog: false,
         notesDialogWorkspaceName: '',
         notesDialogText: '',
+        transferDialog: false,
+        transferIsMove: false,
+        transferBusy: false,
+        transferTargetId: null,
+        transferWorkspacesList: [],
+        pendingTransferFile: null,
+        newTransferWorkspaceName: '',
+        newTransferWorkspaceNotes: '',
+        snackbar: false,
+        snackbarText: '',
+        snackbarColor: 'success',
     }),
     computed: {
       totalSales () {
@@ -624,6 +739,35 @@
       },
       isGuest () {
         return this.$store.getters.isGuest
+      },
+      transferDialogTitle () {
+        return this.transferIsMove ? 'Move to another workspace' : 'Copy to another workspace'
+      },
+      transferCreatesNewWorkspace () {
+        return this.transferTargetId === '__create_new__'
+      },
+      transferSelectItems () {
+        const items = (this.transferWorkspacesList || []).map((w) => ({
+          text: w.name || 'Workspace',
+          value: w._id,
+        }))
+        if (items.length) items.push({ divider: true })
+        items.push({ text: 'Create new workspace', value: '__create_new__' })
+        return items
+      },
+      canConfirmTransfer () {
+        if (this.transferCreatesNewWorkspace) {
+          return !!(this.newTransferWorkspaceName || '').trim()
+        }
+        const id = this.transferTargetId
+        if (id == null || id === '' || id === '__create_new__') return false
+        return this.transferWorkspacesList.some((w) => String(w._id) === String(id))
+      },
+      transferHint () {
+        if (this.transferIsMove) {
+          return 'The original file will be removed from the current workspace after it is saved in the destination. The file name stays the same.'
+        }
+        return 'A copy is saved in the destination. The original file stays in the current workspace. The file name stays the same.'
       },
     },
 
@@ -703,6 +847,97 @@
       canEditFile (file) {
         const lowerExt = String((file && file.ext) || '').toLowerCase()
         return lowerExt !== '.log' && lowerExt !== '.json'
+      },
+      canTransferFile (file) {
+        return canCopyMoveWorkspaceFile(file)
+      },
+      showSnack (text, color = 'info') {
+        this.snackbarText = text
+        this.snackbarColor = color
+        this.snackbar = true
+      },
+      openTransferWorkspacePicker (file, isMove) {
+        if (!file || !file.id || !this.canTransferFile(file)) return
+        const sourceWorkspaceId =
+          file.workspaceid ||
+          (this.selectedworkspace && this.selectedworkspace._id) ||
+          null
+        this.pendingTransferFile = {
+          id: file.id,
+          name: this.getFileDisplayName(file) || file.name,
+          ext: file.ext,
+          content: file.content,
+          workspaceid: sourceWorkspaceId,
+        }
+        this.transferIsMove = !!isMove
+        this.newTransferWorkspaceName = ''
+        this.newTransferWorkspaceNotes = ''
+        loadWorkspacesForPicker(axios, this.$store.getters.isGuest, sourceWorkspaceId)
+          .then((list) => {
+            this.transferWorkspacesList = list || []
+            this.transferTargetId = this.transferWorkspacesList.length
+              ? this.transferWorkspacesList[0]._id
+              : '__create_new__'
+            this.transferDialog = true
+          })
+          .catch(() => {
+            this.transferWorkspacesList = []
+            this.transferTargetId = '__create_new__'
+            this.transferDialog = true
+          })
+      },
+      confirmTransferWorkspacePicker () {
+        if (!this.canConfirmTransfer || this.transferBusy) return
+        const file = this.pendingTransferFile
+        if (!file || !file.id) return
+        const sourceWorkspaceId = file.workspaceid ||
+          (this.selectedworkspace && this.selectedworkspace._id) ||
+          null
+        const isMove = this.transferIsMove
+        const actionLabel = isMove ? 'Moved' : 'Copied'
+        const run = (destWorkspace) => copyOrMoveWorkspaceFile({
+          axios,
+          isGuest: this.$store.getters.isGuest,
+          sourceWorkspaceId,
+          file,
+          destWorkspace,
+          isMove,
+        }).then(({ workspace }) => {
+          this.transferDialog = false
+          this.pendingTransferFile = null
+          const destId = workspace && (workspace._id || workspace.id)
+          if (destId) this.$root.$emit('neptune-job-outputs-changed', { workspaceId: destId })
+          if (isMove && sourceWorkspaceId && String(sourceWorkspaceId) !== String(destId)) {
+            this.$root.$emit('neptune-job-outputs-changed', { workspaceId: sourceWorkspaceId })
+          }
+          this.refreshworkspacedata()
+          this.showSnack(actionLabel + ' file to ' + ((workspace && workspace.name) || 'workspace') + '.', 'success')
+        })
+
+        this.transferBusy = true
+        const finish = () => { this.transferBusy = false }
+        if (this.transferCreatesNewWorkspace) {
+          const name = (this.newTransferWorkspaceName || '').trim() || 'New Workspace'
+          const notes = (this.newTransferWorkspaceNotes || '').trim()
+          return createWorkspaceForTransfer(axios, this.$store.getters.isGuest, name, notes)
+            .then((ws) => run(ws))
+            .catch((err) => {
+              const msg = (err.response && err.response.data && (err.response.data.error || err.response.data.message)) || (err && err.message)
+              alert('Could not ' + (isMove ? 'move' : 'copy') + ' the file. ' + (msg ? String(msg) : 'Please try again.'))
+            })
+            .finally(finish)
+        }
+        const dest = this.transferWorkspacesList.find((w) => String(w._id) === String(this.transferTargetId))
+        if (!dest) {
+          this.transferBusy = false
+          return
+        }
+        return run(dest)
+          .catch((err) => {
+            const msg = (err.response && err.response.data && (err.response.data.error || err.response.data.message)) || (err && err.message)
+            alert('Could not ' + (isMove ? 'move' : 'copy') + ' the file. ' + (msg ? String(msg) : 'Please try again.'))
+          })
+          .finally(finish)
       },
       editFile (file) {
         if (!file || !file.id || !this.canEditFile(file)) return
@@ -1598,9 +1833,10 @@
         outline: none;
     }
     #dashboard .file-list-actions {
-        flex-wrap: nowrap;
+        flex-wrap: wrap;
         flex-direction: row;
         gap: 4px;
+        justify-content: flex-end;
     }
     #dashboard .file-json-action-pair {
         display: inline-flex;
@@ -1713,6 +1949,16 @@
         background: rgba(165, 214, 167, 0.12);
     }
     .dashboard-naming-dialog .v-btn {
+        text-transform: none !important;
+        letter-spacing: normal !important;
+    }
+    .dashboard-transfer-dialog .headline {
+        font-size: 1.1875rem !important;
+        font-weight: 600 !important;
+        letter-spacing: -0.015em;
+        line-height: 1.35;
+    }
+    .dashboard-transfer-dialog .v-btn {
         text-transform: none !important;
         letter-spacing: normal !important;
     }

@@ -10,6 +10,8 @@ const path = require('path')
 const { spawn } = require('child_process')
 
 const LOG_CAP = 400000
+/** Max wall time for one fluigi compile before the process is killed (status → error/fail). */
+const DEFAULT_COMPILE_TIMEOUT_MS = 10 * 60 * 1000
 
 function sanitizeSyntax (syntax) {
   return String(syntax || '').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '')
@@ -107,7 +109,6 @@ function writeImportLfrTree (tmpdir, bundle) {
       try { content = JSON.stringify(content) } catch (_) { content = '' }
     }
     content = String(content || '')
-    if (!content.trim()) continue
     const destDir = path.join(root, ws)
     fs.mkdirSync(destDir, { recursive: true })
     fs.writeFileSync(path.join(destDir, fname), content, 'utf8')
@@ -234,15 +235,24 @@ function runProcess (cmd, args, options) {
     let stdout = ''
     let stderr = ''
     let settled = false
+    // New process group so timeout can kill poetry + fluigi children together.
     const child = spawn(cmd, args, {
       cwd: options.cwd,
       env: options.env || process.env,
       stdio: ['ignore', 'pipe', 'pipe'],
+      detached: true,
     })
+    const killTree = (signal) => {
+      if (!child.pid) return
+      try { process.kill(-child.pid, signal) } catch (_) {
+        try { child.kill(signal) } catch (__) {}
+      }
+    }
+    const timeoutMs = options.timeoutMs || DEFAULT_COMPILE_TIMEOUT_MS
     const timer = setTimeout(() => {
-      try { child.kill('SIGTERM') } catch (_) {}
+      killTree('SIGTERM')
       setTimeout(() => {
-        try { child.kill('SIGKILL') } catch (_) {}
+        killTree('SIGKILL')
       }, 5000)
       if (!settled) {
         settled = true
@@ -250,10 +260,10 @@ function runProcess (cmd, args, options) {
           returncode: -1,
           stdout,
           stderr,
-          error: `compile timed out after ${Math.round((options.timeoutMs || 3500000) / 1000)}s`,
+          error: `compile timed out after ${Math.round(timeoutMs / 1000)}s (no results)`,
         })
       }
-    }, options.timeoutMs || 3500000)
+    }, timeoutMs)
 
     child.stdout.on('data', (buf) => { stdout += buf.toString() })
     child.stderr.on('data', (buf) => { stderr += buf.toString() })
@@ -358,7 +368,7 @@ async function runLocalCompile ({
 
     const result = await runProcess(cmd, args, {
       cwd: neptuneRoot,
-      timeoutMs: timeoutMs || 3500000,
+      timeoutMs: timeoutMs || DEFAULT_COMPILE_TIMEOUT_MS,
       env: process.env,
     })
     let outputs = collectOutputFiles(outputDir)

@@ -93,7 +93,7 @@
               </div>
               <v-btn
                 small
-                text
+                outlined
                 color="primary"
                 class="solutions-parameter-spec-btn ml-3"
                 :href="evaluationMetricSpecUrl"
@@ -134,21 +134,48 @@
             :items-per-page.sync="resultsTableItemsPerPage"
             :page.sync="resultsTablePage"
             :custom-sort="customTableSort"
+            must-sort
             item-key="rowKey"
             :item-class="rowClass"
             class="component-library-table solutions-jobs-table"
             :footer-props="{ 'items-per-page-options': [10, 25, 50] }"
           >
+            <template v-slot:item.inputFile="{ item }">
+              <span
+                class="solutions-cell-ellipsis"
+                :title="item.inputFileFull || item.inputFile || ''"
+              >{{ item.inputFile || '—' }}</span>
+            </template>
+
+            <template v-slot:item.inputFormat="{ item }">
+              <span
+                class="solutions-cell-ellipsis"
+                :title="item.inputFormat || ''"
+              >{{ item.inputFormat || '—' }}</span>
+            </template>
+
             <template v-slot:item.workspaceName="{ item }">
               <button
                 v-if="item.workspaceId"
                 type="button"
-                class="solutions-path-link"
+                class="solutions-path-link solutions-cell-ellipsis"
+                :title="item.workspaceName || ''"
                 @click="navigateToWorkspaceOutput(item)"
               >
                 {{ item.workspaceName || '—' }}
               </button>
-              <span v-else>{{ item.workspaceName || '—' }}</span>
+              <span
+                v-else
+                class="solutions-cell-ellipsis"
+                :title="item.workspaceName || ''"
+              >{{ item.workspaceName || '—' }}</span>
+            </template>
+
+            <template v-slot:item.lastUpdatedDisplay="{ item }">
+              <span
+                class="solutions-cell-ellipsis"
+                :title="item.lastUpdatedDisplay || ''"
+              >{{ item.lastUpdatedDisplay || '—' }}</span>
             </template>
 
             <template v-slot:item.areaScore="{ item }">
@@ -398,21 +425,22 @@ export default {
       logDialogRow: null,
       logDialogText: '',
       tableHeaders: [
-        { text: 'Input File', value: 'inputFile', sortable: true },
-        { text: 'Modified', value: 'lastUpdatedDisplay', sortable: true },
-        { text: 'Workspace', value: 'workspaceName', sortable: false },
-        { text: 'Global Util.', value: 'areaScore', sortable: false, align: 'end' },
-        { text: 'Local Compact.', value: 'compactScore', sortable: false, align: 'end' },
-        { text: 'Conn Length', value: 'connectionLengthScore', sortable: false, align: 'end' },
-        { text: 'Bend', value: 'bendScore', sortable: false, align: 'end' },
-        { text: 'Symmetry', value: 'symmetryScore', sortable: false, align: 'end' },
-        { text: 'Fragment.', value: 'fragmentationScore', sortable: false, align: 'end' },
-        { text: 'Total', value: 'overallScore', sortable: false, align: 'end' },
-        { text: 'JSON', value: 'jsonActions', sortable: false, align: 'center' },
-        { text: 'Log', value: 'logActions', sortable: false, align: 'center' },
-        { text: 'Visualization', value: 'threedufActions', sortable: false, align: 'center' },
-        { text: 'Status', value: 'status', sortable: false, align: 'end' },
-        { text: 'Delete', value: 'deleteActions', sortable: false, align: 'center' },
+        { text: 'Input File', value: 'inputFile', width: '180px', sortable: true, align: 'center' },
+        { text: 'Input Format', value: 'inputFormat', width: '170px', sortable: true, align: 'center' },
+        { text: 'Workspace', value: 'workspaceName', width: '160px', sortable: true, align: 'center' },
+        { text: 'Modified', value: 'lastUpdatedDisplay', width: '160px', sortable: true, align: 'center' },
+        { text: 'Global Util.', value: 'areaScore', width: '120px', sortable: false, align: 'center' },
+        { text: 'Local Compact.', value: 'compactScore', width: '140px', sortable: false, align: 'center' },
+        { text: 'Conn Length', value: 'connectionLengthScore', width: '120px', sortable: false, align: 'center' },
+        { text: 'Bend', value: 'bendScore', width: '72px', sortable: false, align: 'center' },
+        { text: 'Symmetry', value: 'symmetryScore', width: '100px', sortable: false, align: 'center' },
+        { text: 'Fragment.', value: 'fragmentationScore', width: '100px', sortable: false, align: 'center' },
+        { text: 'Total', value: 'overallScore', width: '80px', sortable: false, align: 'center' },
+        { text: 'JSON', value: 'jsonActions', width: '72px', sortable: false, align: 'center' },
+        { text: 'Log', value: 'logActions', width: '64px', sortable: false, align: 'center' },
+        { text: 'Visualization', value: 'threedufActions', width: '130px', sortable: false, align: 'center' },
+        { text: 'Status', value: 'status', width: '110px', sortable: false, align: 'center' },
+        { text: 'Delete', value: 'deleteActions', width: '90px', sortable: false, align: 'center' },
       ],
     }
   },
@@ -435,6 +463,8 @@ export default {
         rows.push(this.buildExampleRow(ex))
       }
       for (const job of this.jobs) {
+        // Compile-to-MINT (lfrToMint) must not appear in Jobs results.
+        if (String(job.compileType || '') === 'lfrToMint') continue
         rows.push(this.buildJobRow(job))
       }
       // Recompute Total here from applied weights so Results stays in sync after Apply.
@@ -524,24 +554,60 @@ export default {
       } catch (_) {}
     },
     customTableSort (items, sortBy, sortDesc) {
-      if (!sortBy) return items
+      if (!sortBy || (Array.isArray(sortBy) && !sortBy.length)) return items
+      const key = Array.isArray(sortBy) ? sortBy[0] : sortBy
+      if (!key) return items
+      const desc = Array.isArray(sortDesc) ? !!sortDesc[0] : !!sortDesc
       const sorted = [...items]
-      const desc = !!sortDesc
+      const cmpStr = (a, b) => String(a || '').toLowerCase().localeCompare(String(b || '').toLowerCase(), undefined, {
+        sensitivity: 'base',
+        numeric: true,
+      })
+      const primaryValue = (row) => {
+        if (key === 'lastUpdatedDisplay') return Number(row.lastUpdatedSort) || 0
+        if (key === 'inputFormat') return String(row.inputFormat || '')
+        if (key === 'inputFile') return String(row.inputFile || '')
+        if (key === 'workspaceName') return String(row.workspaceName || '')
+        return String(row[key] || '')
+      }
+      // Tie-break priority when primary values match: workspace → format → file name → time.
+      const tieBreak = (a, b) => (
+        cmpStr(a.workspaceName, b.workspaceName) ||
+        cmpStr(a.inputFormat, b.inputFormat) ||
+        cmpStr(a.inputFile, b.inputFile) ||
+        ((Number(a.lastUpdatedSort) || 0) - (Number(b.lastUpdatedSort) || 0))
+      )
       sorted.sort((a, b) => {
-        let av
-        let bv
-        if (sortBy === 'lastUpdatedDisplay') {
-          av = a.lastUpdatedSort || 0
-          bv = b.lastUpdatedSort || 0
+        const av = primaryValue(a)
+        const bv = primaryValue(b)
+        let primary = 0
+        if (key === 'lastUpdatedDisplay') {
+          primary = av === bv ? 0 : (av < bv ? -1 : 1)
         } else {
-          av = String(a[sortBy] || '').toLowerCase()
-          bv = String(b[sortBy] || '').toLowerCase()
+          primary = cmpStr(av, bv)
         }
-        if (av < bv) return desc ? 1 : -1
-        if (av > bv) return desc ? -1 : 1
-        return 0
+        if (primary !== 0) return desc ? -primary : primary
+        return tieBreak(a, b)
       })
       return sorted
+    },
+    splitInputFileAndFormat (fullName) {
+      const raw = String(fullName || '').trim()
+      if (!raw || raw === '—') {
+        return { inputFile: '—', inputFormat: '—', inputFileFull: '—' }
+      }
+      const extMatch = raw.match(/(\.[^.]+)$/)
+      const ext = extMatch ? extMatch[1].toLowerCase() : ''
+      const stem = ext ? raw.slice(0, -ext.length) : raw
+      let inputFormat = '—'
+      if (ext === '.lfr' || ext === '.v') inputFormat = 'LFR'
+      else if (ext === '.mint' || ext === '.uf') inputFormat = 'MINT'
+      else if (ext) inputFormat = ext.replace(/^\./, '').toUpperCase()
+      return {
+        inputFile: stem || raw,
+        inputFormat,
+        inputFileFull: raw,
+      }
     },
     toFiniteNumber (value) {
       const n = Number(value)
@@ -800,10 +866,13 @@ export default {
         symmetryScore: row.symmetryScore,
         fragmentationScore: row.fragmentationScore,
       }
+      const inputParts = this.splitInputFileAndFormat(row.inputFile)
       return {
         rowKey: `example-${row.outputFile}`,
         rowKind: 'example',
-        inputFile: row.inputFile,
+        inputFile: inputParts.inputFile,
+        inputFormat: inputParts.inputFormat,
+        inputFileFull: inputParts.inputFileFull,
         lastUpdatedDisplay: updatedRaw ? Utils.getprettytimestamp(updatedRaw) : '—',
         lastUpdatedSort: updatedRaw ? new Date(updatedRaw).getTime() : 0,
         outputFileName: row.outputFile,
@@ -850,10 +919,13 @@ export default {
         : this.resolveEvaluationScoreBreakdown(job)
       const updatedRaw = job.created_at || job.updated_at || (fileData && fileData.updated_at) || null
       const logText = this.getJobLogText(job)
+      const inputParts = this.splitInputFileAndFormat(this.getInputFileDisplay(job, outputFileName))
       return {
         rowKey: `job-${job.id || primaryFileId || Math.random()}`,
         rowKind: 'job',
-        inputFile: this.getInputFileDisplay(job, outputFileName),
+        inputFile: inputParts.inputFile,
+        inputFormat: inputParts.inputFormat,
+        inputFileFull: inputParts.inputFileFull,
         lastUpdatedDisplay: updatedRaw ? Utils.getprettytimestamp(updatedRaw) : '—',
         lastUpdatedSort: updatedRaw ? new Date(updatedRaw).getTime() : 0,
         outputFileName,
@@ -1449,7 +1521,8 @@ export default {
     background: rgba(0, 105, 148, 0.04) !important
 
   ::v-deep .solutions-jobs-table table
-    border-collapse: collapse !important
+    border-collapse: separate !important
+    border-spacing: 0
     border: 1px solid rgba(0, 51, 73, 0.24) !important
 
   ::v-deep .solutions-jobs-table thead th,
@@ -1477,7 +1550,7 @@ export default {
     text-decoration: underline
     cursor: pointer
     font: inherit
-    text-align: left
+    text-align: center
     &:hover
       color: #004d6d
 
@@ -1506,17 +1579,31 @@ export default {
     align-items: center
     gap: 12px
     flex-wrap: wrap
+    width: 100%
+
+  .solutions-parameter-hint-text
+    flex: 1 1 320px
+    min-width: 0
 
   .solutions-refresh-btn
     color: #ffffff !important
 
-  .solutions-jobs-table ::v-deep .v-btn--text,
-  .solutions-parameter-spec-btn
+  .solutions-jobs-table ::v-deep .v-btn--text
     text-transform: none !important
     letter-spacing: normal !important
     border: 0 !important
     box-shadow: none !important
     background: transparent !important
+
+  .solutions-parameter-spec-btn
+    text-transform: none !important
+    letter-spacing: normal !important
+    flex: 0 0 auto
+    margin-left: auto !important
+
+  .solutions-parameter-spec-btn ::v-deep .v-btn__content
+    text-transform: none !important
+    letter-spacing: normal !important
 
   .solutions-formula-inputs
     display: flex
@@ -1569,9 +1656,196 @@ export default {
     font-family: var(--neptune-font-code), monospace
     font-size: var(--neptune-fs-body, 14pt) !important
 
-  @media (max-width: 1280px)
-    ::v-deep .solutions-jobs-table .v-data-table__wrapper
-      overflow-x: auto
+  ::v-deep .solutions-jobs-table .v-data-table__wrapper
+    overflow-x: auto !important
+
+  // Freeze Input File + Input Format + Workspace; horizontal scroll moves later columns.
+  // Widths must fit full header labels + sort icons on sortable cols.
+  $jobs-col-file: 180px
+  $jobs-col-format: 170px
+  $jobs-col-ws: 160px
+
+  ::v-deep .solutions-jobs-table .v-data-table__wrapper table
+    border-collapse: separate !important
+    border-spacing: 0
+    table-layout: auto
+    width: max-content
+    min-width: 100%
+
+  // Column titles + cell values centered; headers never ellipsis.
+  ::v-deep .solutions-jobs-table thead th,
+  ::v-deep .solutions-jobs-table tbody td
+    text-align: center !important
+    vertical-align: middle !important
+
+  ::v-deep .solutions-jobs-table thead th
+    white-space: nowrap !important
+    overflow: visible !important
+    text-overflow: clip !important
+    padding-left: 12px !important
+    padding-right: 12px !important
+
+  ::v-deep .solutions-jobs-table thead th .v-data-table-header__content
+    display: inline-flex !important
+    align-items: center !important
+    justify-content: center !important
+    white-space: nowrap !important
+    width: 100%
+
+  // Keep sort arrows visible (not clipped / not faded out).
+  ::v-deep .solutions-jobs-table thead th.sortable .v-data-table-header__icon,
+  ::v-deep .solutions-jobs-table thead th .v-data-table-header__icon
+    opacity: 1 !important
+    display: inline-flex !important
+    margin-left: 4px !important
+    flex-shrink: 0 !important
+
+  .solutions-cell-ellipsis
+    display: inline-block
+    max-width: 100%
+    overflow: hidden
+    text-overflow: ellipsis
+    white-space: nowrap
+    vertical-align: middle
+    text-align: center
+
+  ::v-deep .solutions-jobs-table thead th:nth-child(1),
+  ::v-deep .solutions-jobs-table tbody td:nth-child(1)
+    position: sticky
+    left: 0
+    z-index: 3
+    width: $jobs-col-file !important
+    min-width: $jobs-col-file !important
+    max-width: $jobs-col-file !important
+    box-sizing: border-box
+    background: #fff !important
+    box-shadow: 1px 0 0 rgba(0, 51, 73, 0.18)
+
+  ::v-deep .solutions-jobs-table tbody td:nth-child(1)
+    overflow: hidden
+    text-overflow: ellipsis
+    white-space: nowrap
+
+  ::v-deep .solutions-jobs-table thead th:nth-child(2),
+  ::v-deep .solutions-jobs-table tbody td:nth-child(2)
+    position: sticky
+    left: $jobs-col-file
+    z-index: 3
+    width: $jobs-col-format !important
+    min-width: $jobs-col-format !important
+    max-width: $jobs-col-format !important
+    box-sizing: border-box
+    background: #fff !important
+    box-shadow: 1px 0 0 rgba(0, 51, 73, 0.18)
+
+  ::v-deep .solutions-jobs-table tbody td:nth-child(2)
+    overflow: hidden
+    text-overflow: ellipsis
+    white-space: nowrap
+
+  ::v-deep .solutions-jobs-table thead th:nth-child(3),
+  ::v-deep .solutions-jobs-table tbody td:nth-child(3)
+    position: sticky
+    left: calc(#{$jobs-col-file} + #{$jobs-col-format})
+    z-index: 3
+    width: $jobs-col-ws !important
+    min-width: $jobs-col-ws !important
+    max-width: $jobs-col-ws !important
+    box-sizing: border-box
+    background: #fff !important
+    box-shadow: 2px 0 4px rgba(0, 51, 73, 0.12)
+
+  ::v-deep .solutions-jobs-table tbody td:nth-child(3)
+    overflow: hidden
+    text-overflow: ellipsis
+    white-space: nowrap
+
+  // Non-sticky columns: enough room for full header text (+ sort icon on Modified).
+  ::v-deep .solutions-jobs-table thead th:nth-child(4),
+  ::v-deep .solutions-jobs-table tbody td:nth-child(4)
+    min-width: 160px
+
+  ::v-deep .solutions-jobs-table thead th:nth-child(5),
+  ::v-deep .solutions-jobs-table tbody td:nth-child(5)
+    min-width: 120px
+
+  ::v-deep .solutions-jobs-table thead th:nth-child(6),
+  ::v-deep .solutions-jobs-table tbody td:nth-child(6)
+    min-width: 140px
+
+  ::v-deep .solutions-jobs-table thead th:nth-child(7),
+  ::v-deep .solutions-jobs-table tbody td:nth-child(7)
+    min-width: 120px
+
+  ::v-deep .solutions-jobs-table thead th:nth-child(8),
+  ::v-deep .solutions-jobs-table tbody td:nth-child(8)
+    min-width: 72px
+
+  ::v-deep .solutions-jobs-table thead th:nth-child(9),
+  ::v-deep .solutions-jobs-table tbody td:nth-child(9)
+    min-width: 100px
+
+  ::v-deep .solutions-jobs-table thead th:nth-child(10),
+  ::v-deep .solutions-jobs-table tbody td:nth-child(10)
+    min-width: 100px
+
+  ::v-deep .solutions-jobs-table thead th:nth-child(11),
+  ::v-deep .solutions-jobs-table tbody td:nth-child(11)
+    min-width: 80px
+
+  ::v-deep .solutions-jobs-table thead th:nth-child(12),
+  ::v-deep .solutions-jobs-table tbody td:nth-child(12)
+    min-width: 72px
+
+  ::v-deep .solutions-jobs-table thead th:nth-child(13),
+  ::v-deep .solutions-jobs-table tbody td:nth-child(13)
+    min-width: 64px
+
+  ::v-deep .solutions-jobs-table thead th:nth-child(14),
+  ::v-deep .solutions-jobs-table tbody td:nth-child(14)
+    min-width: 130px
+
+  ::v-deep .solutions-jobs-table thead th:nth-child(15),
+  ::v-deep .solutions-jobs-table tbody td:nth-child(15)
+    min-width: 110px
+
+  ::v-deep .solutions-jobs-table thead th:nth-child(16),
+  ::v-deep .solutions-jobs-table tbody td:nth-child(16)
+    min-width: 90px
+
+  ::v-deep .solutions-jobs-table thead th:nth-child(1),
+  ::v-deep .solutions-jobs-table thead th:nth-child(2),
+  ::v-deep .solutions-jobs-table thead th:nth-child(3)
+    z-index: 4
+    background: #f7fafc !important
+
+  ::v-deep .solutions-jobs-table .results-row--done td:nth-child(1),
+  ::v-deep .solutions-jobs-table .results-row--done td:nth-child(2),
+  ::v-deep .solutions-jobs-table .results-row--done td:nth-child(3)
+    background: #eaf6eb !important
+
+  ::v-deep .solutions-jobs-table .results-row--fail td:nth-child(1),
+  ::v-deep .solutions-jobs-table .results-row--fail td:nth-child(2),
+  ::v-deep .solutions-jobs-table .results-row--fail td:nth-child(3)
+    background: #fdeceb !important
+
+  ::v-deep .solutions-jobs-table .results-row--processing td:nth-child(1),
+  ::v-deep .solutions-jobs-table .results-row--processing td:nth-child(2),
+  ::v-deep .solutions-jobs-table .results-row--processing td:nth-child(3),
+  ::v-deep .solutions-jobs-table .results-row--ongoing td:nth-child(1),
+  ::v-deep .solutions-jobs-table .results-row--ongoing td:nth-child(2),
+  ::v-deep .solutions-jobs-table .results-row--ongoing td:nth-child(3)
+    background: #fff3e0 !important
+
+  .theme--dark ::v-deep .solutions-jobs-table thead th:nth-child(1),
+  .theme--dark ::v-deep .solutions-jobs-table thead th:nth-child(2),
+  .theme--dark ::v-deep .solutions-jobs-table thead th:nth-child(3)
+    background: #1e1e1e !important
+
+  .theme--dark ::v-deep .solutions-jobs-table tbody td:nth-child(1),
+  .theme--dark ::v-deep .solutions-jobs-table tbody td:nth-child(2),
+  .theme--dark ::v-deep .solutions-jobs-table tbody td:nth-child(3)
+    background: #121212 !important
 
 @keyframes job-row-flash
   0%, 100%

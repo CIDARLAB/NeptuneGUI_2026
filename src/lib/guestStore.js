@@ -244,10 +244,17 @@ function updateFile (workspaceId, fileId, content, newName, options = {}) {
   if (!f) return null
   const now = new Date().toISOString()
   const oldName = f.name
-  const touch = options.touch !== false
-  const touchWorkspace = options.touchWorkspace !== false
+  const nextName = (newName != null && String(newName).trim() !== '')
+    ? String(newName).trim()
+    : oldName
+  const nameChanged = nextName !== oldName
+  // Policy: Last Edited updates ONLY when forceTouch (generate / move / copy) or rename.
+  // Ordinary Save must not bump this file or any sibling (e.g. handwritten .mint).
+  const forceTouch = options.forceTouch === true
+  const touch = forceTouch || nameChanged
+  const touchWorkspace = forceTouch || (nameChanged && options.touchWorkspace !== false)
   f.content = content
-  if (newName != null && String(newName).trim() !== '') f.name = String(newName).trim()
+  if (nameChanged) f.name = nextName
   if (touch) f.updated_at = now
   if (touchWorkspace) w.updated_at = now
   // After an in-place rename, drop any leftover rows that still use the old name.
@@ -265,7 +272,7 @@ function renameFile (workspaceId, fileId, newName, content) {
   const existing = getFile(workspaceId, fileId)
   if (!existing) return null
   const body = content != null ? content : existing.content
-  return updateFile(workspaceId, fileId, body, newName)
+  return updateFile(workspaceId, fileId, body, newName, { forceTouch: true, touchWorkspace: true })
 }
 
 function deleteFile (workspaceId, fileId) {
@@ -284,8 +291,12 @@ function upsertFileByName (workspaceId, fileName, content, options = {}) {
   const ext = (String(fileName).match(/\.[^.]+$/) || [''])[0]
   const created = createFile(workspaceId, fileName, ext)
   if (!created) return null
-  // createFile already stamped created/updated; refresh content without double-bumping if touch=false
-  return updateFile(workspaceId, created.id, content, null, options)
+  // New file already has created/updated stamps; fill body without an extra bump
+  // unless caller forceTouch (compile generate) or content write should count.
+  return updateFile(workspaceId, created.id, content, null, {
+    ...options,
+    forceTouch: options.forceTouch === true,
+  })
 }
 
 function findFileByName (workspaceId, fileName) {
@@ -462,6 +473,8 @@ function syncExampleDemoFiles (wid) {
 
   // Only seed a brand-new empty Example workspace. If the user renamed or
   // deleted a seed file, do not recreate the old name on the next load.
+  // Never overwrite existing content/timestamps — Compile to MINT and user edits
+  // must keep their own Last Edited times (only the touched file should change).
   const createMissingSeeds = ws.files.length === 0
 
   const nextFiles = []
@@ -470,11 +483,6 @@ function syncExampleDemoFiles (wid) {
     if (existing) {
       if (!existing.ext && spec.ext) {
         existing.ext = spec.ext
-        changed = true
-      }
-      if (existing.content !== spec.content) {
-        existing.content = spec.content
-        existing.updated_at = now
         changed = true
       }
       nextFiles.push(existing)

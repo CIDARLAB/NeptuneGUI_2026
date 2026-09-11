@@ -76,7 +76,6 @@ export function buildWorkspaceLfrIndex (workspaces) {
       const fileName = String((f && f.name) || '').trim()
       if (!/\.lfr$/i.test(fileName)) return
       const content = fileContentAsString(f && f.content)
-      if (!content.trim()) return
       register({
         path: `${workspaceName}/${fileName}`,
         workspaceName,
@@ -191,8 +190,8 @@ export function formatImportResolveError (result) {
   }
   const list = (result.missing || []).map((m) => `  - ${m}`).join('\n')
   return (
-    'Could not find LFR file(s) referenced by `import:\n' +
+    'The following LFR file(s) referenced by `import do not exist in the matching workspace:\n' +
     list +
-    '\n\nUse WorkspaceName/file.lfr (exact Dashboard workspace name + filename) and check spelling.'
+    '\n\nUse WorkspaceName/file.lfr (exact Dashboard workspace name + filename) and check spelling. Compilation was not started.'
   )
 }

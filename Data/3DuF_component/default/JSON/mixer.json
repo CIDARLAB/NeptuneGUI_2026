@@ -21,7 +21,7 @@
         "edgeBend2": 400.0,
         "rotation": 0.0,
         "position": [
-          15000.0,
+          20000.0,
           20000.0
         ],
         "ID": "mixer_1"
@@ -46,26 +46,33 @@
   ],
   "connections": [],
   "params": {
-    "x-span": 76200,
-    "y-span": 76200,
-    "length": 76200.0,
+    "x-span": 40000.0,
+    "y-span": 40000.0,
+    "length": 40000.0,
     "flowPortCount": 0,
     "controlPortCount": 0,
-    "width": 76200.0
+    "width": 40000.0
   },
   "layers": [
     {
       "name": "FLOW_0",
       "id": "0",
       "type": "FLOW",
-      "params": {},
+      "params": {
+        "z_offset": 0,
+        "flip": false
+      },
       "group": "0"
     },
     {
       "id": "1",
       "name": "CONTROL_0",
       "type": "CONTROL",
-      "group": "0"
+      "group": "0",
+      "params": {
+        "z_offset": 0,
+        "flip": false
+      }
     }
   ],
   "version": "1.2",

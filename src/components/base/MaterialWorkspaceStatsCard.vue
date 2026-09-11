@@ -87,6 +87,44 @@
           </template>
           <span>Open this file in the Editor</span>
         </v-tooltip>
+        <v-tooltip
+          v-if="canTransferFile"
+          bottom
+        >
+          <template v-slot:activator="{ on, attrs }">
+            <v-btn
+              text
+              icon
+              color="primary"
+              class="file-stats-action-btn"
+              v-bind="attrs"
+              v-on="on"
+              @click="emitTransfer(false)"
+            >
+              <v-icon>mdi-content-copy</v-icon>
+            </v-btn>
+          </template>
+          <span>Copy to another workspace</span>
+        </v-tooltip>
+        <v-tooltip
+          v-if="canTransferFile"
+          bottom
+        >
+          <template v-slot:activator="{ on, attrs }">
+            <v-btn
+              text
+              icon
+              color="primary"
+              class="file-stats-action-btn"
+              v-bind="attrs"
+              v-on="on"
+              @click="emitTransfer(true)"
+            >
+              <v-icon>mdi-file-move-outline</v-icon>
+            </v-btn>
+          </template>
+          <span>Move to another workspace</span>
+        </v-tooltip>
         <v-tooltip bottom>
           <template v-slot:activator="{ on, attrs }">
             <v-btn
@@ -230,6 +268,10 @@
         const lowerExt = String(this.ext || '').toLowerCase()
         return lowerExt !== '.log' && lowerExt !== '.json'
       },
+      canTransferFile () {
+        const lowerExt = String(this.ext || '').toLowerCase().replace(/^\./, '')
+        return lowerExt === 'lfr' || lowerExt === 'mint' || lowerExt === 'json'
+      },
     },
 
     methods: {
@@ -312,6 +354,16 @@
         if (!this.canEditFile) return
         this.editfile(this.id)
       },
+      emitTransfer (isMove) {
+        if (!this.canTransferFile) return
+        this.$emit(isMove ? 'moveFile' : 'copyFile', {
+          id: this.id,
+          name: this.name,
+          workspaceid: this.workspaceid,
+          ext: this.ext,
+          content: this.content,
+        })
+      },
     },
   }
 </script>
@@ -335,7 +387,7 @@
 
   .file-stats-actions
     width: 100%
-    flex-wrap: nowrap
+    flex-wrap: wrap
     flex-direction: row
     justify-content: center
     gap: 2px

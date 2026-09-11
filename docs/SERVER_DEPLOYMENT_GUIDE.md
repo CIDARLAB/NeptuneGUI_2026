@@ -126,7 +126,7 @@ Editor actions:
 |----|--------------|--------|
 | **Save and synthesize** (`.lfr`) | `POST /api/v1/mushroommapper` (`compileType` / mode `lfr`) | `fluigi synthesize` |
 | **Save and synthesize** (`.mint`) | `POST /api/v1/fluigi` (`mint`) | `fluigi synthesizeFromMINT` |
-| **Compile to MINT** (`.lfr` only) | `POST /api/v1/mushroommapper` with `compileMode: "lfrToMint"` (aliases `mintOnly`, or `POST /api/v1/lfrToMint`) | `fluigi compile_lfr` — success = primary `*_fromLFR.mint`; unplaced JSON discarded; **no** PR JSON / evaluation |
+| **Compile to MINT** (`.lfr` only) | `POST /api/v1/mushroommapper` with `compileMode: "lfrToMint"` (aliases `mintOnly`, or `POST /api/v1/lfrToMint`) | `fluigi compile_lfr` — success = primary `*_fromLFR.mint`; unplaced JSON discarded; **no** PR JSON / evaluation; **not listed on Jobs** |
 
 ### 4.1 Frontend → Express
 
@@ -155,7 +155,7 @@ Editor fetches `/api/v1/componentFiles` first, then posts:
 }
 ```
 
-> **Note:** `compileMode` / `compileType` of `lfrToMint` or `mintOnly` selects MINT-only. Omit them (or use full synthesize routes) for place-and-route. `componentBundle` and Express merge logic are **implemented**. `evaluationWeights` is the **target contract** (Jobs page weights should be sent with full synthesize so compute can return scored breakdown; until wired, compute uses defaults and the GUI can still recompute Total from returned components). Workspace create (`POST /api/v1/workspace`) accepts optional **`notes`**.
+> **Note:** `compileMode` / `compileType` of `lfrToMint` or `mintOnly` selects MINT-only. Omit them (or use full synthesize routes) for place-and-route. Mint-only jobs are **excluded** from `GET /api/v1/jobs` / the Jobs UI (workspace still receives `*_fromLFR.mint`). Compiling `X.lfr` / `X_fromLFR.mint` never overwrites handwritten `X.mint`; MINT synthesize updates PR JSON / artifacts, not the source `.mint`. `componentBundle` and Express merge logic are **implemented**. `evaluationWeights` is the **target contract** (Jobs page weights should be sent with full synthesize so compute can return scored breakdown; until wired, compute uses defaults and the GUI can still recompute Total from returned components). Workspace create (`POST /api/v1/workspace`) accepts optional **`notes`**. `PUT /api/v1/file` accepts optional **`forceTouch: true`** to bump Last Edited (ordinary Save does not).
 
 #### Each `componentBundle` entry (slimmed by `toCompileComponentBundle` before Modal)
 
@@ -165,7 +165,7 @@ Editor fetches `/api/v1/componentFiles` first, then posts:
 | `name` | Display name |
 | `source` | `default` / `tmp` / `custom` |
 | `sourceType` | Origin type |
-| `params` | User-edited numeric params from Library DIY (mixer allows `edgeBend` / `edgeBend1` / `edgeBend2`) |
+| `params` | User-edited numeric params from Library DIY (channel: `channelWidth` / `height` / `channelRadius` / `crossSection`; mixer: `edgeBend` / `edgeBend1` / `edgeBend2`) |
 | `jsonScript` | Full 3DuF/ParchMint JSON string |
 | `lfrScript` | Component LFR module (for LFR `import`) |
 | `mintScript` | Component MINT snippet |
@@ -205,6 +205,8 @@ Body = enriched payload above. Response = **job UUID** (JSON string).
 4. Collect files under `output/`. Full synthesize prefers `*_fromLFR_PR.json` / `*_fromMINT_PR.json`. TREE-PLACE uses `dump_intermediates=False` in `fluigi/place_and_route.py` (only the PR JSON; no `Neptune_2026/Benchmarks/` tree/result/PNG or cluster dumps). Set that argument to `True` to restore the full inspection set. **Mint-only** keeps the primary `*_fromLFR.mint` and discards unplaced JSON.
 5. Run `compute_layout_evaluation_scores()` on primary `*_PR.json` (**skipped** for `lfrToMint`)
 6. **Remove this job’s temp directory**; keep job metadata in `job_store` until Express fetches and persists. Express then stamps generated names `{stem}(YYYYMMDDHHMM).ext` and writes them into the originating workspace.
+
+**Timeouts:** local `compileRunner.js` and Modal subprocess wall clock are **600 s**; Modal function timeout is **700 s**. On timeout the job fails with log text `compile timed out after 600s (no results)` (local runner kills the fluigi process group). Empty referenced `` `import `` `.lfr` stubs are still written into the compile tree.
 
 ### 4.4 Modal → Express → persistence (target behavior)
 
@@ -273,17 +275,19 @@ On failure: `status: "error"`, `stderr` contains fluigi log tail.
 
 Route: Dashboard → **Results / Jobs** (`Solutions.vue`).
 
+**Scope:** only **Save and synthesize** jobs (`lfr` / `mint`). **Compile to MINT** (`lfrToMint`) is omitted from create/restore/`GET /api/v1/jobs` and from the table.
+
 ### 5.1 Table columns (in addition to existing score columns)
 
 | Column | Description |
 |--------|-------------|
-| Input File | Source LFR/MINT name |
+| **Input File** | Source stem (sticky while scrolling) |
+| **Input Format** | LFR / MINT / … (sticky) |
 | Last Updated | Job completion time |
-| Output File | Primary JSON (prefer `*_PR.json`) |
-| **Workspace** | Workspace containing the output JSON (link to Dashboard) |
+| **Workspace** | Workspace containing the output JSON (link to Dashboard; sticky) |
 | Global Util. … Total | Six components + weighted total |
-| **JSON** | Button → modal (below) |
-| Action | Done / Ongoing / Fail |
+| **JSON** / Log / Visualization | Actions for artifacts |
+| Status | Done / Ongoing / Fail |
 | **Delete** | Last column: remove the job **and** sibling generated files (JSON / MINT / log / eval). Deleting the matching workspace file does the same. |
 
 The table **auto-refreshes every 10 s**. **Refresh** runs an immediate reload and resets that timer. `GET /api/v1/jobs?full=1` returns full job records (used by ZIP export).
@@ -334,11 +338,12 @@ Spec: `docs/EVALUATION_METRIC_SPEC_V1.md`. Implementation: Neptune_2026 `fluigi/
 | Symptom | Action |
 |---------|--------|
 | Empty Component Library | Ensure image includes `seed-data/`; deploy `dataLayer.js` fallback |
-| Compile 501 | `NEPTUNE_COMPILE_URL` not set |
+| Compile 501 | `NEPTUNE_COMPILE_URL` not set (local fluigi needs `NEPTUNE_2026_ROOT` / sibling clone instead) |
 | Compile 502 | Modal down or wrong URL |
+| `compile timed out after 600s (no results)` | P&R exceeded wall clock; simplify design or raise timeouts in `compileRunner.js` / `modal_app.py` together |
 | Wrong component geometry/ports | Push `component_library.py`; rebuild Modal image |
 | `Could not pull default values` | Primitives not up in compute container; check `primitivesReused` in logs |
-| Empty Jobs list | Verify `/api/v1/jobs`; job query must use `id=` |
+| Empty Jobs list | Verify `/api/v1/jobs`; job query must use `id=`; remember **Compile to MINT** never appears on Jobs |
 
 ---
 
@@ -348,9 +353,10 @@ Spec: `docs/EVALUATION_METRIC_SPEC_V1.md`. Implementation: Neptune_2026 `fluigi/
 - [ ] `modal deploy modal_app.py` OK
 - [ ] Fly `NEPTUNE_COMPILE_URL` points to latest Modal URL
 - [ ] After `fly deploy`, logs show 9 default components
-- [ ] Editor Compile returns job id; new row on Jobs page
+- [ ] Editor **Save and synthesize** returns job id; new row on Jobs; **Compile to MINT** writes workspace `*_fromLFR.mint` only (no Jobs row)
 - [ ] Output JSON in correct workspace; evaluation columns populated
 - [ ] Apply new weights updates all Total cells
+- [ ] Timeout around 600 s surfaces `compile timed out after 600s (no results)`
 
 ---
 
@@ -358,11 +364,14 @@ Spec: `docs/EVALUATION_METRIC_SPEC_V1.md`. Implementation: Neptune_2026 `fluigi/
 
 | File | Role |
 |------|------|
-| `modal_app.py` | Compute, primitives reuse, fluigi |
-| `server/index.js` | Compile proxy, evaluation proxy |
+| `modal_app.py` | Compute, primitives reuse, fluigi (600s/700s timeouts) |
+| `server/index.js` | Compile proxy, Jobs filter (no `lfrToMint`), evaluation proxy |
+| `server/compileRunner.js` | Local fluigi runner + process-group timeout |
 | `server/componentBundle.js` | Bundle merge / slim payload |
-| `server/dataLayer.js` | Data volume + seed-data fallback |
-| `src/views/dashboard/Editor.vue` | Compile button |
+| `server/dataLayer.js` | Data volume + seed-data fallback + `forceTouch` |
+| `src/lib/workspaceFileTransfer.js` | Dashboard copy/move for lfr/mint/json |
+| `src/lib/normalizeDeviceJsonFor3DuF.js` | Library board framing before 3DuF postMessage |
+| `src/views/dashboard/Editor.vue` | Save / synthesize / Compile to MINT |
 | `src/views/dashboard/Solutions.vue` | Jobs + evaluation weights UI |
 | `fly.toml` | Fly volume and port |
 | `Neptune_2026/fluigi/evaluation_metric.py` | Scoring |

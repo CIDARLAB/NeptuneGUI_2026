@@ -448,20 +448,30 @@ function createFile (session, workspaceId, fileName, ext) {
   return file
 }
 
-function updateFileContent (session, workspaceId, fileId, content, newName) {
+function updateFileContent (session, workspaceId, fileId, content, newName, options = {}) {
   const list = getFiles(session, workspaceId)
   const f = list.find(x => String(x.id) === String(fileId))
   if (!f) return null
   const now = new Date().toISOString()
+  const oldName = f.name
+  const nextName = (newName != null && String(newName).trim() !== '')
+    ? String(newName).trim()
+    : oldName
+  const nameChanged = nextName !== oldName
+  // Only bump Last Edited for generate / move / copy (forceTouch) or rename.
+  const forceTouch = options && options.forceTouch === true
+  const touch = forceTouch || nameChanged
   f.content = content
-  if (newName != null && String(newName).trim() !== '') f.name = String(newName).trim()
-  f.updated_at = now
+  if (nameChanged) f.name = nextName
+  if (touch) f.updated_at = now
   saveFiles(session, workspaceId, list)
-  const workspaces = getWorkspaces(session)
-  const ws = workspaces.find(w => String(w._id) === String(workspaceId))
-  if (ws) {
-    ws.updated_at = now
-    saveWorkspaces(session, workspaces)
+  if (touch) {
+    const workspaces = getWorkspaces(session)
+    const ws = workspaces.find(w => String(w._id) === String(workspaceId))
+    if (ws) {
+      ws.updated_at = now
+      saveWorkspaces(session, workspaces)
+    }
   }
   return f
 }

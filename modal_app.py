@@ -426,12 +426,13 @@ def _compute_evaluation(pr_json_text: str, json_name: str) -> dict | None:
 
 
 # ---------------------------------------------------------------------------
-# Compute function — spawned once per compile request
-# Runs in its own container with a long timeout
+# Compute function — spawned once per compile request.
+# Container timeout is slightly above the 10-minute fluigi wall clock.
 # ---------------------------------------------------------------------------
 
 
-@app.function(timeout=3600, cpu=4.0)
+# Wall-clock limit matches local compileRunner (10 min) + small margin for cleanup.
+@app.function(timeout=700, cpu=4.0)
 def run_compile(
     job_id: str,
     source_content: str,
@@ -497,7 +498,7 @@ def run_compile(
                 text=True,
                 cwd="/neptune",
                 env=env,
-                timeout=3500,
+                timeout=600,
             )
 
             # Collect output files (JSON layout results)
@@ -557,8 +558,8 @@ def run_compile(
     except subprocess.TimeoutExpired:
         job_store[job_id] = {
             "status": "error",
-            "error": "compile timed out",
-            "log": "compile timed out",
+            "error": "compile timed out after 600s (no results)",
+            "log": "compile timed out after 600s (no results)",
         }
     except Exception as exc:
         job_store[job_id] = {"status": "error", "error": str(exc), "log": str(exc)}

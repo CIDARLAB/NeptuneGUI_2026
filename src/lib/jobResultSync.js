@@ -1,5 +1,23 @@
 import { isWorkspaceVisibleFileName } from './compileOutputFiles'
 
+/** Handwritten X.mint must never be overwritten by jobs that target X_fromLFR.* / X.lfr. */
+export function isHandwrittenMintSiblingOfJob (fileName, sourceFilename) {
+  const name = String(fileName || '')
+  if (!/\.mint$/i.test(name)) return false
+  if (/_fromLFR(?:\(\d{12}\))?\.mint$/i.test(name)) return false
+  const src = String(sourceFilename || '')
+  if (!src) return false
+  const srcStem = src.replace(/\.[^.]+$/, '')
+  const bareStem = name.replace(/\.[^.]+$/, '')
+  if (/_fromLFR$/i.test(srcStem)) {
+    return bareStem.toLowerCase() === srcStem.replace(/_fromLFR$/i, '').toLowerCase()
+  }
+  if (/\.(lfr|v)$/i.test(src)) {
+    return bareStem.toLowerCase() === srcStem.toLowerCase()
+  }
+  return false
+}
+
 export function generatedFileNamesFromJob (job) {
   const names = new Set()
   if (!job || typeof job !== 'object') return []
@@ -65,7 +83,12 @@ export function persistGuestJobOutputs (guestStore, jobs) {
     extras.forEach((f) => {
       if (!f || !f.name) return
       if (!isWorkspaceVisibleFileName(f.name)) return
-      guestStore.upsertFileByName(ws._id, f.name, f.content == null ? '' : f.content)
+      if (isHandwrittenMintSiblingOfJob(f.name, job.sourceFilename)) return
+      // Generated compile outputs only — bump that file's Last Edited, never siblings.
+      guestStore.upsertFileByName(ws._id, f.name, f.content == null ? '' : f.content, {
+        forceTouch: true,
+        touchWorkspace: true,
+      })
     })
     pruneHiddenCompileArtifactsFromWorkspace(guestStore, ws._id)
     if (extras.length) touched.push({ workspaceId: ws._id, jobId: job.id })
