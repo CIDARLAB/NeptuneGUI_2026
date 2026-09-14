@@ -1554,12 +1554,12 @@ const DIY_RENDER_PARAM_ALLOWLIST = {
     'controlChannelWidth',
     'flowChannelWidth',
     'in',
-    'length',
     'out',
     'rotation',
     'leafPitch',
     'stageLength',
-    'valveWidth',
+    'valveWidthX',
+    'valveWidthY',
     'mirrorByX',
     'mirrorByY',
   ]),
@@ -1602,8 +1602,8 @@ const DIY_PARAM_DEFAULTS = {
     controlChannelWidth: 100,
     in: 1,
     out: 8,
-    valveWidth: 1800,
-    length: 500,
+    valveWidthX: 1800,
+    valveWidthY: 500,
     stageLength: 3000,
     rotation: 0,
     mirrorByX: 0,
@@ -1636,11 +1636,17 @@ function pickEditableParams (syntax, jsonObj) {
     if (!Number.isFinite(params.leafPitch) && Number.isFinite(params.spacing)) {
       params.leafPitch = params.spacing
     }
-    if (!Number.isFinite(params.valveWidth) && Number.isFinite(params.width)) {
-      params.valveWidth = params.width
+    if (!Number.isFinite(params.valveWidthX)) {
+      if (Number.isFinite(params.valveWidth)) params.valveWidthX = params.valveWidth
+      else if (Number.isFinite(params.width)) params.valveWidthX = params.width
+    }
+    if (!Number.isFinite(params.valveWidthY) && Number.isFinite(params.length)) {
+      params.valveWidthY = params.length
     }
     delete params.spacing
     delete params.width
+    delete params.valveWidth
+    delete params.length
   }
   return filterDiyParamsByRenderImpact(syntax, params)
 }
@@ -1693,15 +1699,20 @@ function applyEditableParamsScoped (syntax, root, params) {
   const mux = data.sanitizeComponentSyntax(syntax) === 'mux'
   targets.forEach((node) => {
     paramKeys.forEach((k) => {
-      if (typeof node.params[k] === 'number' || (mux && (k === 'leafPitch' || k === 'valveWidth'))) {
+      if (typeof node.params[k] === 'number' || (mux && (k === 'leafPitch' || k === 'valveWidthX' || k === 'valveWidthY'))) {
         node.params[k] = params[k]
       }
     })
     if (mux) {
       delete node.params.spacing
-      if (Number.isFinite(params.valveWidth)) {
-        node.params.valveWidth = params.valveWidth
-        node.params.width = params.valveWidth
+      if (Number.isFinite(params.valveWidthX)) {
+        node.params.valveWidthX = params.valveWidthX
+        node.params.valveWidth = params.valveWidthX
+        node.params.width = params.valveWidthX
+      }
+      if (Number.isFinite(params.valveWidthY)) {
+        node.params.valveWidthY = params.valveWidthY
+        node.params.length = params.valveWidthY
       }
     }
   })
@@ -1761,8 +1772,14 @@ function buildComponentPayload (syntax, jsonObj, source) {
   const lfrText = data.readTextIfExists(data.getComponentDefaultLfrPath(syntax))
   const rawMint = data.readTextIfExists(data.getComponentDefaultMintPath(syntax))
   const mintParams = { ...params }
-  if (data.sanitizeComponentSyntax(syntax) === 'mux' && Number.isFinite(mintParams.valveWidth)) {
-    mintParams.width = mintParams.valveWidth
+  if (data.sanitizeComponentSyntax(syntax) === 'mux') {
+    if (Number.isFinite(mintParams.valveWidthX)) {
+      mintParams.valveWidth = mintParams.valveWidthX
+      mintParams.width = mintParams.valveWidthX
+    }
+    if (Number.isFinite(mintParams.valveWidthY)) {
+      mintParams.length = mintParams.valveWidthY
+    }
   }
   const mintText = rawMint ? applyParamsToMintText(rawMint, mintParams) : ''
   const jsonScript = JSON.stringify(cleaned, null, 2)

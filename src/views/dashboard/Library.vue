@@ -424,6 +424,8 @@ export default {
       diyParamUnits: {
         leafPitch: 'μm',
         valveWidth: 'μm',
+        valveWidthX: 'μm',
+        valveWidthY: 'μm',
         flowChannelWidth: 'μm',
         controlChannelWidth: 'μm',
         channelWidth: 'μm',
@@ -445,11 +447,13 @@ export default {
       diyParamDescriptionsByComponent: {
         mux: {
           leafpitch: 'Center-to-center pitch of adjacent MUX leaf channels. This sets the tree width.',
-          valvewidth: 'Horizontal valve pad width across each vertical flow channel.',
+          valvewidthx: 'Left-right size of each control valve pad.',
+          valvewidthy: 'Up-down size of each control valve pad.',
+          valvewidth: 'Legacy single valve width; use valveWidthX.',
           flowchannelwidth: 'Width of the MUX flow-layer channels.',
           controlchannelwidth: 'Width of the MUX control-layer buses.',
-          width: 'Horizontal valve pad width across each vertical flow channel (legacy name for valveWidth).',
-          length: 'Valve pad thickness along the vertical flow channel.',
+          width: 'Legacy left-right valve size; use valveWidthX.',
+          length: 'Legacy up-down valve size; use valveWidthY.',
           stagelength: 'Vertical length of each MUX tree stage.',
           in: 'Number of MUX flow inputs.',
           out: 'Number of MUX flow outputs (leaf count).',
@@ -498,7 +502,9 @@ export default {
         bendspacing: 'Spacing between adjacent mixer bends.',
         numberofbends: 'Number of serpentine mixer bends.',
         leafpitch: 'Center-to-center pitch of adjacent MUX leaf channels. This sets the tree width.',
-        valvewidth: 'Horizontal valve pad width across each vertical flow channel.',
+        valvewidth: 'Legacy single valve width; use valveWidthX.',
+        valvewidthx: 'Left-right size of each control valve pad.',
+        valvewidthy: 'Up-down size of each control valve pad.',
         flowchannelwidth: 'Width of the primary fluidic channel on the flow layer.',
         controlchannelwidth: 'Width of the pneumatic control channel on the control layer.',
         stagelength: 'Vertical length of each tree or MUX stage.',
@@ -805,24 +811,30 @@ export default {
       if (Number.isFinite(legacyParam) && legacyParam > 0) return legacyParam
       return 4000
     },
-    muxValveWidthFromComponent (component) {
+    muxValveAxisFromComponent (component, keys, fallback) {
       const params = (component && component.params) || {}
-      const direct = Number(params.valveWidth)
-      if (Number.isFinite(direct) && direct > 0) return direct
-      const fromWidth = Number(params.width)
-      if (Number.isFinite(fromWidth) && fromWidth > 0) return fromWidth
+      for (const key of keys) {
+        const direct = Number(params[key])
+        if (Number.isFinite(direct) && direct > 0) return direct
+      }
       try {
         const parsed = JSON.parse(component.jsonScript || component.jsonViewScript || '{}')
         const node = Array.isArray(parsed.components)
           ? parsed.components.find(c => String((c && c.entity) || '').toUpperCase() === 'MUX')
           : null
         const src = (node && node.params) || {}
-        const fromJson = Number(src.valveWidth)
-        if (Number.isFinite(fromJson) && fromJson > 0) return fromJson
-        const legacy = Number(src.width)
-        if (Number.isFinite(legacy) && legacy > 0) return legacy
+        for (const key of keys) {
+          const fromJson = Number(src[key])
+          if (Number.isFinite(fromJson) && fromJson > 0) return fromJson
+        }
       } catch (_) {}
-      return 1800
+      return fallback
+    },
+    muxValveWidthXFromComponent (component) {
+      return this.muxValveAxisFromComponent(component, ['valveWidthX', 'valveWidth', 'width'], 1800)
+    },
+    muxValveWidthYFromComponent (component) {
+      return this.muxValveAxisFromComponent(component, ['valveWidthY', 'length'], 500)
     },
     /**
      * Map stored channel params into the DIY form the same way 3DuF does:
@@ -853,13 +865,16 @@ export default {
       }
       const next = {}
       Object.keys(src).forEach((k) => {
-        if (k === 'crossSection' || k === 'spacing' || k === 'width') return
+        if (k === 'crossSection' || k === 'spacing' || k === 'width' || k === 'valveWidth' || k === 'length') return
         next[k] = String(src[k])
       })
       if (this.isMuxSyntax(component)) {
         next.leafPitch = String(this.muxLeafPitchFromComponent(component))
-        next.valveWidth = String(this.muxValveWidthFromComponent(component))
+        next.valveWidthX = String(this.muxValveWidthXFromComponent(component))
+        next.valveWidthY = String(this.muxValveWidthYFromComponent(component))
         delete next.width
+        delete next.valveWidth
+        delete next.length
       }
       this.diyForm = next
       this.diyChannelProfile = 'CHANNEL'

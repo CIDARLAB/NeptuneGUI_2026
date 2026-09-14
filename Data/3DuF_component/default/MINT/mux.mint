@@ -1,7 +1,7 @@
 DEVICE Super_Mux_8
 LAYER FLOW
 
-H MUX mux_8 1 to 8 leafPitch=4000 flowChannelWidth=500 controlChannelWidth=100 valveWidth=1800 width=1800 length=500 stageLength=3000;
+H MUX mux_8 1 to 8 leafPitch=4000 flowChannelWidth=500 controlChannelWidth=100 valveWidthX=1800 valveWidthY=500 width=1800 length=500 stageLength=3000;
 PORT port_out portRadius=1000;
 H BANK port_in of 8 PORT portRadius=1000 spacing=4000;
 
