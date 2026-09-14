@@ -165,7 +165,7 @@ Editor fetches `/api/v1/componentFiles` first, then posts:
 | `name` | Display name |
 | `source` | `default` / `tmp` / `custom` |
 | `sourceType` | Origin type |
-| `params` | User-edited numeric params from Library DIY (channel: `channelWidth` / `height` / `channelRadius` / `crossSection`; mux: `leafPitch` / `flowChannelWidth` / `controlChannelWidth` / `stageLength` / … — legacy `spacing` maps to `leafPitch`; mixer: `edgeBend` / `edgeBend1` / `edgeBend2`) |
+| `params` | User-edited numeric params from Library DIY (channel: `channelWidth` / `height` / `channelRadius` / `crossSection`; mux: `leafPitch` / `valveWidth` / `flowChannelWidth` / `controlChannelWidth` / `stageLength` / … — legacy `spacing`→`leafPitch`, `width`→`valveWidth`; mixer: `edgeBend` / `edgeBend1` / `edgeBend2`) |
 | `jsonScript` | Full 3DuF/ParchMint JSON string |
 | `lfrScript` | Component LFR module (for LFR `import`) |
 | `mintScript` | Component MINT snippet |

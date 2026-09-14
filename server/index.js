@@ -1559,7 +1559,7 @@ const DIY_RENDER_PARAM_ALLOWLIST = {
     'rotation',
     'leafPitch',
     'stageLength',
-    'width',
+    'valveWidth',
     'mirrorByX',
     'mirrorByY',
   ]),
@@ -1595,13 +1595,31 @@ const DIY_RENDER_PARAM_ALLOWLIST = {
   valve: new Set(['length', 'rotation', 'width', 'mirrorByX', 'mirrorByY']),
 }
 
+const DIY_PARAM_DEFAULTS = {
+  mux: {
+    leafPitch: 4000,
+    flowChannelWidth: 500,
+    controlChannelWidth: 100,
+    in: 1,
+    out: 8,
+    valveWidth: 1800,
+    length: 500,
+    stageLength: 3000,
+    rotation: 0,
+    mirrorByX: 0,
+    mirrorByY: 0,
+  },
+}
+
 function filterDiyParamsByRenderImpact (syntax, params) {
   const safeSyntax = data.sanitizeComponentSyntax(syntax)
   const allow = DIY_RENDER_PARAM_ALLOWLIST[safeSyntax]
   if (!allow || !params || typeof params !== 'object') return params || {}
+  const defaults = DIY_PARAM_DEFAULTS[safeSyntax] || {}
   const next = {}
-  Object.keys(params).forEach((k) => {
-    if (allow.has(k)) next[k] = params[k]
+  allow.forEach((k) => {
+    if (Number.isFinite(params[k])) next[k] = params[k]
+    else if (Number.isFinite(defaults[k])) next[k] = defaults[k]
   })
   return next
 }
@@ -1618,7 +1636,11 @@ function pickEditableParams (syntax, jsonObj) {
     if (!Number.isFinite(params.leafPitch) && Number.isFinite(params.spacing)) {
       params.leafPitch = params.spacing
     }
+    if (!Number.isFinite(params.valveWidth) && Number.isFinite(params.width)) {
+      params.valveWidth = params.width
+    }
     delete params.spacing
+    delete params.width
   }
   return filterDiyParamsByRenderImpact(syntax, params)
 }
@@ -1671,11 +1693,17 @@ function applyEditableParamsScoped (syntax, root, params) {
   const mux = data.sanitizeComponentSyntax(syntax) === 'mux'
   targets.forEach((node) => {
     paramKeys.forEach((k) => {
-      if (typeof node.params[k] === 'number' || (mux && k === 'leafPitch')) {
+      if (typeof node.params[k] === 'number' || (mux && (k === 'leafPitch' || k === 'valveWidth'))) {
         node.params[k] = params[k]
       }
     })
-    if (mux) delete node.params.spacing
+    if (mux) {
+      delete node.params.spacing
+      if (Number.isFinite(params.valveWidth)) {
+        node.params.valveWidth = params.valveWidth
+        node.params.width = params.valveWidth
+      }
+    }
   })
 }
 
@@ -1732,7 +1760,11 @@ function buildComponentPayload (syntax, jsonObj, source) {
   const params = pickEditableParams(syntax, cleaned)
   const lfrText = data.readTextIfExists(data.getComponentDefaultLfrPath(syntax))
   const rawMint = data.readTextIfExists(data.getComponentDefaultMintPath(syntax))
-  const mintText = rawMint ? applyParamsToMintText(rawMint, params) : ''
+  const mintParams = { ...params }
+  if (data.sanitizeComponentSyntax(syntax) === 'mux' && Number.isFinite(mintParams.valveWidth)) {
+    mintParams.width = mintParams.valveWidth
+  }
+  const mintText = rawMint ? applyParamsToMintText(rawMint, mintParams) : ''
   const jsonScript = JSON.stringify(cleaned, null, 2)
   return {
     syntax: data.sanitizeComponentSyntax(syntax),

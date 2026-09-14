@@ -414,7 +414,7 @@ export default {
         valve3d: '3D valve primitive with editable gap, radius, height, and rotation for flow-control geometry.',
         valve_3d: '3D valve primitive with editable gap, radius, height, and rotation for flow-control geometry.',
         mixer: 'Serpentine mixer that combines two or more input streams via diffusion.',
-        mux: 'Multiplexer that routes one input to a selected output channel.',
+        mux: 'Super_Mux_8: eight-input horizontal MUX (leafPitch=4000) with I/O ports and control pads.',
         port: 'External I/O port for connecting tubing or pressure lines to the chip.',
         reaction_chamber: 'Chamber where reagents mix, react, or incubate.',
         tree: 'Branching network that splits a single stream into multiple equal outputs.',
@@ -423,6 +423,7 @@ export default {
       },
       diyParamUnits: {
         leafPitch: 'μm',
+        valveWidth: 'μm',
         flowChannelWidth: 'μm',
         controlChannelWidth: 'μm',
         channelWidth: 'μm',
@@ -444,9 +445,10 @@ export default {
       diyParamDescriptionsByComponent: {
         mux: {
           leafpitch: 'Center-to-center pitch of adjacent MUX leaf channels. This sets the tree width.',
+          valvewidth: 'Horizontal valve pad width across each vertical flow channel.',
           flowchannelwidth: 'Width of the MUX flow-layer channels.',
           controlchannelwidth: 'Width of the MUX control-layer buses.',
-          width: 'Horizontal valve pad width across each vertical flow channel.',
+          width: 'Horizontal valve pad width across each vertical flow channel (legacy name for valveWidth).',
           length: 'Valve pad thickness along the vertical flow channel.',
           stagelength: 'Vertical length of each MUX tree stage.',
           in: 'Number of MUX flow inputs.',
@@ -496,6 +498,7 @@ export default {
         bendspacing: 'Spacing between adjacent mixer bends.',
         numberofbends: 'Number of serpentine mixer bends.',
         leafpitch: 'Center-to-center pitch of adjacent MUX leaf channels. This sets the tree width.',
+        valvewidth: 'Horizontal valve pad width across each vertical flow channel.',
         flowchannelwidth: 'Width of the primary fluidic channel on the flow layer.',
         controlchannelwidth: 'Width of the pneumatic control channel on the control layer.',
         stagelength: 'Vertical length of each tree or MUX stage.',
@@ -777,6 +780,50 @@ export default {
         : ((itemOrSyntax && (itemOrSyntax.syntax || itemOrSyntax.name)) || '')
       return String(syntax).toLowerCase() === 'channel'
     },
+    isMuxSyntax (itemOrSyntax) {
+      const syntax = typeof itemOrSyntax === 'string'
+        ? itemOrSyntax
+        : ((itemOrSyntax && (itemOrSyntax.syntax || itemOrSyntax.name)) || '')
+      return String(syntax).toLowerCase().replace(/[^a-z0-9_-]/g, '') === 'mux'
+    },
+    muxLeafPitchFromComponent (component) {
+      const params = (component && component.params) || {}
+      const direct = Number(params.leafPitch)
+      if (Number.isFinite(direct) && direct > 0) return direct
+      try {
+        const parsed = JSON.parse(component.jsonScript || component.jsonViewScript || '{}')
+        const node = Array.isArray(parsed.components)
+          ? parsed.components.find(c => String((c && c.entity) || '').toUpperCase() === 'MUX')
+          : null
+        const src = (node && node.params) || {}
+        const fromJson = Number(src.leafPitch)
+        if (Number.isFinite(fromJson) && fromJson > 0) return fromJson
+        const legacy = Number(src.spacing)
+        if (Number.isFinite(legacy) && legacy > 0) return legacy
+      } catch (_) {}
+      const legacyParam = Number(params.spacing)
+      if (Number.isFinite(legacyParam) && legacyParam > 0) return legacyParam
+      return 4000
+    },
+    muxValveWidthFromComponent (component) {
+      const params = (component && component.params) || {}
+      const direct = Number(params.valveWidth)
+      if (Number.isFinite(direct) && direct > 0) return direct
+      const fromWidth = Number(params.width)
+      if (Number.isFinite(fromWidth) && fromWidth > 0) return fromWidth
+      try {
+        const parsed = JSON.parse(component.jsonScript || component.jsonViewScript || '{}')
+        const node = Array.isArray(parsed.components)
+          ? parsed.components.find(c => String((c && c.entity) || '').toUpperCase() === 'MUX')
+          : null
+        const src = (node && node.params) || {}
+        const fromJson = Number(src.valveWidth)
+        if (Number.isFinite(fromJson) && fromJson > 0) return fromJson
+        const legacy = Number(src.width)
+        if (Number.isFinite(legacy) && legacy > 0) return legacy
+      } catch (_) {}
+      return 1800
+    },
     /**
      * Map stored channel params into the DIY form the same way 3DuF does:
      * rectangular → channelWidth + height; rounded → channelRadius (half width).
@@ -806,9 +853,14 @@ export default {
       }
       const next = {}
       Object.keys(src).forEach((k) => {
-        if (k === 'crossSection') return
+        if (k === 'crossSection' || k === 'spacing' || k === 'width') return
         next[k] = String(src[k])
       })
+      if (this.isMuxSyntax(component)) {
+        next.leafPitch = String(this.muxLeafPitchFromComponent(component))
+        next.valveWidth = String(this.muxValveWidthFromComponent(component))
+        delete next.width
+      }
       this.diyForm = next
       this.diyChannelProfile = 'CHANNEL'
     },

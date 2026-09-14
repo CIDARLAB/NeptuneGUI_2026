@@ -163,7 +163,7 @@ Editor 在 compile 前拉取 `/api/v1/componentFiles`，组装请求体：
 | `name` | 显示名 |
 | `source` | `default` / `tmp` / `custom` |
 | `sourceType` | 来源类型 |
-| `params` | 用户在 Library DIY 中修改的数值参数（channel：`channelWidth` / `height` / `channelRadius` / `crossSection`；mux：`leafPitch` / `flowChannelWidth` / `controlChannelWidth` / `stageLength` 等 — 旧字段 `spacing` 映射为 `leafPitch`；mixer：`edgeBend` / `edgeBend1` / `edgeBend2`） |
+| `params` | 用户在 Library DIY 中修改的数值参数（channel：`channelWidth` / `height` / `channelRadius` / `crossSection`；mux：`leafPitch` / `valveWidth` / `flowChannelWidth` / `controlChannelWidth` / `stageLength` 等 — 旧字段 `spacing`→`leafPitch`、`width`→`valveWidth`；mixer：`edgeBend` / `edgeBend1` / `edgeBend2`） |
 | `jsonScript` | 完整 3DuF/ParchMint JSON 字符串 |
 | `lfrScript` | 组件 LFR 模块文本（LFR import 用） |
 | `mintScript` | 组件 MINT 片段 |

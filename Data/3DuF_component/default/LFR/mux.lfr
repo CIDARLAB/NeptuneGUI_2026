@@ -1,22 +1,22 @@
-// Minimal LFR case corresponding to a 1-to-8 MUX (multiplexer, fanout).
-// Matches the MINT primitive `MUX ... in=1 out=8` in QuickTest/default/MINT/mux.mint.
-// The 3-bit control signal `c_select` steers the single input to one of eight outputs.
+// Super_Mux_8 — eight flow inlets, one outlet, 3-bit control.
+// Matches MINT-TestCases/Base/Super_Mux_8.mint (H MUX 1 to 8, leafPitch=4000).
+// CONTROL `c_select` chooses which inlet is connected to `out`.
 module mux(
-    finput input,
-    foutput [0:7] outputs,
+    finput [0:7] inputs,
+    foutput out,
     control [0:2] c_select
 );
     distribute@(c_select)
     begin
         case(c_select)
-            3'b000 : outputs[0] <= input;
-            3'b001 : outputs[1] <= input;
-            3'b010 : outputs[2] <= input;
-            3'b011 : outputs[3] <= input;
-            3'b100 : outputs[4] <= input;
-            3'b101 : outputs[5] <= input;
-            3'b110 : outputs[6] <= input;
-            3'b111 : outputs[7] <= input;
+            3'b000 : out <= inputs[0];
+            3'b001 : out <= inputs[1];
+            3'b010 : out <= inputs[2];
+            3'b011 : out <= inputs[3];
+            3'b100 : out <= inputs[4];
+            3'b101 : out <= inputs[5];
+            3'b110 : out <= inputs[6];
+            3'b111 : out <= inputs[7];
         endcase
     end
 endmodule

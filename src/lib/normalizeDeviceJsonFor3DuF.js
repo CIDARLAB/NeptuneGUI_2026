@@ -126,11 +126,13 @@ function ensureLayers (device) {
 
 function looksLikeLibraryPreview (device, bbox) {
   const comps = Array.isArray(device.components) ? device.components : []
-  if (comps.length === 0 || comps.length > 12) return false
+  if (comps.length === 0) return false
   const name = String(device.name || '').toLowerCase()
-  if (name && (LARGE_LIBRARY_NAMES.has(name) || [
+  if (name && LARGE_LIBRARY_NAMES.has(name)) return true
+  if (comps.length > 12) return false
+  if (name && [
     'channel', 'mixer', 'nozzle_droplet_generator', 'picoinjector', 'port', 'reaction_chamber', 'valve3d',
-  ].includes(name))) {
+  ].includes(name)) {
     return true
   }
   // Heuristic: few components and modest content span → library preview, not a full chip.

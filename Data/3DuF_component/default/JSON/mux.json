@@ -1,163 +1,1758 @@
 {
-  "name": "mux",
-  "components": [
-    {
-      "name": "mux_1",
-      "id": "mux_1",
-      "entity": "MUX",
-      "layers": [
-        "0"
-      ],
-      "params": {
-        "componentSpacing": 1000,
-        "flowChannelWidth": 500,
-        "leafPitch": 4000,
-        "in": 1,
-        "out": 8,
-        "width": 1800,
-        "length": 500.0,
-        "height": 250,
-        "stageLength": 3000,
-        "controlChannelWidth": 100,
-        "rotation": 0.0,
-        "mirrorByX": 0.0,
-        "mirrorByY": 0.0,
-        "position": [
-          40000.0,
-          40000.0
-        ],
-        "ID": "mux_1"
-      },
-      "ports": [
+    "name": "mux",
+    "IsPlacedAndRouted": true,
+    "components": [
         {
-          "x": 15400.0,
-          "y": 0.0,
-          "label": "1",
-          "layer": "FLOW"
+            "name": "mux_8",
+            "id": "mux_8",
+            "entity": "MUX",
+            "layers": [
+                "0"
+            ],
+            "params": {
+                "leafPitch": 4000,
+                "flowChannelWidth": 500,
+                "controlChannelWidth": 100,
+                "width": 1800.0,
+                "length": 500.0,
+                "stageLength": 3000,
+                "in": 1,
+                "out": 8,
+                "componentSpacing": 1000.0,
+                "rotation": 0,
+                "height": 250.0,
+                "mirrorByX": 0,
+                "mirrorByY": 0.0,
+                "position": [
+                    40000.0,
+                    40000.0
+                ],
+                "ID": "mux_8",
+                "valveWidth": 1800.0
+            },
+            "ports": [
+                {
+                    "x": 15400.0,
+                    "y": 0.0,
+                    "label": "1",
+                    "layer": "FLOW"
+                },
+                {
+                    "x": 29400.0,
+                    "y": 13500.0,
+                    "label": "2",
+                    "layer": "FLOW"
+                },
+                {
+                    "x": 25400.0,
+                    "y": 13500.0,
+                    "label": "3",
+                    "layer": "FLOW"
+                },
+                {
+                    "x": 21400.0,
+                    "y": 13500.0,
+                    "label": "4",
+                    "layer": "FLOW"
+                },
+                {
+                    "x": 17400.0,
+                    "y": 13500.0,
+                    "label": "5",
+                    "layer": "FLOW"
+                },
+                {
+                    "x": 13400.0,
+                    "y": 13500.0,
+                    "label": "6",
+                    "layer": "FLOW"
+                },
+                {
+                    "x": 9400.0,
+                    "y": 13500.0,
+                    "label": "7",
+                    "layer": "FLOW"
+                },
+                {
+                    "x": 5400.0,
+                    "y": 13500.0,
+                    "label": "8",
+                    "layer": "FLOW"
+                },
+                {
+                    "x": 1400.0,
+                    "y": 13500.0,
+                    "label": "9",
+                    "layer": "FLOW"
+                },
+                {
+                    "x": 0.0,
+                    "y": 4750.0,
+                    "label": "10",
+                    "layer": "CONTROL"
+                },
+                {
+                    "x": 30800.0,
+                    "y": 5250.0,
+                    "label": "11",
+                    "layer": "CONTROL"
+                },
+                {
+                    "x": 0.0,
+                    "y": 8250.0,
+                    "label": "12",
+                    "layer": "CONTROL"
+                },
+                {
+                    "x": 30800.0,
+                    "y": 8750.0,
+                    "label": "13",
+                    "layer": "CONTROL"
+                },
+                {
+                    "x": 0.0,
+                    "y": 11750.0,
+                    "label": "14",
+                    "layer": "CONTROL"
+                },
+                {
+                    "x": 30800.0,
+                    "y": 12250.0,
+                    "label": "15",
+                    "layer": "CONTROL"
+                }
+            ],
+            "x-span": 30800,
+            "y-span": 13500
         },
         {
-          "x": 29400.0,
-          "y": 13500.0,
-          "label": "2",
-          "layer": "FLOW"
+            "name": "port_out",
+            "id": "port_out",
+            "entity": "PORT",
+            "layers": [
+                "0"
+            ],
+            "params": {
+                "portRadius": 1000,
+                "componentSpacing": 1000.0,
+                "height": 1100.0,
+                "position": [
+                    40000.0,
+                    21250.0
+                ],
+                "ID": "port_out",
+                "rotation": 0,
+                "mirrorByX": 0
+            },
+            "ports": [
+                {
+                    "label": "1",
+                    "layer": "FLOW",
+                    "x": 1000.0,
+                    "y": 1000.0
+                }
+            ],
+            "x-span": 2000,
+            "y-span": 2000
         },
         {
-          "x": 25400.0,
-          "y": 13500.0,
-          "label": "3",
-          "layer": "FLOW"
+            "name": "port_in_1",
+            "id": "port_in_1",
+            "entity": "PORT",
+            "layers": [
+                "0"
+            ],
+            "params": {
+                "portRadius": 1000,
+                "componentSpacing": 1000.0,
+                "height": 1100.0,
+                "position": [
+                    54000.0,
+                    58750.0
+                ],
+                "ID": "port_in_1",
+                "rotation": 0,
+                "mirrorByX": 0
+            },
+            "ports": [
+                {
+                    "label": "1",
+                    "layer": "FLOW",
+                    "x": 1000.0,
+                    "y": 1000.0
+                }
+            ],
+            "x-span": 2000,
+            "y-span": 2000
         },
         {
-          "x": 21400.0,
-          "y": 13500.0,
-          "label": "4",
-          "layer": "FLOW"
+            "name": "port_in_2",
+            "id": "port_in_2",
+            "entity": "PORT",
+            "layers": [
+                "0"
+            ],
+            "params": {
+                "portRadius": 1000,
+                "componentSpacing": 1000.0,
+                "height": 1100.0,
+                "position": [
+                    50000.0,
+                    58750.0
+                ],
+                "ID": "port_in_2",
+                "rotation": 0,
+                "mirrorByX": 0
+            },
+            "ports": [
+                {
+                    "label": "1",
+                    "layer": "FLOW",
+                    "x": 1000.0,
+                    "y": 1000.0
+                }
+            ],
+            "x-span": 2000,
+            "y-span": 2000
         },
         {
-          "x": 17400.0,
-          "y": 13500.0,
-          "label": "5",
-          "layer": "FLOW"
+            "name": "port_in_3",
+            "id": "port_in_3",
+            "entity": "PORT",
+            "layers": [
+                "0"
+            ],
+            "params": {
+                "portRadius": 1000,
+                "componentSpacing": 1000.0,
+                "height": 1100.0,
+                "position": [
+                    46000.0,
+                    58750.0
+                ],
+                "ID": "port_in_3",
+                "rotation": 0,
+                "mirrorByX": 0
+            },
+            "ports": [
+                {
+                    "label": "1",
+                    "layer": "FLOW",
+                    "x": 1000.0,
+                    "y": 1000.0
+                }
+            ],
+            "x-span": 2000,
+            "y-span": 2000
         },
         {
-          "x": 13400.0,
-          "y": 13500.0,
-          "label": "6",
-          "layer": "FLOW"
+            "name": "port_in_4",
+            "id": "port_in_4",
+            "entity": "PORT",
+            "layers": [
+                "0"
+            ],
+            "params": {
+                "portRadius": 1000,
+                "componentSpacing": 1000.0,
+                "height": 1100.0,
+                "position": [
+                    42000.0,
+                    58750.0
+                ],
+                "ID": "port_in_4",
+                "rotation": 0,
+                "mirrorByX": 0
+            },
+            "ports": [
+                {
+                    "label": "1",
+                    "layer": "FLOW",
+                    "x": 1000.0,
+                    "y": 1000.0
+                }
+            ],
+            "x-span": 2000,
+            "y-span": 2000
         },
         {
-          "x": 9400.0,
-          "y": 13500.0,
-          "label": "7",
-          "layer": "FLOW"
+            "name": "port_in_5",
+            "id": "port_in_5",
+            "entity": "PORT",
+            "layers": [
+                "0"
+            ],
+            "params": {
+                "portRadius": 1000,
+                "componentSpacing": 1000.0,
+                "height": 1100.0,
+                "position": [
+                    38000.0,
+                    58750.0
+                ],
+                "ID": "port_in_5",
+                "rotation": 0,
+                "mirrorByX": 0
+            },
+            "ports": [
+                {
+                    "label": "1",
+                    "layer": "FLOW",
+                    "x": 1000.0,
+                    "y": 1000.0
+                }
+            ],
+            "x-span": 2000,
+            "y-span": 2000
         },
         {
-          "x": 5400.0,
-          "y": 13500.0,
-          "label": "8",
-          "layer": "FLOW"
+            "name": "port_in_6",
+            "id": "port_in_6",
+            "entity": "PORT",
+            "layers": [
+                "0"
+            ],
+            "params": {
+                "portRadius": 1000,
+                "componentSpacing": 1000.0,
+                "height": 1100.0,
+                "position": [
+                    34000.0,
+                    58750.0
+                ],
+                "ID": "port_in_6",
+                "rotation": 0,
+                "mirrorByX": 0
+            },
+            "ports": [
+                {
+                    "label": "1",
+                    "layer": "FLOW",
+                    "x": 1000.0,
+                    "y": 1000.0
+                }
+            ],
+            "x-span": 2000,
+            "y-span": 2000
         },
         {
-          "x": 1400.0,
-          "y": 13500.0,
-          "label": "9",
-          "layer": "FLOW"
+            "name": "port_in_7",
+            "id": "port_in_7",
+            "entity": "PORT",
+            "layers": [
+                "0"
+            ],
+            "params": {
+                "portRadius": 1000,
+                "componentSpacing": 1000.0,
+                "height": 1100.0,
+                "position": [
+                    30000.0,
+                    58750.0
+                ],
+                "ID": "port_in_7",
+                "rotation": 0,
+                "mirrorByX": 0
+            },
+            "ports": [
+                {
+                    "label": "1",
+                    "layer": "FLOW",
+                    "x": 1000.0,
+                    "y": 1000.0
+                }
+            ],
+            "x-span": 2000,
+            "y-span": 2000
         },
         {
-          "x": 0.0,
-          "y": 4750.0,
-          "label": "10",
-          "layer": "CONTROL"
+            "name": "port_in_8",
+            "id": "port_in_8",
+            "entity": "PORT",
+            "layers": [
+                "0"
+            ],
+            "params": {
+                "portRadius": 1000,
+                "componentSpacing": 1000.0,
+                "height": 1100.0,
+                "position": [
+                    26000.0,
+                    58750.0
+                ],
+                "ID": "port_in_8",
+                "rotation": 0,
+                "mirrorByX": 0
+            },
+            "ports": [
+                {
+                    "label": "1",
+                    "layer": "FLOW",
+                    "x": 1000.0,
+                    "y": 1000.0
+                }
+            ],
+            "x-span": 2000,
+            "y-span": 2000
         },
         {
-          "x": 30800.0,
-          "y": 5250.0,
-          "label": "11",
-          "layer": "CONTROL"
+            "name": "cp1",
+            "id": "cp1",
+            "entity": "PORT",
+            "layers": [
+                "1"
+            ],
+            "params": {
+                "portRadius": 1000,
+                "componentSpacing": 1000.0,
+                "height": 1100.0,
+                "position": [
+                    12600.0,
+                    38000.0
+                ],
+                "ID": "cp1"
+            },
+            "ports": [
+                {
+                    "label": "1",
+                    "layer": "CONTROL",
+                    "x": 1000.0,
+                    "y": 1000.0
+                }
+            ],
+            "x-span": 2000,
+            "y-span": 2000
         },
         {
-          "x": 0.0,
-          "y": 8250.0,
-          "label": "12",
-          "layer": "CONTROL"
+            "name": "cp2",
+            "id": "cp2",
+            "entity": "PORT",
+            "layers": [
+                "1"
+            ],
+            "params": {
+                "portRadius": 1000,
+                "componentSpacing": 1000.0,
+                "height": 1100.0,
+                "position": [
+                    67400.0,
+                    38500.0
+                ],
+                "ID": "cp2"
+            },
+            "ports": [
+                {
+                    "label": "1",
+                    "layer": "CONTROL",
+                    "x": 1000.0,
+                    "y": 1000.0
+                }
+            ],
+            "x-span": 2000,
+            "y-span": 2000
         },
         {
-          "x": 30800.0,
-          "y": 8750.0,
-          "label": "13",
-          "layer": "CONTROL"
+            "name": "cp3",
+            "id": "cp3",
+            "entity": "PORT",
+            "layers": [
+                "1"
+            ],
+            "params": {
+                "portRadius": 1000,
+                "componentSpacing": 1000.0,
+                "height": 1100.0,
+                "position": [
+                    9600.0,
+                    41500.0
+                ],
+                "ID": "cp3"
+            },
+            "ports": [
+                {
+                    "label": "1",
+                    "layer": "CONTROL",
+                    "x": 1000.0,
+                    "y": 1000.0
+                }
+            ],
+            "x-span": 2000,
+            "y-span": 2000
         },
         {
-          "x": 0.0,
-          "y": 11750.0,
-          "label": "14",
-          "layer": "CONTROL"
+            "name": "cp4",
+            "id": "cp4",
+            "entity": "PORT",
+            "layers": [
+                "1"
+            ],
+            "params": {
+                "portRadius": 1000,
+                "componentSpacing": 1000.0,
+                "height": 1100.0,
+                "position": [
+                    70400.0,
+                    42000.0
+                ],
+                "ID": "cp4"
+            },
+            "ports": [
+                {
+                    "label": "1",
+                    "layer": "CONTROL",
+                    "x": 1000.0,
+                    "y": 1000.0
+                }
+            ],
+            "x-span": 2000,
+            "y-span": 2000
         },
         {
-          "x": 30800.0,
-          "y": 12250.0,
-          "label": "15",
-          "layer": "CONTROL"
+            "name": "cp5",
+            "id": "cp5",
+            "entity": "PORT",
+            "layers": [
+                "1"
+            ],
+            "params": {
+                "portRadius": 1000,
+                "componentSpacing": 1000.0,
+                "height": 1100.0,
+                "position": [
+                    6600.0,
+                    45000.0
+                ],
+                "ID": "cp5"
+            },
+            "ports": [
+                {
+                    "label": "1",
+                    "layer": "CONTROL",
+                    "x": 1000.0,
+                    "y": 1000.0
+                }
+            ],
+            "x-span": 2000,
+            "y-span": 2000
+        },
+        {
+            "name": "cp6",
+            "id": "cp6",
+            "entity": "PORT",
+            "layers": [
+                "1"
+            ],
+            "params": {
+                "portRadius": 1000,
+                "componentSpacing": 1000.0,
+                "height": 1100.0,
+                "position": [
+                    73400.0,
+                    45500.0
+                ],
+                "ID": "cp6"
+            },
+            "ports": [
+                {
+                    "label": "1",
+                    "layer": "CONTROL",
+                    "x": 1000.0,
+                    "y": 1000.0
+                }
+            ],
+            "x-span": 2000,
+            "y-span": 2000
         }
-      ],
-      "x-span": 30800.0,
-      "y-span": 13500.0
-    }
-  ],
-  "connections": [],
-  "params": {
-    "x-span": 80000.0,
-    "y-span": 80000.0,
-    "length": 80000.0,
-    "flowPortCount": 0,
-    "controlPortCount": 0,
-    "width": 80000.0
-  },
-  "layers": [
-    {
-      "name": "FLOW_0",
-      "id": "0",
-      "type": "FLOW",
-      "params": {
-        "z_offset": 0,
-        "flip": false
-      },
-      "group": "0"
+    ],
+    "connections": [
+        {
+            "sinks": [
+                {
+                    "component": "port_out",
+                    "port": "1"
+                }
+            ],
+            "name": "c_out",
+            "id": "c_out",
+            "source": {
+                "component": "mux_8",
+                "port": "1"
+            },
+            "params": {
+                "channelWidth": 500,
+                "connectionSpacing": 1000,
+                "crossSection": 1,
+                "start": [
+                    "Point",
+                    54400.0,
+                    22000.0
+                ],
+                "end": [
+                    40000.0,
+                    33250.0
+                ],
+                "wayPoints": [
+                    [
+                        40000.0,
+                        22250.0
+                    ],
+                    [
+                        40000.0,
+                        33250.0
+                    ]
+                ],
+                "segments": [
+                    [
+                        [
+                            40000.0,
+                            22250.0
+                        ],
+                        [
+                            40000.0,
+                            33250.0
+                        ]
+                    ]
+                ],
+                "ID": "c_out"
+            },
+            "layer": "0",
+            "paths": [
+                {
+                    "source": {
+                        "component": "mux_8",
+                        "port": "1"
+                    },
+                    "sink": {
+                        "component": "port_out",
+                        "port": "3"
+                    },
+                    "wayPoints": [
+                        [
+                            40000.0,
+                            22250.0
+                        ],
+                        [
+                            40000.0,
+                            33250.0
+                        ]
+                    ]
+                }
+            ],
+            "entity": "CHANNEL"
+        },
+        {
+            "sinks": [
+                {
+                    "component": "mux_8",
+                    "port": "2"
+                }
+            ],
+            "name": "cin1",
+            "id": "cin1",
+            "source": {
+                "component": "port_in_1",
+                "port": "1"
+            },
+            "params": {
+                "channelWidth": 500,
+                "connectionSpacing": 1000,
+                "crossSection": 1,
+                "start": [
+                    "Point",
+                    68400.0,
+                    57500.0
+                ],
+                "end": [
+                    54000.0,
+                    46750.0
+                ],
+                "wayPoints": [
+                    [
+                        54000.0,
+                        57750.0
+                    ],
+                    [
+                        54000.0,
+                        46750.0
+                    ]
+                ],
+                "segments": [
+                    [
+                        [
+                            54000.0,
+                            57750.0
+                        ],
+                        [
+                            54000.0,
+                            46750.0
+                        ]
+                    ]
+                ],
+                "ID": "cin1"
+            },
+            "layer": "0",
+            "paths": [
+                {
+                    "source": {
+                        "component": "port_in_1",
+                        "port": "1"
+                    },
+                    "sink": {
+                        "component": "mux_8",
+                        "port": "2"
+                    },
+                    "wayPoints": [
+                        [
+                            54000.0,
+                            57750.0
+                        ],
+                        [
+                            54000.0,
+                            46750.0
+                        ]
+                    ]
+                }
+            ],
+            "entity": "CHANNEL"
+        },
+        {
+            "sinks": [
+                {
+                    "component": "mux_8",
+                    "port": "3"
+                }
+            ],
+            "name": "cin2",
+            "id": "cin2",
+            "source": {
+                "component": "port_in_2",
+                "port": "1"
+            },
+            "params": {
+                "channelWidth": 500,
+                "connectionSpacing": 1000,
+                "crossSection": 1,
+                "start": [
+                    "Point",
+                    64400.0,
+                    57500.0
+                ],
+                "end": [
+                    50000.0,
+                    46750.0
+                ],
+                "wayPoints": [
+                    [
+                        50000.0,
+                        57750.0
+                    ],
+                    [
+                        50000.0,
+                        46750.0
+                    ]
+                ],
+                "segments": [
+                    [
+                        [
+                            50000.0,
+                            57750.0
+                        ],
+                        [
+                            50000.0,
+                            46750.0
+                        ]
+                    ]
+                ],
+                "ID": "cin2"
+            },
+            "layer": "0",
+            "paths": [
+                {
+                    "source": {
+                        "component": "port_in_2",
+                        "port": "1"
+                    },
+                    "sink": {
+                        "component": "mux_8",
+                        "port": "3"
+                    },
+                    "wayPoints": [
+                        [
+                            50000.0,
+                            57750.0
+                        ],
+                        [
+                            50000.0,
+                            46750.0
+                        ]
+                    ]
+                }
+            ],
+            "entity": "CHANNEL"
+        },
+        {
+            "sinks": [
+                {
+                    "component": "mux_8",
+                    "port": "4"
+                }
+            ],
+            "name": "cin3",
+            "id": "cin3",
+            "source": {
+                "component": "port_in_3",
+                "port": "1"
+            },
+            "params": {
+                "channelWidth": 500,
+                "connectionSpacing": 1000,
+                "crossSection": 1,
+                "start": [
+                    "Point",
+                    60400.0,
+                    57500.0
+                ],
+                "end": [
+                    46000.0,
+                    46750.0
+                ],
+                "wayPoints": [
+                    [
+                        46000.0,
+                        57750.0
+                    ],
+                    [
+                        46000.0,
+                        46750.0
+                    ]
+                ],
+                "segments": [
+                    [
+                        [
+                            46000.0,
+                            57750.0
+                        ],
+                        [
+                            46000.0,
+                            46750.0
+                        ]
+                    ]
+                ],
+                "ID": "cin3"
+            },
+            "layer": "0",
+            "paths": [
+                {
+                    "source": {
+                        "component": "port_in_3",
+                        "port": "1"
+                    },
+                    "sink": {
+                        "component": "mux_8",
+                        "port": "4"
+                    },
+                    "wayPoints": [
+                        [
+                            46000.0,
+                            57750.0
+                        ],
+                        [
+                            46000.0,
+                            46750.0
+                        ]
+                    ]
+                }
+            ],
+            "entity": "CHANNEL"
+        },
+        {
+            "sinks": [
+                {
+                    "component": "mux_8",
+                    "port": "5"
+                }
+            ],
+            "name": "cin4",
+            "id": "cin4",
+            "source": {
+                "component": "port_in_4",
+                "port": "1"
+            },
+            "params": {
+                "channelWidth": 500,
+                "connectionSpacing": 1000,
+                "crossSection": 1,
+                "start": [
+                    "Point",
+                    56400.0,
+                    57500.0
+                ],
+                "end": [
+                    42000.0,
+                    46750.0
+                ],
+                "wayPoints": [
+                    [
+                        42000.0,
+                        57750.0
+                    ],
+                    [
+                        42000.0,
+                        46750.0
+                    ]
+                ],
+                "segments": [
+                    [
+                        [
+                            42000.0,
+                            57750.0
+                        ],
+                        [
+                            42000.0,
+                            46750.0
+                        ]
+                    ]
+                ],
+                "ID": "cin4"
+            },
+            "layer": "0",
+            "paths": [
+                {
+                    "source": {
+                        "component": "port_in_4",
+                        "port": "1"
+                    },
+                    "sink": {
+                        "component": "mux_8",
+                        "port": "5"
+                    },
+                    "wayPoints": [
+                        [
+                            42000.0,
+                            57750.0
+                        ],
+                        [
+                            42000.0,
+                            46750.0
+                        ]
+                    ]
+                }
+            ],
+            "entity": "CHANNEL"
+        },
+        {
+            "sinks": [
+                {
+                    "component": "mux_8",
+                    "port": "6"
+                }
+            ],
+            "name": "cin5",
+            "id": "cin5",
+            "source": {
+                "component": "port_in_5",
+                "port": "1"
+            },
+            "params": {
+                "channelWidth": 500,
+                "connectionSpacing": 1000,
+                "crossSection": 1,
+                "start": [
+                    "Point",
+                    52400.0,
+                    57500.0
+                ],
+                "end": [
+                    38000.0,
+                    46750.0
+                ],
+                "wayPoints": [
+                    [
+                        38000.0,
+                        57750.0
+                    ],
+                    [
+                        38000.0,
+                        46750.0
+                    ]
+                ],
+                "segments": [
+                    [
+                        [
+                            38000.0,
+                            57750.0
+                        ],
+                        [
+                            38000.0,
+                            46750.0
+                        ]
+                    ]
+                ],
+                "ID": "cin5"
+            },
+            "layer": "0",
+            "paths": [
+                {
+                    "source": {
+                        "component": "port_in_5",
+                        "port": "1"
+                    },
+                    "sink": {
+                        "component": "mux_8",
+                        "port": "6"
+                    },
+                    "wayPoints": [
+                        [
+                            38000.0,
+                            57750.0
+                        ],
+                        [
+                            38000.0,
+                            46750.0
+                        ]
+                    ]
+                }
+            ],
+            "entity": "CHANNEL"
+        },
+        {
+            "sinks": [
+                {
+                    "component": "mux_8",
+                    "port": "7"
+                }
+            ],
+            "name": "cin6",
+            "id": "cin6",
+            "source": {
+                "component": "port_in_6",
+                "port": "1"
+            },
+            "params": {
+                "channelWidth": 500,
+                "connectionSpacing": 1000,
+                "crossSection": 1,
+                "start": [
+                    "Point",
+                    48400.0,
+                    57500.0
+                ],
+                "end": [
+                    34000.0,
+                    46750.0
+                ],
+                "wayPoints": [
+                    [
+                        34000.0,
+                        57750.0
+                    ],
+                    [
+                        34000.0,
+                        46750.0
+                    ]
+                ],
+                "segments": [
+                    [
+                        [
+                            34000.0,
+                            57750.0
+                        ],
+                        [
+                            34000.0,
+                            46750.0
+                        ]
+                    ]
+                ],
+                "ID": "cin6"
+            },
+            "layer": "0",
+            "paths": [
+                {
+                    "source": {
+                        "component": "port_in_6",
+                        "port": "1"
+                    },
+                    "sink": {
+                        "component": "mux_8",
+                        "port": "7"
+                    },
+                    "wayPoints": [
+                        [
+                            34000.0,
+                            57750.0
+                        ],
+                        [
+                            34000.0,
+                            46750.0
+                        ]
+                    ]
+                }
+            ],
+            "entity": "CHANNEL"
+        },
+        {
+            "sinks": [
+                {
+                    "component": "mux_8",
+                    "port": "8"
+                }
+            ],
+            "name": "cin7",
+            "id": "cin7",
+            "source": {
+                "component": "port_in_7",
+                "port": "1"
+            },
+            "params": {
+                "channelWidth": 500,
+                "connectionSpacing": 1000,
+                "crossSection": 1,
+                "start": [
+                    "Point",
+                    44400.0,
+                    57500.0
+                ],
+                "end": [
+                    30000.0,
+                    46750.0
+                ],
+                "wayPoints": [
+                    [
+                        30000.0,
+                        57750.0
+                    ],
+                    [
+                        30000.0,
+                        46750.0
+                    ]
+                ],
+                "segments": [
+                    [
+                        [
+                            30000.0,
+                            57750.0
+                        ],
+                        [
+                            30000.0,
+                            46750.0
+                        ]
+                    ]
+                ],
+                "ID": "cin7"
+            },
+            "layer": "0",
+            "paths": [
+                {
+                    "source": {
+                        "component": "port_in_7",
+                        "port": "1"
+                    },
+                    "sink": {
+                        "component": "mux_8",
+                        "port": "8"
+                    },
+                    "wayPoints": [
+                        [
+                            30000.0,
+                            57750.0
+                        ],
+                        [
+                            30000.0,
+                            46750.0
+                        ]
+                    ]
+                }
+            ],
+            "entity": "CHANNEL"
+        },
+        {
+            "sinks": [
+                {
+                    "component": "mux_8",
+                    "port": "9"
+                }
+            ],
+            "name": "cin8",
+            "id": "cin8",
+            "source": {
+                "component": "port_in_8",
+                "port": "1"
+            },
+            "params": {
+                "channelWidth": 500,
+                "connectionSpacing": 1000,
+                "crossSection": 1,
+                "start": [
+                    "Point",
+                    40400.0,
+                    57500.0
+                ],
+                "end": [
+                    26000.0,
+                    46750.0
+                ],
+                "wayPoints": [
+                    [
+                        26000.0,
+                        57750.0
+                    ],
+                    [
+                        26000.0,
+                        46750.0
+                    ]
+                ],
+                "segments": [
+                    [
+                        [
+                            26000.0,
+                            57750.0
+                        ],
+                        [
+                            26000.0,
+                            46750.0
+                        ]
+                    ]
+                ],
+                "ID": "cin8"
+            },
+            "layer": "0",
+            "paths": [
+                {
+                    "source": {
+                        "component": "port_in_8",
+                        "port": "1"
+                    },
+                    "sink": {
+                        "component": "mux_8",
+                        "port": "9"
+                    },
+                    "wayPoints": [
+                        [
+                            26000.0,
+                            57750.0
+                        ],
+                        [
+                            26000.0,
+                            46750.0
+                        ]
+                    ]
+                }
+            ],
+            "entity": "CHANNEL"
+        },
+        {
+            "sinks": [
+                {
+                    "component": "mux_8",
+                    "port": "10"
+                }
+            ],
+            "name": "cc1",
+            "id": "cc1",
+            "source": {
+                "component": "cp1",
+                "port": "1"
+            },
+            "params": {
+                "channelWidth": 100,
+                "connectionSpacing": 1000,
+                "crossSection": 1,
+                "start": [
+                    "Point",
+                    28000.0,
+                    37750.0
+                ],
+                "end": [
+                    24600.0,
+                    38000.0
+                ],
+                "wayPoints": [
+                    [
+                        13600.0,
+                        38000.0
+                    ],
+                    [
+                        24600.0,
+                        38000.0
+                    ]
+                ],
+                "segments": [
+                    [
+                        [
+                            13600.0,
+                            38000.0
+                        ],
+                        [
+                            24600.0,
+                            38000.0
+                        ]
+                    ]
+                ],
+                "ID": "cc1"
+            },
+            "layer": "1",
+            "paths": [
+                {
+                    "source": {
+                        "component": "cp1",
+                        "port": "1"
+                    },
+                    "sink": {
+                        "component": "mux_8",
+                        "port": "10"
+                    },
+                    "wayPoints": [
+                        [
+                            13600.0,
+                            38000.0
+                        ],
+                        [
+                            24600.0,
+                            38000.0
+                        ]
+                    ]
+                }
+            ],
+            "entity": "CHANNEL"
+        },
+        {
+            "sinks": [
+                {
+                    "component": "mux_8",
+                    "port": "11"
+                }
+            ],
+            "name": "cc2",
+            "id": "cc2",
+            "source": {
+                "component": "cp2",
+                "port": "1"
+            },
+            "params": {
+                "channelWidth": 100,
+                "connectionSpacing": 1000,
+                "crossSection": 1,
+                "start": [
+                    "Point",
+                    80800.0,
+                    38250.0
+                ],
+                "end": [
+                    55400.0,
+                    38500.0
+                ],
+                "wayPoints": [
+                    [
+                        66400.0,
+                        38500.0
+                    ],
+                    [
+                        55400.0,
+                        38500.0
+                    ]
+                ],
+                "segments": [
+                    [
+                        [
+                            66400.0,
+                            38500.0
+                        ],
+                        [
+                            55400.0,
+                            38500.0
+                        ]
+                    ]
+                ],
+                "ID": "cc2"
+            },
+            "layer": "1",
+            "paths": [
+                {
+                    "source": {
+                        "component": "cp2",
+                        "port": "1"
+                    },
+                    "sink": {
+                        "component": "mux_8",
+                        "port": "11"
+                    },
+                    "wayPoints": [
+                        [
+                            66400.0,
+                            38500.0
+                        ],
+                        [
+                            55400.0,
+                            38500.0
+                        ]
+                    ]
+                }
+            ],
+            "entity": "CHANNEL"
+        },
+        {
+            "sinks": [
+                {
+                    "component": "mux_8",
+                    "port": "12"
+                }
+            ],
+            "name": "cc3",
+            "id": "cc3",
+            "source": {
+                "component": "cp3",
+                "port": "1"
+            },
+            "params": {
+                "channelWidth": 100,
+                "connectionSpacing": 1000,
+                "crossSection": 1,
+                "start": [
+                    "Point",
+                    25000.0,
+                    41250.0
+                ],
+                "end": [
+                    24600.0,
+                    41500.0
+                ],
+                "wayPoints": [
+                    [
+                        10600.0,
+                        41500.0
+                    ],
+                    [
+                        24600.0,
+                        41500.0
+                    ]
+                ],
+                "segments": [
+                    [
+                        [
+                            10600.0,
+                            41500.0
+                        ],
+                        [
+                            24600.0,
+                            41500.0
+                        ]
+                    ]
+                ],
+                "ID": "cc3"
+            },
+            "layer": "1",
+            "paths": [
+                {
+                    "source": {
+                        "component": "cp3",
+                        "port": "1"
+                    },
+                    "sink": {
+                        "component": "mux_8",
+                        "port": "12"
+                    },
+                    "wayPoints": [
+                        [
+                            10600.0,
+                            41500.0
+                        ],
+                        [
+                            24600.0,
+                            41500.0
+                        ]
+                    ]
+                }
+            ],
+            "entity": "CHANNEL"
+        },
+        {
+            "sinks": [
+                {
+                    "component": "mux_8",
+                    "port": "13"
+                }
+            ],
+            "name": "cc4",
+            "id": "cc4",
+            "source": {
+                "component": "cp4",
+                "port": "1"
+            },
+            "params": {
+                "channelWidth": 100,
+                "connectionSpacing": 1000,
+                "crossSection": 1,
+                "start": [
+                    "Point",
+                    83800.0,
+                    41750.0
+                ],
+                "end": [
+                    55400.0,
+                    42000.0
+                ],
+                "wayPoints": [
+                    [
+                        69400.0,
+                        42000.0
+                    ],
+                    [
+                        55400.0,
+                        42000.0
+                    ]
+                ],
+                "segments": [
+                    [
+                        [
+                            69400.0,
+                            42000.0
+                        ],
+                        [
+                            55400.0,
+                            42000.0
+                        ]
+                    ]
+                ],
+                "ID": "cc4"
+            },
+            "layer": "1",
+            "paths": [
+                {
+                    "source": {
+                        "component": "cp4",
+                        "port": "1"
+                    },
+                    "sink": {
+                        "component": "mux_8",
+                        "port": "13"
+                    },
+                    "wayPoints": [
+                        [
+                            69400.0,
+                            42000.0
+                        ],
+                        [
+                            55400.0,
+                            42000.0
+                        ]
+                    ]
+                }
+            ],
+            "entity": "CHANNEL"
+        },
+        {
+            "sinks": [
+                {
+                    "component": "mux_8",
+                    "port": "14"
+                }
+            ],
+            "name": "cc5",
+            "id": "cc5",
+            "source": {
+                "component": "cp5",
+                "port": "1"
+            },
+            "params": {
+                "channelWidth": 100,
+                "connectionSpacing": 1000,
+                "crossSection": 1,
+                "start": [
+                    "Point",
+                    22000.0,
+                    44750.0
+                ],
+                "end": [
+                    24600.0,
+                    45000.0
+                ],
+                "wayPoints": [
+                    [
+                        7600.0,
+                        45000.0
+                    ],
+                    [
+                        24600.0,
+                        45000.0
+                    ]
+                ],
+                "segments": [
+                    [
+                        [
+                            7600.0,
+                            45000.0
+                        ],
+                        [
+                            24600.0,
+                            45000.0
+                        ]
+                    ]
+                ],
+                "ID": "cc5"
+            },
+            "layer": "1",
+            "paths": [
+                {
+                    "source": {
+                        "component": "cp5",
+                        "port": "1"
+                    },
+                    "sink": {
+                        "component": "mux_8",
+                        "port": "14"
+                    },
+                    "wayPoints": [
+                        [
+                            7600.0,
+                            45000.0
+                        ],
+                        [
+                            24600.0,
+                            45000.0
+                        ]
+                    ]
+                }
+            ],
+            "entity": "CHANNEL"
+        },
+        {
+            "sinks": [
+                {
+                    "component": "mux_8",
+                    "port": "15"
+                }
+            ],
+            "name": "cc6",
+            "id": "cc6",
+            "source": {
+                "component": "cp6",
+                "port": "1"
+            },
+            "params": {
+                "channelWidth": 100,
+                "connectionSpacing": 1000,
+                "crossSection": 1,
+                "start": [
+                    "Point",
+                    86800.0,
+                    45250.0
+                ],
+                "end": [
+                    55400.0,
+                    45500.0
+                ],
+                "wayPoints": [
+                    [
+                        72400.0,
+                        45500.0
+                    ],
+                    [
+                        55400.0,
+                        45500.0
+                    ]
+                ],
+                "segments": [
+                    [
+                        [
+                            72400.0,
+                            45500.0
+                        ],
+                        [
+                            55400.0,
+                            45500.0
+                        ]
+                    ]
+                ],
+                "ID": "cc6"
+            },
+            "layer": "1",
+            "paths": [
+                {
+                    "source": {
+                        "component": "cp6",
+                        "port": "1"
+                    },
+                    "sink": {
+                        "component": "mux_8",
+                        "port": "15"
+                    },
+                    "wayPoints": [
+                        [
+                            72400.0,
+                            45500.0
+                        ],
+                        [
+                            55400.0,
+                            45500.0
+                        ]
+                    ]
+                }
+            ],
+            "entity": "CHANNEL"
+        }
+    ],
+    "params": {
+        "x-span": 80000.0,
+        "y-span": 80000.0,
+        "length": 80000.0,
+        "flowPortCount": 9,
+        "controlPortCount": 6,
+        "width": 80000.0
     },
-    {
-      "id": "1",
-      "name": "CONTROL_0",
-      "type": "CONTROL",
-      "group": "0",
-      "params": {
-        "z_offset": 0,
-        "flip": false
-      }
-    }
-  ],
-  "version": "1.2",
-  "valves": [],
-  "isPnR": false,
-  "layoutConstraints": [],
-  "IsPlacedAndRouted": true
+    "layers": [
+        {
+            "name": "FLOW_0",
+            "id": "0",
+            "type": "FLOW",
+            "params": {
+                "z_offset": 0,
+                "flip": false
+            },
+            "group": "0"
+        },
+        {
+            "name": "CONTROL_0",
+            "id": "1",
+            "type": "CONTROL",
+            "params": {
+                "z_offset": 0,
+                "flip": false
+            },
+            "group": "0"
+        }
+    ],
+    "features": [],
+    "version": "1.2",
+    "valves": [],
+    "isPnR": false,
+    "layoutConstraints": [
+        {
+            "type": "ORIENTATION_CONSTRAINT",
+            "operation_type": "RELATIVE_OPERATIONS",
+            "components": [
+                "mux_8",
+                "port_in_1"
+            ],
+            "connections": [],
+            "params": {},
+            "relationships": {
+                "mux_8": "HORIZONTAL",
+                "port_in_1": "HORIZONTAL"
+            }
+        },
+        {
+            "type": "ORIENTATION_CONSTRAINT",
+            "operation_type": "RELATIVE_OPERATIONS",
+            "components": [
+                "mux_8",
+                "port_in_1"
+            ],
+            "connections": [],
+            "params": {},
+            "relationships": {
+                "mux_8": "HORIZONTAL",
+                "port_in_1": "HORIZONTAL"
+            }
+        }
+    ]
 }
