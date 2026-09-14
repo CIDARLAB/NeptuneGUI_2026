@@ -206,6 +206,7 @@
               <v-text-field
                 v-model="diyForm.channelRadius"
                 label="channelRadius"
+                :suffix="diyParamUnit('channelRadius')"
                 outlined
                 dense
                 class="mb-2"
@@ -234,6 +235,7 @@
                 :key="key"
                 v-model="diyForm[key]"
                 :label="key"
+                :suffix="diyParamUnit(key)"
                 outlined
                 dense
                 class="mb-2"
@@ -266,6 +268,7 @@
               :key="key"
               v-model="diyForm[key]"
               :label="key"
+              :suffix="diyParamUnit(key)"
               outlined
               dense
               class="mb-2"
@@ -418,7 +421,38 @@ export default {
         nozzle_droplet_generator: 'Flow-focusing nozzle that generates monodisperse droplets in a continuous phase.',
         picoinjector: 'Injects picoliter volumes of reagent into passing droplets.',
       },
+      diyParamUnits: {
+        leafPitch: 'μm',
+        flowChannelWidth: 'μm',
+        controlChannelWidth: 'μm',
+        channelWidth: 'μm',
+        channelRadius: 'μm',
+        width: 'μm',
+        length: 'μm',
+        height: 'μm',
+        stageLength: 'μm',
+        portRadius: 'μm',
+        rotation: '°',
+        bendLength: 'μm',
+        bendSpacing: 'μm',
+        valveRadius: 'μm',
+        gap: 'μm',
+        edgeBend: 'μm',
+        edgeBend1: 'μm',
+        edgeBend2: 'μm',
+      },
       diyParamDescriptionsByComponent: {
+        mux: {
+          leafpitch: 'Center-to-center pitch of adjacent MUX leaf channels. This sets the tree width.',
+          flowchannelwidth: 'Width of the MUX flow-layer channels.',
+          controlchannelwidth: 'Width of the MUX control-layer buses.',
+          width: 'Horizontal valve pad width across each vertical flow channel.',
+          length: 'Valve pad thickness along the vertical flow channel.',
+          stagelength: 'Vertical length of each MUX tree stage.',
+          in: 'Number of MUX flow inputs.',
+          out: 'Number of MUX flow outputs (leaf count).',
+          rotation: 'Rotation of the MUX body in degrees.',
+        },
         channel: {
           channelwidth: 'Drawn width of the channel in the flow-layer plane (same as 3DuF CHANNEL).',
           height: 'Extruded depth of the rectangular channel cross-section (same as 3DuF CHANNEL).',
@@ -461,6 +495,10 @@ export default {
         bendlength: 'Length of each full serpentine mixer bend.',
         bendspacing: 'Spacing between adjacent mixer bends.',
         numberofbends: 'Number of serpentine mixer bends.',
+        leafpitch: 'Center-to-center pitch of adjacent MUX leaf channels. This sets the tree width.',
+        flowchannelwidth: 'Width of the primary fluidic channel on the flow layer.',
+        controlchannelwidth: 'Width of the pneumatic control channel on the control layer.',
+        stagelength: 'Vertical length of each tree or MUX stage.',
       },
     }
   },
@@ -497,6 +535,12 @@ export default {
       if (!item || item.source === 'custom') return ''
       const key = String(item.syntax || item.name || '').toLowerCase()
       return this.defaultComponentDescriptions[key] || ''
+    },
+    diyParamUnit (key) {
+      if (!key) return ''
+      if (this.diyParamUnits[key]) return this.diyParamUnits[key]
+      const match = Object.keys(this.diyParamUnits).find(k => k.toLowerCase() === String(key).toLowerCase())
+      return match ? this.diyParamUnits[match] : ''
     },
     diyParamDescription (key) {
       const normalizedKey = String(key || '').trim().toLowerCase()

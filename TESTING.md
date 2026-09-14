@@ -147,7 +147,7 @@ Guest UI smoke (align with **README.md** / **RUN_LFR.md**):
 2. **Editor** — **Rename** Confirm; edit then leave without Save (unsaved text discarded); **Save file** (Last Edited **unchanged**); **Move** / **Copy** (destination Last Edited bumps; stays in Editor).
 3. **Compile to MINT** on an LFR → workspace gets `*_fromLFR.mint`; handwritten `.mint` unchanged; **no** Jobs row.
 4. **Save and synthesize** → Jobs row + stamped PR JSON / MINT; **Alerts** when done/fail; Jobs **Input Format** + sticky columns; **Apply** weights refresh **Total**.
-5. **Component Library** — Channel DIY **CHANNEL** vs **ROUNDED CHANNEL**; open default component in 3DuF (compact board framing); DIY mixer `edgeBend*`.
+5. **Component Library** — Channel DIY **CHANNEL** vs **ROUNDED CHANNEL**; mux DIY **`leafPitch`** (μm suffix; not `spacing`); open default component in 3DuF (compact board framing); DIY mixer `edgeBend*`.
 6. **Export / Import** workspaces ZIP (includes `jobs.json` and typed folders).
 7. Optional: force a long P&R and confirm timeout text `compile timed out after 600s (no results)`.
 

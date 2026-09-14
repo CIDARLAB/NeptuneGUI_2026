@@ -1557,7 +1557,7 @@ const DIY_RENDER_PARAM_ALLOWLIST = {
     'length',
     'out',
     'rotation',
-    'spacing',
+    'leafPitch',
     'stageLength',
     'width',
     'mirrorByX',
@@ -1614,6 +1614,12 @@ function pickEditableParams (syntax, jsonObj) {
     const v = src.params[k]
     if (typeof v === 'number' && Number.isFinite(v)) params[k] = v
   })
+  if (data.sanitizeComponentSyntax(syntax) === 'mux') {
+    if (!Number.isFinite(params.leafPitch) && Number.isFinite(params.spacing)) {
+      params.leafPitch = params.spacing
+    }
+    delete params.spacing
+  }
   return filterDiyParamsByRenderImpact(syntax, params)
 }
 
@@ -1662,10 +1668,14 @@ function applyEditableParamsScoped (syntax, root, params) {
   const src = findDiySourceNode(syntax, root)
   if (!src || !src.params) return
   const targets = [src, ...collectDiyMirrorNodes(root, src.id)]
+  const mux = data.sanitizeComponentSyntax(syntax) === 'mux'
   targets.forEach((node) => {
     paramKeys.forEach((k) => {
-      if (typeof node.params[k] === 'number') node.params[k] = params[k]
+      if (typeof node.params[k] === 'number' || (mux && k === 'leafPitch')) {
+        node.params[k] = params[k]
+      }
     })
+    if (mux) delete node.params.spacing
   })
 }
 

@@ -10,15 +10,15 @@
       ],
       "params": {
         "componentSpacing": 1000,
-        "flowChannelWidth": 800,
-        "spacing": 4000.0,
+        "flowChannelWidth": 500,
+        "leafPitch": 4000,
         "in": 1,
         "out": 8,
-        "width": 1600,
-        "length": 1600.0,
+        "width": 1800,
+        "length": 500.0,
         "height": 250,
-        "stageLength": 4000,
-        "controlChannelWidth": 400,
+        "stageLength": 3000,
+        "controlChannelWidth": 100,
         "rotation": 0.0,
         "mirrorByX": 0.0,
         "mirrorByY": 0.0,
@@ -30,98 +30,98 @@
       },
       "ports": [
         {
-          "x": 23600,
-          "y": 0,
+          "x": 15400.0,
+          "y": 0.0,
           "label": "1",
           "layer": "FLOW"
         },
         {
-          "x": 41100,
-          "y": 18400,
+          "x": 29400.0,
+          "y": 13500.0,
           "label": "2",
           "layer": "FLOW"
         },
         {
-          "x": 36100,
-          "y": 18400,
+          "x": 25400.0,
+          "y": 13500.0,
           "label": "3",
           "layer": "FLOW"
         },
         {
-          "x": 31100,
-          "y": 18400,
+          "x": 21400.0,
+          "y": 13500.0,
           "label": "4",
           "layer": "FLOW"
         },
         {
-          "x": 26100,
-          "y": 18400,
+          "x": 17400.0,
+          "y": 13500.0,
           "label": "5",
           "layer": "FLOW"
         },
         {
-          "x": 21100,
-          "y": 18400,
+          "x": 13400.0,
+          "y": 13500.0,
           "label": "6",
           "layer": "FLOW"
         },
         {
-          "x": 16100,
-          "y": 18400,
+          "x": 9400.0,
+          "y": 13500.0,
           "label": "7",
           "layer": "FLOW"
         },
         {
-          "x": 11100,
-          "y": 18400,
+          "x": 5400.0,
+          "y": 13500.0,
           "label": "8",
           "layer": "FLOW"
         },
         {
-          "x": 6100,
-          "y": 18400,
+          "x": 1400.0,
+          "y": 13500.0,
           "label": "9",
           "layer": "FLOW"
         },
         {
-          "x": 5600,
-          "y": 5800,
+          "x": 0.0,
+          "y": 4750.0,
           "label": "10",
           "layer": "CONTROL"
         },
         {
-          "x": 41600,
-          "y": 7800,
+          "x": 30800.0,
+          "y": 5250.0,
           "label": "11",
           "layer": "CONTROL"
         },
         {
-          "x": 5600,
-          "y": 10600,
+          "x": 0.0,
+          "y": 8250.0,
           "label": "12",
           "layer": "CONTROL"
         },
         {
-          "x": 41600,
-          "y": 12600,
+          "x": 30800.0,
+          "y": 8750.0,
           "label": "13",
           "layer": "CONTROL"
         },
         {
-          "x": 5600,
-          "y": 15400,
+          "x": 0.0,
+          "y": 11750.0,
           "label": "14",
           "layer": "CONTROL"
         },
         {
-          "x": 41600,
-          "y": 17400,
+          "x": 30800.0,
+          "y": 12250.0,
           "label": "15",
           "layer": "CONTROL"
         }
       ],
-      "x-span": 47200.0,
-      "y-span": 18400.0
+      "x-span": 30800.0,
+      "y-span": 13500.0
     }
   ],
   "connections": [],
