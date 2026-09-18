@@ -9,7 +9,7 @@
         "0"
       ],
       "params": {
-        "componentSpacing": 1000,
+        "componentSpacing": 2000,
         "orificeSize": 200,
         "orificeLength": 400,
         "oilInputWidth": 800,

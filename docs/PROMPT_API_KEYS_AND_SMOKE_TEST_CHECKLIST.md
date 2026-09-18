@@ -53,14 +53,7 @@ Common errors:
 
 ### Local automated pre-check (no API keys)
 
-From `Neptune_2026` repo root:
-
-```bash
-poetry run python scripts/verify_prompt_smoke.py
-```
-
-This validates prompt-pack structure, updated distribute/MINT support-doc markers,
-`lfr2en` section headers, and `compile_lfr` on checklist + new distribute patterns.
+Prompt-pack files live under `Neptune_2026/Prompt/` and `NeptuneGUI_2026/src/Prompt/`. Confirm the pack still has `manifest.json`, `en2lfr_*`, `lfr2en_*`, and the syntax manuals before calling a provider.
 
 Run two minimum tests per provider: `en2lfr` + `lfr2en`.
 

@@ -196,7 +196,7 @@
             <v-select
               v-model="diyChannelProfile"
               :items="channelProfileOptions"
-              label="Channel profile"
+              label="Channel type"
               outlined
               dense
               class="mb-2"
@@ -345,6 +345,7 @@ import {
   LFR_NAMING_SPEC_URL,
   validateAndNormalizeLfrName,
 } from '@/lib/lfrNaming'
+import { sortParameterNames } from '@/lib/paramDisplayOrder'
 
 const LIBRARY_JSON_COMMENT_KEYS = ['_LFR_filename', '_LFR_source', '_MINT_filename', '_MINT_source']
 
@@ -395,7 +396,7 @@ export default {
       diyBusy: false,
       diyComponent: null,
       diyForm: {},
-      diyChannelProfile: 'CHANNEL',
+      diyChannelProfile: 'ROUNDED CHANNEL',
       channelProfileOptions: [
         { text: 'CHANNEL', value: 'CHANNEL' },
         { text: 'ROUNDED CHANNEL', value: 'ROUNDED CHANNEL' },
@@ -414,7 +415,7 @@ export default {
         valve3d: '3D valve primitive with editable gap, radius, height, and rotation for flow-control geometry.',
         valve_3d: '3D valve primitive with editable gap, radius, height, and rotation for flow-control geometry.',
         mixer: 'Serpentine mixer that combines two or more input streams via diffusion.',
-        mux: 'Super_Mux_8: eight-input horizontal MUX (leafPitch=4000) with I/O ports and control pads.',
+        mux: 'Super_MUX_8: eight-input horizontal MUX (leafSpace=4000) with I/O ports and control pads.',
         port: 'External I/O port for connecting tubing or pressure lines to the chip.',
         reaction_chamber: 'Chamber where reagents mix, react, or incubate.',
         tree: 'Branching network that splits a single stream into multiple equal outputs.',
@@ -422,18 +423,22 @@ export default {
         picoinjector: 'Injects picoliter volumes of reagent into passing droplets.',
       },
       diyParamUnits: {
+        leafSpace: 'μm',
         leafPitch: 'μm',
         valveWidth: 'μm',
         valveWidthX: 'μm',
         valveWidthY: 'μm',
         flowChannelWidth: 'μm',
         controlChannelWidth: 'μm',
+        componentSpacing: 'μm',
         channelWidth: 'μm',
         channelRadius: 'μm',
         width: 'μm',
         length: 'μm',
         height: 'μm',
+        stageSpace: 'μm',
         stageLength: 'μm',
+        spacing: 'μm',
         portRadius: 'μm',
         rotation: '°',
         bendLength: 'μm',
@@ -446,7 +451,7 @@ export default {
       },
       diyParamDescriptionsByComponent: {
         mux: {
-          leafpitch: 'Center-to-center pitch of adjacent MUX leaf channels. This sets the tree width.',
+          leafspace: 'Center-to-center spacing of adjacent MUX leaf channels. This sets the tree width.',
           valvewidthx: 'Left-right size of each control valve pad.',
           valvewidthy: 'Up-down size of each control valve pad.',
           valvewidth: 'Legacy single valve width; use valveWidthX.',
@@ -454,7 +459,8 @@ export default {
           controlchannelwidth: 'Width of the MUX control-layer buses.',
           width: 'Legacy left-right valve size; use valveWidthX.',
           length: 'Legacy up-down valve size; use valveWidthY.',
-          stagelength: 'Vertical length of each MUX tree stage.',
+          stagespace: 'Along-tree spacing of successive flow stages. This is the gap that separates control buses sandwiched between two flow-tree stages.',
+          componentspacing: 'Keepout halo around the MUX body (µm). Place-and-route keeps other components and channel bodies outside this band.',
           in: 'Number of MUX flow inputs.',
           out: 'Number of MUX flow outputs (leaf count).',
           rotation: 'Rotation of the MUX body in degrees.',
@@ -462,7 +468,15 @@ export default {
         channel: {
           channelwidth: 'Drawn width of the channel in the flow-layer plane (same as 3DuF CHANNEL).',
           height: 'Extruded depth of the rectangular channel cross-section (same as 3DuF CHANNEL).',
-          channelradius: 'Radius of a circular channel cross-section; width and depth follow this radius (same as 3DuF ROUNDED CHANNEL).',
+          channelradius: 'Radius of a circular channel cross-section; width and depth follow this radius (same as 3DuF ROUNDED CHANNEL). JSON stores this as crossSection=1; MINT writes RoundedChannel=True.',
+        },
+        tree: {
+          leafspace: 'Leaf spacing of the TREE. Same role as MUX leafSpace.',
+          stagespace: 'Along-tree spacing of successive TREE stages. Same role as MUX stageSpace.',
+          flowchannelwidth: 'Width of the TREE flow-layer channels.',
+          in: 'Number of TREE trunks (usually 1).',
+          out: 'Number of TREE leaves.',
+          componentspacing: 'Keepout halo around the TREE body (µm). Place-and-route keeps other components and channel bodies outside this band.',
         },
         valve: {
           rotation: 'Valve orientation in degrees; rotates the valve geometry around its insertion point.',
@@ -471,7 +485,7 @@ export default {
           width: 'Valve body width in the rendered geometry.',
           length: 'Valve body length in the rendered geometry.',
           height: 'Extrusion height (z dimension) used for valve rendering/manufacturing layers.',
-          componentspacing: 'Placement offset used by the component macro when positioning local valve features.',
+          componentspacing: 'Keepout halo around the valve body (µm). Place-and-route keeps other components and channel bodies outside this band.',
         },
         valve3d: {
           rotation: 'Valve orientation in degrees; rotates the valve geometry around its insertion point.',
@@ -480,7 +494,7 @@ export default {
           width: 'Valve body width in the rendered geometry.',
           length: 'Valve body length in the rendered geometry.',
           height: 'Extrusion height (z dimension) used for valve rendering/manufacturing layers.',
-          componentspacing: 'Placement offset used by the component macro when positioning local valve features.',
+          componentspacing: 'Keepout halo around the valve body (µm). Place-and-route keeps other components and channel bodies outside this band.',
         },
       },
       diyParamDescriptionsGeneric: {
@@ -494,20 +508,21 @@ export default {
         gap: 'Gap/opening size that controls spacing between two relevant geometry boundaries.',
         channelwidth: 'Width of the channel cross-section in the flow layer.',
         connectionspacing: 'Spacing value used when routing or placing connection/channel segments.',
-        componentspacing: 'Spacing offset used when placing component-local geometry around anchors.',
+        componentspacing: 'Keepout halo around the component body (µm). Place-and-route keeps other components and channel bodies outside this band. Users and DIY components may override the default.',
         portradius: 'Port radius that controls the size of circular I/O port openings.',
         edgebend1: 'Distance from mixer port 1 to the outer end of that incomplete bend. Set to half the connecting channel width so the joint widths match.',
         edgebend2: 'Distance from mixer port 2 to the outer end of that incomplete bend. Set to half the connecting channel width so the joint widths match.',
         bendlength: 'Length of each full serpentine mixer bend.',
         bendspacing: 'Spacing between adjacent mixer bends.',
         numberofbends: 'Number of serpentine mixer bends.',
-        leafpitch: 'Center-to-center pitch of adjacent MUX leaf channels. This sets the tree width.',
+        leafspace: 'Leaf spacing of MUX, TREE, and YTREE. This is the parameter that sets how far apart adjacent leaves sit.',
         valvewidth: 'Legacy single valve width; use valveWidthX.',
         valvewidthx: 'Left-right size of each control valve pad.',
         valvewidthy: 'Up-down size of each control valve pad.',
         flowchannelwidth: 'Width of the primary fluidic channel on the flow layer.',
         controlchannelwidth: 'Width of the pneumatic control channel on the control layer.',
-        stagelength: 'Vertical length of each tree or MUX stage.',
+        stagespace: 'Along-tree spacing of successive MUX/TREE/YTREE flow stages.',
+        spacing: 'BANK instance spacing, or a pump/chamber pitch. Tree primitives use leafSpace.',
       },
     }
   },
@@ -517,7 +532,7 @@ export default {
       return syntax === 'channel'
     },
     diyParamKeys () {
-      return Object.keys(this.diyForm).sort()
+      return sortParameterNames(Object.keys(this.diyForm))
     },
   },
   mounted () {
@@ -792,23 +807,51 @@ export default {
         : ((itemOrSyntax && (itemOrSyntax.syntax || itemOrSyntax.name)) || '')
       return String(syntax).toLowerCase().replace(/[^a-z0-9_-]/g, '') === 'mux'
     },
-    muxLeafPitchFromComponent (component) {
+    isTreeSyntax (itemOrSyntax) {
+      const syntax = typeof itemOrSyntax === 'string'
+        ? itemOrSyntax
+        : ((itemOrSyntax && (itemOrSyntax.syntax || itemOrSyntax.name)) || '')
+      const key = String(syntax).toLowerCase().replace(/[^a-z0-9_-]/g, '')
+      return key === 'tree' || key === 'ytree'
+    },
+    muxLeafSpaceFromComponent (component) {
       const params = (component && component.params) || {}
-      const direct = Number(params.leafPitch)
+      const direct = Number(params.leafSpace)
       if (Number.isFinite(direct) && direct > 0) return direct
+      const legacyNamed = Number(params.leafPitch)
+      if (Number.isFinite(legacyNamed) && legacyNamed > 0) return legacyNamed
       try {
         const parsed = JSON.parse(component.jsonScript || component.jsonViewScript || '{}')
         const node = Array.isArray(parsed.components)
           ? parsed.components.find(c => String((c && c.entity) || '').toUpperCase() === 'MUX')
           : null
         const src = (node && node.params) || {}
-        const fromJson = Number(src.leafPitch)
+        const fromJson = Number(src.leafSpace != null ? src.leafSpace : src.leafPitch)
         if (Number.isFinite(fromJson) && fromJson > 0) return fromJson
         const legacy = Number(src.spacing)
         if (Number.isFinite(legacy) && legacy > 0) return legacy
       } catch (_) {}
       const legacyParam = Number(params.spacing)
       if (Number.isFinite(legacyParam) && legacyParam > 0) return legacyParam
+      return 4000
+    },
+    muxStageSpaceFromComponent (component) {
+      return this.muxValveAxisFromComponent(component, ['stageSpace', 'stageLength'], 4000)
+    },
+    treeLeafSpaceFromComponent (component) {
+      const params = (component && component.params) || {}
+      const direct = Number(params.leafSpace)
+      if (Number.isFinite(direct) && direct > 0) return direct
+      const legacy = Number(params.spacing)
+      if (Number.isFinite(legacy) && legacy > 0) return legacy
+      return 4000
+    },
+    treeStageSpaceFromComponent (component) {
+      const params = (component && component.params) || {}
+      const direct = Number(params.stageSpace)
+      if (Number.isFinite(direct) && direct > 0) return direct
+      const legacy = Number(params.stageLength)
+      if (Number.isFinite(legacy) && legacy > 0) return legacy
       return 4000
     },
     muxValveAxisFromComponent (component, keys, fallback) {
@@ -834,7 +877,7 @@ export default {
       return this.muxValveAxisFromComponent(component, ['valveWidthX', 'valveWidth', 'width'], 1800)
     },
     muxValveWidthYFromComponent (component) {
-      return this.muxValveAxisFromComponent(component, ['valveWidthY', 'length'], 500)
+      return this.muxValveAxisFromComponent(component, ['valveWidthY', 'length'], 1000)
     },
     /**
      * Map stored channel params into the DIY form the same way 3DuF does:
@@ -845,7 +888,7 @@ export default {
       const channelWidth = Number(src.channelWidth)
       const height = Number(src.height)
       const crossSection = Number(src.crossSection)
-      const rounded = Number.isFinite(crossSection) && crossSection >= 0.5
+      const rounded = !Number.isFinite(crossSection) || crossSection >= 0.5
       this.diyChannelProfile = rounded ? 'ROUNDED CHANNEL' : 'CHANNEL'
       if (rounded) {
         const radius = Number.isFinite(channelWidth) ? channelWidth / 2 : ''
@@ -865,19 +908,24 @@ export default {
       }
       const next = {}
       Object.keys(src).forEach((k) => {
-        if (k === 'crossSection' || k === 'spacing' || k === 'width' || k === 'valveWidth' || k === 'length') return
+        if (k === 'crossSection' || k === 'spacing' || k === 'width' || k === 'valveWidth' || k === 'length' || k === 'leafPitch' || k === 'stageLength') return
         next[k] = String(src[k])
       })
       if (this.isMuxSyntax(component)) {
-        next.leafPitch = String(this.muxLeafPitchFromComponent(component))
+        next.leafSpace = String(this.muxLeafSpaceFromComponent(component))
+        next.stageSpace = String(this.muxStageSpaceFromComponent(component))
         next.valveWidthX = String(this.muxValveWidthXFromComponent(component))
         next.valveWidthY = String(this.muxValveWidthYFromComponent(component))
         delete next.width
         delete next.valveWidth
         delete next.length
       }
+      if (this.isTreeSyntax(component)) {
+        next.leafSpace = String(this.treeLeafSpaceFromComponent(component))
+        next.stageSpace = String(this.treeStageSpaceFromComponent(component))
+      }
       this.diyForm = next
-      this.diyChannelProfile = 'CHANNEL'
+      this.diyChannelProfile = 'ROUNDED CHANNEL'
     },
     onChannelProfileChange (newProfile) {
       if (newProfile === 'ROUNDED CHANNEL') {
@@ -915,7 +963,7 @@ export default {
       this.diyBusy = false
       this.diyComponent = null
       this.diyForm = {}
-      this.diyChannelProfile = 'CHANNEL'
+      this.diyChannelProfile = 'ROUNDED CHANNEL'
     },
     updateComponentInList (nextComponent) {
       if (!nextComponent || !nextComponent.syntax) return

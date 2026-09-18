@@ -1,5 +1,5 @@
-// Super_Mux_8 — eight flow inlets, one outlet, 3-bit control.
-// Matches MINT-TestCases/Base/Super_Mux_8.mint (H MUX 1 to 8, leafPitch=4000).
+// Super_MUX_8 — eight flow inlets, one outlet, 3-bit control.
+// Matches MINT_TestCases/Base/Super_MUX_8.mint (H MUX 1 to 8, leafSpace=4000, stageSpace=4000).
 // CONTROL `c_select` chooses which inlet is connected to `out`.
 module mux(
     finput [0:7] inputs,

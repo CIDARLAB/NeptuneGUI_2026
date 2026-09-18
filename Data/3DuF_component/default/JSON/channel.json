@@ -10,7 +10,7 @@
         "0"
       ],
       "params": {
-        "componentSpacing": 1000.0,
+        "componentSpacing": 2000.0,
         "portRadius": 1000.0,
         "height": 1100.0,
         "position": [
@@ -40,7 +40,7 @@
         "0"
       ],
       "params": {
-        "componentSpacing": 1000.0,
+        "componentSpacing": 2000.0,
         "portRadius": 1000.0,
         "height": 1100.0,
         "position": [
@@ -80,7 +80,7 @@
       "params": {
         "connectionSpacing": 1600,
         "channelWidth": 600,
-        "crossSection": 0,
+        "crossSection": 1,
         "height": 600,
         "start": [
           20000.0,
@@ -137,7 +137,7 @@
           ]
         }
       ],
-      "entity": "CHANNEL"
+      "entity": "ROUNDED CHANNEL"
     }
   ],
   "params": {

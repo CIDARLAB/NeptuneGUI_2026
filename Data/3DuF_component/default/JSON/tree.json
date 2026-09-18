@@ -9,14 +9,12 @@
         "0"
       ],
       "params": {
-        "componentSpacing": 1000,
-        "flowChannelWidth": 800,
-        "spacing": 4000.0,
+        "componentSpacing": 2000,
+        "flowChannelWidth": 600,
         "in": 1,
         "out": 8,
         "width": 2460,
         "height": 250,
-        "stageLength": 4000,
         "rotation": 0.0,
         "mirrorByX": 0.0,
         "mirrorByY": 0.0,
@@ -24,7 +22,9 @@
           40000.0,
           40000.0
         ],
-        "ID": "tree_1"
+        "ID": "tree_1",
+        "leafSpace": 4000.0,
+        "stageSpace": 4000
       },
       "ports": [
         {

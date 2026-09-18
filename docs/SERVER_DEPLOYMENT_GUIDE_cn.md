@@ -163,7 +163,7 @@ Editor 在 compile 前拉取 `/api/v1/componentFiles`，组装请求体：
 | `name` | 显示名 |
 | `source` | `default` / `tmp` / `custom` |
 | `sourceType` | 来源类型 |
-| `params` | 用户在 Library DIY 中修改的数值参数（channel：`channelWidth` / `height` / `channelRadius` / `crossSection`；mux：`leafPitch` / `valveWidthX` / `valveWidthY` / `flowChannelWidth` / `controlChannelWidth` / `stageLength` 等 — 旧字段 `spacing`→`leafPitch`、`width`/`valveWidth`→`valveWidthX`、`length`→`valveWidthY`；mixer：`edgeBend` / `edgeBend1` / `edgeBend2`） |
+| `params` | 用户在 Library DIY 中修改的数值参数（channel：`channelWidth` / `height` / `channelRadius` / JSON `crossSection`，下拉框为 **Channel type**；mux/tree：`leafSpace` / `stageSpace` 等 — 旧字段 `leafPitch`/`spacing`/`stageLength` 会迁移；mux 另有 `valveWidthX`/`valveWidthY`；BANK 的 `spacing` 是实例间距；mixer：`edgeBend*`；多数类型可编辑 keepout **`componentSpacing`**，内置默认 **2000** µm）。表单排序见 `src/lib/paramDisplayOrder.js`。 |
 | `jsonScript` | 完整 3DuF/ParchMint JSON 字符串 |
 | `lfrScript` | 组件 LFR 模块文本（LFR import 用） |
 | `mintScript` | 组件 MINT 片段 |
@@ -299,7 +299,7 @@ Express 在 job 成功后应：
 - 下方按钮：
   - **Download** — 下载当前 JSON 文件
   - **Import to Component Library** — 作为 custom 组件导入
-  - **Open in 3DuF** — 打开 [3duf.org](https://3duf.org/) 并加载该 JSON（需使用 routed `*_PR.json`）
+  - **Open in 3DuF** — 打开 `THREE_DUF_APP_URL`（本仓库暂为 `http://localhost:8083/`）并加载该 JSON（需使用 routed `*_PR.json`）
   - **Delete** — 从 workspace 删除该 job 及其同次生成文件，并更新 jobs 列表
 
 ### 5.3 Evaluation Score 与权重重算

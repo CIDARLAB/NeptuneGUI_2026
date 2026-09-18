@@ -165,7 +165,7 @@ Editor fetches `/api/v1/componentFiles` first, then posts:
 | `name` | Display name |
 | `source` | `default` / `tmp` / `custom` |
 | `sourceType` | Origin type |
-| `params` | User-edited numeric params from Library DIY (channel: `channelWidth` / `height` / `channelRadius` / `crossSection`; mux: `leafPitch` / `valveWidthX` / `valveWidthY` / `flowChannelWidth` / `controlChannelWidth` / `stageLength` / … — legacy `spacing`→`leafPitch`, `width`/`valveWidth`→`valveWidthX`, `length`→`valveWidthY`; mixer: `edgeBend` / `edgeBend1` / `edgeBend2`) |
+| `params` | User-edited numeric params from Library DIY (channel: `channelWidth` / `height` / `channelRadius` / JSON `crossSection` from **Channel type**; mux/tree: `leafSpace` / `stageSpace` / … — legacy `leafPitch`/`spacing`/`stageLength` migrate; mux also `valveWidthX`/`valveWidthY`; BANK `spacing` is instance pitch; mixer: `edgeBend*`; most types expose keepout **`componentSpacing`**, default **2000** µm). Display order: `src/lib/paramDisplayOrder.js`. |
 | `jsonScript` | Full 3DuF/ParchMint JSON string |
 | `lfrScript` | Component LFR module (for LFR `import`) |
 | `mintScript` | Component MINT snippet |
@@ -300,7 +300,7 @@ The table **auto-refreshes every 10 s**. **Refresh** runs an immediate reload an
 - Actions:
   - **Download** — download the JSON file
   - **Import to Component Library** — add as custom component
-  - **Open in 3DuF** — load routed `*_PR.json` at [3duf.org](https://3duf.org/)
+  - **Open in 3DuF** — load routed `*_PR.json` at the URL in `src/lib/open3DuFPostMessage.js` (`THREE_DUF_APP_URL`; this checkout uses `http://localhost:8083/`)
   - **Delete** — remove the job and generated siblings from the workspace, then refresh the jobs list
 
 ### 5.3 Evaluation scores and weight re-apply
@@ -371,6 +371,8 @@ Spec: `docs/EVALUATION_METRIC_SPEC_V1.md`. Implementation: Neptune_2026 `fluigi/
 | `server/dataLayer.js` | Data volume + seed-data fallback + `forceTouch` |
 | `src/lib/workspaceFileTransfer.js` | Dashboard copy/move for lfr/mint/json |
 | `src/lib/normalizeDeviceJsonFor3DuF.js` | Library board framing before 3DuF postMessage |
+| `src/lib/paramDisplayOrder.js` | Library DIY parameter field order |
+| `src/lib/open3DuFPostMessage.js` | `THREE_DUF_APP_URL` + loadDeviceFromJSON handshake |
 | `src/views/dashboard/Editor.vue` | Save / synthesize / Compile to MINT |
 | `src/views/dashboard/Solutions.vue` | Jobs + evaluation weights UI |
 | `fly.toml` | Fly volume and port |

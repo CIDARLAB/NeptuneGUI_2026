@@ -3,7 +3,7 @@ Neptune 2026 - MINT Syntax Manual (Quick Reference)
 Canonical implementation and examples:
 - Neptune_2026/docs/LFR_MINT_LANGUAGE_MANUAL.md
 - Neptune_2026/pylfr/pymint/
-- Neptune_2026/Microfluidics-Benchmarks/MINT-TestCases/
+- Neptune_2026/Microfluidics-Benchmarks/MINT_TestCases/
 
 1) Top-level structure
 DEVICE <name>

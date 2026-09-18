@@ -9,7 +9,7 @@
         "0"
       ],
       "params": {
-        "componentSpacing": 1000.0,
+        "componentSpacing": 2000.0,
         "portRadius": 1000.0,
         "height": 1100.0,
         "position": [

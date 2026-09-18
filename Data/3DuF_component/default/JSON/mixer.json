@@ -9,16 +9,16 @@
         "0"
       ],
       "params": {
-        "componentSpacing": 1000.0,
-        "channelWidth": 800.0,
+        "componentSpacing": 2000.0,
+        "channelWidth": 600.0,
         "bendSpacing": 1230.0,
         "numberOfBends": 1.0,
         "bendLength": 2460.0,
         "height": 250.0,
         "mirrorByX": 0.0,
         "mirrorByY": 0.0,
-        "edgeBend1": 400.0,
-        "edgeBend2": 400.0,
+        "edgeBend1": 300.0,
+        "edgeBend2": 300.0,
         "rotation": 0.0,
         "position": [
           20000.0,
@@ -28,20 +28,20 @@
       },
       "ports": [
         {
-          "x": 2030,
+          "x": 1830,
           "y": 0,
           "label": "1",
           "layer": "FLOW"
         },
         {
-          "x": 2030,
-          "y": 4860,
+          "x": 1830,
+          "y": 4260,
           "label": "2",
           "layer": "FLOW"
         }
       ],
-      "x-span": 4060.0,
-      "y-span": 4860.0
+      "x-span": 3660.0,
+      "y-span": 4260.0
     }
   ],
   "connections": [],

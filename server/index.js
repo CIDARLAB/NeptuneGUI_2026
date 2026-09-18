@@ -1547,21 +1547,22 @@ function findDiySourceNode (syntax, jsonObj) {
 // Keep only DIY params that affect 3DuF geometry rendering for built-in components.
 // Derived from each corresponding 3DuF component class render2D()/transformRender().
 const DIY_RENDER_PARAM_ALLOWLIST = {
-  // crossSection is set via the CHANNEL / ROUNDED CHANNEL profile UI (not shown as a raw field).
+  // crossSection is set via the CHANNEL / ROUNDED CHANNEL type UI (not shown as a raw field).
   channel: new Set(['channelWidth', 'height', 'crossSection']),
-  mixer: new Set(['bendLength', 'bendSpacing', 'channelWidth', 'numberOfBends', 'edgeBend', 'edgeBend1', 'edgeBend2', 'rotation', 'mirrorByX', 'mirrorByY']),
+  mixer: new Set(['channelWidth', 'bendLength', 'bendSpacing', 'numberOfBends', 'edgeBend', 'edgeBend1', 'edgeBend2', 'rotation', 'mirrorByX', 'mirrorByY', 'componentSpacing']),
   mux: new Set([
-    'controlChannelWidth',
-    'flowChannelWidth',
     'in',
     'out',
-    'rotation',
-    'leafPitch',
-    'stageLength',
+    'flowChannelWidth',
+    'controlChannelWidth',
+    'leafSpace',
+    'stageSpace',
     'valveWidthX',
     'valveWidthY',
+    'rotation',
     'mirrorByX',
     'mirrorByY',
+    'componentSpacing',
   ]),
   nozzle_droplet_generator: new Set([
     'oilInputWidth',
@@ -1573,6 +1574,7 @@ const DIY_RENDER_PARAM_ALLOWLIST = {
     'rotation',
     'mirrorByX',
     'mirrorByY',
+    'componentSpacing',
   ]),
   picoinjector: new Set([
     'dropletWidth',
@@ -1587,27 +1589,29 @@ const DIY_RENDER_PARAM_ALLOWLIST = {
     'width',
     'mirrorByX',
     'mirrorByY',
+    'componentSpacing',
   ]),
-  port: new Set(['portRadius']),
-  reaction_chamber: new Set(['cornerRadius', 'length', 'rotation', 'width', 'mirrorByX', 'mirrorByY']),
-  tree: new Set(['flowChannelWidth', 'in', 'out', 'rotation', 'spacing', 'stageLength', 'mirrorByX', 'mirrorByY']),
-  valve3d: new Set(['gap', 'rotation', 'valveRadius']),
-  valve: new Set(['length', 'rotation', 'width', 'mirrorByX', 'mirrorByY']),
+  port: new Set(['portRadius', 'height', 'rotation', 'componentSpacing']),
+  reaction_chamber: new Set(['width', 'length', 'cornerRadius', 'rotation', 'mirrorByX', 'mirrorByY', 'componentSpacing']),
+  tree: new Set(['in', 'out', 'flowChannelWidth', 'leafSpace', 'stageSpace', 'rotation', 'mirrorByX', 'mirrorByY', 'componentSpacing']),
+  valve3d: new Set(['gap', 'valveRadius', 'rotation', 'componentSpacing']),
+  valve: new Set(['width', 'length', 'rotation', 'mirrorByX', 'mirrorByY', 'componentSpacing']),
 }
 
 const DIY_PARAM_DEFAULTS = {
   mux: {
-    leafPitch: 4000,
-    flowChannelWidth: 500,
-    controlChannelWidth: 100,
     in: 1,
     out: 8,
+    flowChannelWidth: 600,
+    controlChannelWidth: 600,
+    leafSpace: 4000,
+    stageSpace: 4000,
     valveWidthX: 1800,
-    valveWidthY: 500,
-    stageLength: 3000,
+    valveWidthY: 1000,
     rotation: 0,
     mirrorByX: 0,
     mirrorByY: 0,
+    componentSpacing: 2000,
   },
 }
 
@@ -1632,10 +1636,16 @@ function pickEditableParams (syntax, jsonObj) {
     const v = src.params[k]
     if (typeof v === 'number' && Number.isFinite(v)) params[k] = v
   })
-  if (data.sanitizeComponentSyntax(syntax) === 'mux') {
-    if (!Number.isFinite(params.leafPitch) && Number.isFinite(params.spacing)) {
-      params.leafPitch = params.spacing
+  if (data.sanitizeComponentSyntax(syntax) === 'mux' || data.sanitizeComponentSyntax(syntax) === 'tree') {
+    if (!Number.isFinite(params.leafSpace)) {
+      if (Number.isFinite(params.leafPitch)) params.leafSpace = params.leafPitch
+      else if (Number.isFinite(params.spacing)) params.leafSpace = params.spacing
     }
+    if (!Number.isFinite(params.stageSpace) && Number.isFinite(params.stageLength)) {
+      params.stageSpace = params.stageLength
+    }
+  }
+  if (data.sanitizeComponentSyntax(syntax) === 'mux') {
     if (!Number.isFinite(params.valveWidthX)) {
       if (Number.isFinite(params.valveWidth)) params.valveWidthX = params.valveWidth
       else if (Number.isFinite(params.width)) params.valveWidthX = params.width
@@ -1643,10 +1653,14 @@ function pickEditableParams (syntax, jsonObj) {
     if (!Number.isFinite(params.valveWidthY) && Number.isFinite(params.length)) {
       params.valveWidthY = params.length
     }
-    delete params.spacing
     delete params.width
     delete params.valveWidth
     delete params.length
+  }
+  if (data.sanitizeComponentSyntax(syntax) === 'mux' || data.sanitizeComponentSyntax(syntax) === 'tree') {
+    delete params.spacing
+    delete params.leafPitch
+    delete params.stageLength
   }
   return filterDiyParamsByRenderImpact(syntax, params)
 }
@@ -1696,26 +1710,41 @@ function applyEditableParamsScoped (syntax, root, params) {
   const src = findDiySourceNode(syntax, root)
   if (!src || !src.params) return
   const targets = [src, ...collectDiyMirrorNodes(root, src.id)]
-  const mux = data.sanitizeComponentSyntax(syntax) === 'mux'
-  targets.forEach((node) => {
-    paramKeys.forEach((k) => {
-      if (typeof node.params[k] === 'number' || (mux && (k === 'leafPitch' || k === 'valveWidthX' || k === 'valveWidthY'))) {
-        node.params[k] = params[k]
+    const mux = data.sanitizeComponentSyntax(syntax) === 'mux'
+    const tree = data.sanitizeComponentSyntax(syntax) === 'tree'
+    const channel = data.sanitizeComponentSyntax(syntax) === 'channel'
+    targets.forEach((node) => {
+      paramKeys.forEach((k) => {
+        if (typeof node.params[k] === 'number' || (mux && (k === 'leafSpace' || k === 'valveWidthX' || k === 'valveWidthY' || k === 'stageSpace')) || (tree && (k === 'leafSpace' || k === 'stageSpace')) || (channel && k === 'crossSection')) {
+          node.params[k] = params[k]
+        }
+      })
+      if (mux || tree) {
+        delete node.params.spacing
+        delete node.params.leafPitch
+        delete node.params.stageLength
+        if (Number.isFinite(params.leafSpace)) {
+          node.params.leafSpace = params.leafSpace
+        }
+        if (Number.isFinite(params.stageSpace)) {
+          node.params.stageSpace = params.stageSpace
+        }
+      }
+      if (mux) {
+        if (Number.isFinite(params.valveWidthX)) {
+          node.params.valveWidthX = params.valveWidthX
+          node.params.valveWidth = params.valveWidthX
+          node.params.width = params.valveWidthX
+        }
+        if (Number.isFinite(params.valveWidthY)) {
+          node.params.valveWidthY = params.valveWidthY
+          node.params.length = params.valveWidthY
+        }
+      }
+      if (channel && Number.isFinite(params.crossSection)) {
+        node.entity = params.crossSection >= 0.5 ? 'ROUNDED CHANNEL' : 'CHANNEL'
       }
     })
-    if (mux) {
-      delete node.params.spacing
-      if (Number.isFinite(params.valveWidthX)) {
-        node.params.valveWidthX = params.valveWidthX
-        node.params.valveWidth = params.valveWidthX
-        node.params.width = params.valveWidthX
-      }
-      if (Number.isFinite(params.valveWidthY)) {
-        node.params.valveWidthY = params.valveWidthY
-        node.params.length = params.valveWidthY
-      }
-    }
-  })
 }
 
 function formatScalar (v) {
