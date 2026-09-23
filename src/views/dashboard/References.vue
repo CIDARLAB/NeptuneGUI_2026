@@ -22,7 +22,7 @@
         <p class="references-overview-text mt-2 mb-1">
           Common pitfall: in LFR, <code>in % 100</code> means meter/dropletize with target volume parameter <code>100</code> — not “make 100 droplets,” and not arithmetic mod. Details:
           <a
-            href="https://github.com/CIDARLAB/Neptune_2026/blob/main/docs/LFR-TestCases-wiki/Fluidic-Operations.md"
+            href="https://github.com/CIDARLAB/Neptune_2026/blob/main/docs/LFR_TestCases_wiki/Fluidic_Operations.md"
             target="_blank"
             rel="noopener noreferrer"
             class="references-link"
@@ -35,7 +35,7 @@
           Use both, in either order, only when a mapped <code>~</code> also needs a longer serpentine.
           Table:
           <a
-            href="https://github.com/CIDARLAB/Neptune_2026/blob/main/docs/LFR-TestCases-wiki/Compiler-Directives.md"
+            href="https://github.com/CIDARLAB/Neptune_2026/blob/main/docs/LFR_TestCases_wiki/Compiler_Directives.md"
             target="_blank"
             rel="noopener noreferrer"
             class="references-link"
@@ -51,11 +51,11 @@
 
           <div class="references-link-group mb-3">
             <a
-              href="https://github.com/CIDARLAB/Neptune_2026/blob/main/docs/LFR-TestCases-wiki/Home.md"
+              href="https://github.com/CIDARLAB/Neptune_2026/blob/main/docs/LFR_TestCases_wiki/Home.md"
               target="_blank"
               rel="noopener noreferrer"
               class="references-link"
-            >LFR-TestCases Wiki Home (Neptune mirror)</a>
+            >LFR_TestCases Wiki Home (Neptune mirror)</a>
             <a
               href="https://github.com/CIDARLAB/Neptune_2026/blob/main/docs/LFR_READABLE_SYNTAX_SPEC_V2.md"
               target="_blank"
@@ -67,18 +67,18 @@
           <div class="references-block mb-3">
             <div class="references-block-title">Wiki-style syntax sections</div>
             <ul class="references-list">
-              <li><a href="https://github.com/CIDARLAB/Neptune_2026/blob/main/docs/LFR-TestCases-wiki/LFR-Module-Breakdown.md" target="_blank" rel="noopener noreferrer" class="references-link-inline">1) Module Breakdown</a></li>
-              <li><a href="https://github.com/CIDARLAB/Neptune_2026/blob/main/docs/LFR-TestCases-wiki/Varibles-Data-Types.md" target="_blank" rel="noopener noreferrer" class="references-link-inline">2) Variables and Data Types</a></li>
-              <li><a href="https://github.com/CIDARLAB/Neptune_2026/blob/main/docs/LFR-TestCases-wiki/Types-LFR-Descriptions.md" target="_blank" rel="noopener noreferrer" class="references-link-inline">3) Types of LFR Descriptions</a></li>
-              <li><a href="https://github.com/CIDARLAB/Neptune_2026/blob/main/docs/LFR-TestCases-wiki/FIG.md" target="_blank" rel="noopener noreferrer" class="references-link-inline">4) Fluid Interaction Graphs (FIG)</a></li>
-              <li><a href="https://github.com/CIDARLAB/Neptune_2026/blob/main/docs/LFR-TestCases-wiki/Structural-Descriptions.md" target="_blank" rel="noopener noreferrer" class="references-link-inline">5) Structural Descriptions</a></li>
-              <li><a href="https://github.com/CIDARLAB/Neptune_2026/blob/main/docs/LFR-TestCases-wiki/Technology-Mapping.md" target="_blank" rel="noopener noreferrer" class="references-link-inline">6) Technology Mapping</a></li>
-              <li><a href="https://github.com/CIDARLAB/Neptune_2026/blob/main/docs/LFR-TestCases-wiki/Fluidic-Operations.md" target="_blank" rel="noopener noreferrer" class="references-link-inline">7) Fluidic Operations</a></li>
-              <li><a href="https://github.com/CIDARLAB/Neptune_2026/blob/main/docs/LFR-TestCases-wiki/Flow-Annotations.md" target="_blank" rel="noopener noreferrer" class="references-link-inline">8) Flow Annotations</a></li>
-              <li><a href="https://github.com/CIDARLAB/Neptune_2026/blob/main/docs/LFR-TestCases-wiki/Distribution-Blocks.md" target="_blank" rel="noopener noreferrer" class="references-link-inline">9) Distribution Blocks</a></li>
-              <li><a href="https://github.com/CIDARLAB/Neptune_2026/blob/main/docs/LFR-TestCases-wiki/Control-Line-Logic.md" target="_blank" rel="noopener noreferrer" class="references-link-inline">10) Control Line Logic</a></li>
-              <li><a href="https://github.com/CIDARLAB/Neptune_2026/blob/main/docs/LFR-TestCases-wiki/Imports-and-Module-Reuse.md" target="_blank" rel="noopener noreferrer" class="references-link-inline">11) Imports and Module Reuse</a></li>
-              <li><a href="https://github.com/CIDARLAB/Neptune_2026/blob/main/docs/LFR-TestCases-wiki/Compiler-Directives.md" target="_blank" rel="noopener noreferrer" class="references-link-inline">12) Compiler Directives</a></li>
+              <li><a href="https://github.com/CIDARLAB/Neptune_2026/blob/main/docs/LFR_TestCases_wiki/LFR_Module_Breakdown.md" target="_blank" rel="noopener noreferrer" class="references-link-inline">1) Module Breakdown</a></li>
+              <li><a href="https://github.com/CIDARLAB/Neptune_2026/blob/main/docs/LFR_TestCases_wiki/Variables_Data_Types.md" target="_blank" rel="noopener noreferrer" class="references-link-inline">2) Variables and Data Types</a></li>
+              <li><a href="https://github.com/CIDARLAB/Neptune_2026/blob/main/docs/LFR_TestCases_wiki/Types_LFR_Descriptions.md" target="_blank" rel="noopener noreferrer" class="references-link-inline">3) Types of LFR Descriptions</a></li>
+              <li><a href="https://github.com/CIDARLAB/Neptune_2026/blob/main/docs/LFR_TestCases_wiki/FIG.md" target="_blank" rel="noopener noreferrer" class="references-link-inline">4) Fluid Interaction Graphs (FIG)</a></li>
+              <li><a href="https://github.com/CIDARLAB/Neptune_2026/blob/main/docs/LFR_TestCases_wiki/Structural_Descriptions.md" target="_blank" rel="noopener noreferrer" class="references-link-inline">5) Structural Descriptions</a></li>
+              <li><a href="https://github.com/CIDARLAB/Neptune_2026/blob/main/docs/LFR_TestCases_wiki/Technology_Mapping.md" target="_blank" rel="noopener noreferrer" class="references-link-inline">6) Technology Mapping</a></li>
+              <li><a href="https://github.com/CIDARLAB/Neptune_2026/blob/main/docs/LFR_TestCases_wiki/Fluidic_Operations.md" target="_blank" rel="noopener noreferrer" class="references-link-inline">7) Fluidic Operations</a></li>
+              <li><a href="https://github.com/CIDARLAB/Neptune_2026/blob/main/docs/LFR_TestCases_wiki/Flow_Annotations.md" target="_blank" rel="noopener noreferrer" class="references-link-inline">8) Flow Annotations</a></li>
+              <li><a href="https://github.com/CIDARLAB/Neptune_2026/blob/main/docs/LFR_TestCases_wiki/Distribution_Blocks.md" target="_blank" rel="noopener noreferrer" class="references-link-inline">9) Distribution Blocks</a></li>
+              <li><a href="https://github.com/CIDARLAB/Neptune_2026/blob/main/docs/LFR_TestCases_wiki/Control_Line_Logic.md" target="_blank" rel="noopener noreferrer" class="references-link-inline">10) Control Line Logic</a></li>
+              <li><a href="https://github.com/CIDARLAB/Neptune_2026/blob/main/docs/LFR_TestCases_wiki/Imports_and_Module_Reuse.md" target="_blank" rel="noopener noreferrer" class="references-link-inline">11) Imports and Module Reuse</a></li>
+              <li><a href="https://github.com/CIDARLAB/Neptune_2026/blob/main/docs/LFR_TestCases_wiki/Compiler_Directives.md" target="_blank" rel="noopener noreferrer" class="references-link-inline">12) Compiler Directives</a></li>
             </ul>
           </div>
 
@@ -127,16 +127,16 @@
           <div class="references-block mb-3">
             <div class="references-block-title">Wiki-aligned MINT sectioning</div>
             <ul class="references-list">
-              <li><a href="https://github.com/CIDARLAB/Neptune_2026/blob/main/docs/MINT-TestCases-wiki/Device-and-File-Structure.md" target="_blank" rel="noopener noreferrer" class="references-link-inline">1) Device and file structure (<span class="references-code">DEVICE</span>, <span class="references-code">LAYER</span>)</a></li>
-              <li><a href="https://github.com/CIDARLAB/Neptune_2026/blob/main/docs/MINT-TestCases-wiki/Variables-Data-Primitives-and-Identifiers.md" target="_blank" rel="noopener noreferrer" class="references-link-inline">2) Variables/data primitives and identifiers</a></li>
-              <li><a href="https://github.com/CIDARLAB/Neptune_2026/blob/main/docs/MINT-TestCases-wiki/Description-Styles.md" target="_blank" rel="noopener noreferrer" class="references-link-inline">3) Description styles: flow-only vs flow+control</a></li>
-              <li><a href="https://github.com/CIDARLAB/Neptune_2026/blob/main/docs/MINT-TestCases-wiki/Graph-Modeling-and-Connectivity-Intent.md" target="_blank" rel="noopener noreferrer" class="references-link-inline">4) Graph modeling and connectivity intent</a></li>
-              <li><a href="https://github.com/CIDARLAB/Neptune_2026/blob/main/docs/MINT-TestCases-wiki/Structural-Descriptions.md" target="_blank" rel="noopener noreferrer" class="references-link-inline">5) Structural descriptions with explicit components</a></li>
-              <li><a href="https://github.com/CIDARLAB/Neptune_2026/blob/main/docs/MINT-TestCases-wiki/Technology-Mapping-and-Primitive-Selection.md" target="_blank" rel="noopener noreferrer" class="references-link-inline">6) Technology mapping and primitive selection</a></li>
-              <li><a href="https://github.com/CIDARLAB/Neptune_2026/blob/main/docs/MINT-TestCases-wiki/Fluidic-Operations-via-Components-and-Channels.md" target="_blank" rel="noopener noreferrer" class="references-link-inline">7) Fluidic operations via components/channels</a></li>
-              <li><a href="https://github.com/CIDARLAB/Neptune_2026/blob/main/docs/MINT-TestCases-wiki/Flow-Annotations-and-Parameter-Fields.md" target="_blank" rel="noopener noreferrer" class="references-link-inline">8) Flow annotations and parameter fields</a></li>
-              <li><a href="https://github.com/CIDARLAB/Neptune_2026/blob/main/docs/MINT-TestCases-wiki/Distribution-Behavior-through-Valves-and-Channels.md" target="_blank" rel="noopener noreferrer" class="references-link-inline">9) Distribution behavior through valves/channels</a></li>
-              <li><a href="https://github.com/CIDARLAB/Neptune_2026/blob/main/docs/MINT-TestCases-wiki/Control-Line-Logic-in-LAYER-CONTROL.md" target="_blank" rel="noopener noreferrer" class="references-link-inline">10) Control line logic in <span class="references-code">LAYER CONTROL</span></a></li>
+              <li><a href="https://github.com/CIDARLAB/Neptune_2026/blob/main/docs/MINT_TestCases_wiki/Device_and_File_Structure.md" target="_blank" rel="noopener noreferrer" class="references-link-inline">1) Device and file structure (<span class="references-code">DEVICE</span>, <span class="references-code">LAYER</span>)</a></li>
+              <li><a href="https://github.com/CIDARLAB/Neptune_2026/blob/main/docs/MINT_TestCases_wiki/Variables_Data_Primitives_and_Identifiers.md" target="_blank" rel="noopener noreferrer" class="references-link-inline">2) Variables/data primitives and identifiers</a></li>
+              <li><a href="https://github.com/CIDARLAB/Neptune_2026/blob/main/docs/MINT_TestCases_wiki/Description_Styles.md" target="_blank" rel="noopener noreferrer" class="references-link-inline">3) Description styles: flow-only vs flow+control</a></li>
+              <li><a href="https://github.com/CIDARLAB/Neptune_2026/blob/main/docs/MINT_TestCases_wiki/Graph_Modeling_and_Connectivity_Intent.md" target="_blank" rel="noopener noreferrer" class="references-link-inline">4) Graph modeling and connectivity intent</a></li>
+              <li><a href="https://github.com/CIDARLAB/Neptune_2026/blob/main/docs/MINT_TestCases_wiki/Structural_Descriptions.md" target="_blank" rel="noopener noreferrer" class="references-link-inline">5) Structural descriptions with explicit components</a></li>
+              <li><a href="https://github.com/CIDARLAB/Neptune_2026/blob/main/docs/MINT_TestCases_wiki/Technology_Mapping_and_Primitive_Selection.md" target="_blank" rel="noopener noreferrer" class="references-link-inline">6) Technology mapping and primitive selection</a></li>
+              <li><a href="https://github.com/CIDARLAB/Neptune_2026/blob/main/docs/MINT_TestCases_wiki/Fluidic_Operations_via_Components_and_Channels.md" target="_blank" rel="noopener noreferrer" class="references-link-inline">7) Fluidic operations via components/channels</a></li>
+              <li><a href="https://github.com/CIDARLAB/Neptune_2026/blob/main/docs/MINT_TestCases_wiki/Flow_Annotations_and_Parameter_Fields.md" target="_blank" rel="noopener noreferrer" class="references-link-inline">8) Flow annotations and parameter fields</a></li>
+              <li><a href="https://github.com/CIDARLAB/Neptune_2026/blob/main/docs/MINT_TestCases_wiki/Distribution_Behavior_through_Valves_and_Channels.md" target="_blank" rel="noopener noreferrer" class="references-link-inline">9) Distribution behavior through valves/channels</a></li>
+              <li><a href="https://github.com/CIDARLAB/Neptune_2026/blob/main/docs/MINT_TestCases_wiki/Control_Line_Logic_in_LAYER_CONTROL.md" target="_blank" rel="noopener noreferrer" class="references-link-inline">10) Control line logic in <span class="references-code">LAYER CONTROL</span></a></li>
             </ul>
           </div>
 

@@ -101,7 +101,7 @@ Upload-and-use workflow (all providers):
 ## Wiki/docs sync checklist
 When Neptune docs or compiler behavior changes, update prompt package in the same pass:
 1. `docs/LFR_READABLE_SYNTAX_SPEC_V2.md` and/or `docs/LFR_MINT_LANGUAGE_MANUAL.md` (GUI References links here)
-2. `docs/LFR-TestCases-wiki/` and/or `docs/MINT-TestCases-wiki/` companion pages
+2. `docs/LFR_TestCases_wiki/` and/or `docs/MINT_TestCases_wiki/` companion pages (underscore paths only; keep GUI References.vue URLs in sync)
 3. `Prompt/LFR_SYNTAX_MANUAL.txt` and `Prompt/MINT_SYNTAX_MANUAL.txt` (distill References/V2 for LLM packs)
 4. Shared **LFR syntax norms** block in all five `*/en2lfr_system.txt` files
 5. `Prompt/DEVELOPER_ENTRY_POINTS.txt` (wiki paths and entry points)

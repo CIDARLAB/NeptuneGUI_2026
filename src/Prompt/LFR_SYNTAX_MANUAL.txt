@@ -2,7 +2,7 @@ Neptune 2026 — LFR Syntax Manual (Quick Reference)
 
 Aligned with Neptune GUI References and:
   docs/LFR_READABLE_SYNTAX_SPEC_V2.md
-  docs/LFR-TestCases-wiki/ (Module Breakdown, Fluidic Operations,
+  docs/LFR_TestCases_wiki/ (Module Breakdown, Fluidic Operations,
   Distribution Blocks, Imports and Module Reuse, Compiler Directives)
 Normative implementation: pylfr/lfrX.g4, pylfr/lfr/preprocessor.py
 
@@ -109,7 +109,7 @@ Ordinary mix does not need #MAP or unary ~ — use binary +.
   (numbers only) stamps that assign's FLOW connections as square CHANNEL
   or rounded. PUMP valveWidthY also sets CONTROL channelWidth into the pump.
   Per-entity key list:
-  docs/LFR-TestCases-wiki/Compiler-Directives.md
+  docs/LFR_TestCases_wiki/Compiler_Directives.md
 
 Equal split:
   assign {a, b} = stream / 2;

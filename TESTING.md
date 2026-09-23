@@ -148,8 +148,9 @@ Guest UI smoke (align with **README.md** / **RUN_LFR.md**):
 3. **Compile to MINT** on an LFR → workspace gets `*_fromLFR.mint`; handwritten `.mint` unchanged; **no** Jobs row.
 4. **Save and synthesize** → Jobs row + stamped PR JSON / MINT; **Alerts** when done/fail; Jobs **Input Format** + sticky columns; **Apply** weights refresh **Total**.
 5. **Component Library** — **Channel type** default **ROUNDED CHANNEL** vs **CHANNEL** (MINT **`RoundedChannel=0|1`**); mux **Super_MUX_8** DIY **`leafSpace`** / **`stageSpace`** / **`valveWidthX`/`valveWidthY`** (TREE same leaf/stage spaces; BANK `spacing` unchanged); keepout **`componentSpacing`** (default **1000** µm, listed last); open mux in 3DuF on **80 000²** board; DIY mixer defaults `channelWidth=600` / `bendSpacing=1400` / `bendLength=2000` / `numberOfBends=1` / `edgeBend*`. References: binary `+` needs no `#MAP`; `#CONSTRAIN "+"` for non-default mixer geometry. Confirm Open-in-3DuF hits `THREE_DUF_APP_URL` (this checkout: `http://localhost:8083/`).
-6. **Export / Import** workspaces ZIP (includes `jobs.json` and typed folders).
-7. Optional: force a long P&R and confirm timeout text `compile timed out after 600s (no results)`.
+6. **References** — open sidebar **References**; spot-check that LFR/MINT wiki links resolve under `docs/LFR_TestCases_wiki/` and `docs/MINT_TestCases_wiki/` (underscore paths, e.g. `Compiler_Directives.md`).
+7. **Export / Import** workspaces ZIP (includes `jobs.json` and typed folders).
+8. Optional: force a long P&R and confirm timeout text `compile timed out after 600s (no results)`.
 
 Optional automated:
 
