@@ -9,7 +9,7 @@
         "0"
       ],
       "params": {
-        "componentSpacing": 2000,
+        "componentSpacing": 1000,
         "height": 250,
         "width": 10000,
         "injectorWidth": 2000,

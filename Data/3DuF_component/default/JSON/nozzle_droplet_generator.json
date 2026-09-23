@@ -9,7 +9,7 @@
         "0"
       ],
       "params": {
-        "componentSpacing": 2000,
+        "componentSpacing": 1000,
         "orificeSize": 200,
         "orificeLength": 400,
         "oilInputWidth": 800,
@@ -17,7 +17,7 @@
         "outputWidth": 600,
         "outputLength": 600,
         "height": 250,
-        "rotation": 0.0,
+        "rotation": 90.0,
         "mirrorByX": 0.0,
         "mirrorByY": 0.0,
         "position": [

@@ -28,6 +28,19 @@
             class="references-link"
           >Fluidic Operations (% metering FAQ)</a>.
         </p>
+        <p class="references-overview-text mt-2 mb-1">
+          Mixer directives: binary <code>+</code> already maps to MIXER, so <code>assign out = a + b;</code> needs no <code>#MAP</code>.
+          <code>#CONSTRAIN "+"</code> only sets geometry on the next <code>+</code> assign (for example <code>numberOfBends</code>).
+          <code>#MAP "MIXER" "~"</code> is required only for an extra unary mixer stage.
+          Use both, in either order, only when a mapped <code>~</code> also needs a longer serpentine.
+          Table:
+          <a
+            href="https://github.com/CIDARLAB/Neptune_2026/blob/main/docs/LFR-TestCases-wiki/Compiler-Directives.md"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="references-link"
+          >Compiler Directives (#MAP vs #CONSTRAIN)</a>.
+        </p>
       </div>
     </div>
 

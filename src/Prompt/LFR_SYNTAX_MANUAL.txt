@@ -79,6 +79,11 @@ chamber/incubate/DIY/#MAP), not for replacing binary +.
 #MAP (same unit as mix / unary ~ — both arguments quoted):
   #MAP "<TECHNOLOGY STRING>" "<operator-or-mode>"
   #MAP "MIXER" "~"
+  assign stage2 = ~stage1;
+  #MAP "PUMP" "~"
+  assign driven = ~in;
+  #MAP "VIA" "storage"
+  storage via0;
   #MAP "CHAMBER" "~"
   #MAP "NOZZLE DROPLET GENERATOR" "%"
 
@@ -88,6 +93,23 @@ chamber/incubate/DIY/#MAP), not for replacing binary +.
 - Never place `#MAP` before `module` (invalid: file-top `#MAP` then
   `module ...`).
 Ordinary mix does not need #MAP or unary ~ — use binary +.
+
+#CONSTRAIN (geometry / physical specs — does NOT choose a primitive):
+  #CONSTRAIN "<operator>" <constraint>
+  #CONSTRAIN "+" numberOfBends = 3
+  #CONSTRAIN "+" channelWidth = 400
+  #CONSTRAIN "CHANNEL" RoundedChannel = 0
+  assign out = a + b;
+  #MAP "PUMP" "~"
+  #CONSTRAIN "~" valveWidthY = 800
+  assign driven = ~in;
+  Same operator stacks until the next assign (or AND on one line).
+  Mixer keys go on "+" / "~"; FLOW-pipe keys go on "CHANNEL" so
+  channelWidth / RoundedChannel do not collide. RoundedChannel = 0|1
+  (numbers only) stamps that assign's FLOW connections as square CHANNEL
+  or rounded. PUMP valveWidthY also sets CONTROL channelWidth into the pump.
+  Per-entity key list:
+  docs/LFR-TestCases-wiki/Compiler-Directives.md
 
 Equal split:
   assign {a, b} = stream / 2;
@@ -141,11 +163,14 @@ Prefer distribute@(…) for control-gated fluid routing rather than C-style tern
 6) Directives
 ------------------------------------------------------------------------
 #MAP          (form and placement: see section 4, next to mix / unary ~)
-#CONSTRAIN
+#CONSTRAIN    (geometry on the next matching assign; see section 4)
 #MATERIAL
 
 Use #MAP / unary ~ only when English names a concrete technology or an
 extra unary process step on one stream. Do not invent file-top #MAP.
+Use #CONSTRAIN when English names mixer bends / channelWidth / etc.
+#MAP and #CONSTRAIN may appear together, in either order, only when a
+mapped unary mixer also needs non-default geometry.
 
 ------------------------------------------------------------------------
 7) Comments

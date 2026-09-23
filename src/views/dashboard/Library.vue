@@ -468,7 +468,7 @@ export default {
         channel: {
           channelwidth: 'Drawn width of the channel in the flow-layer plane (same as 3DuF CHANNEL).',
           height: 'Extruded depth of the rectangular channel cross-section (same as 3DuF CHANNEL).',
-          channelradius: 'Radius of a circular channel cross-section; width and depth follow this radius (same as 3DuF ROUNDED CHANNEL). JSON stores this as crossSection=1; MINT writes RoundedChannel=True.',
+          channelradius: 'Radius of a circular channel cross-section; width and depth follow this radius (same as 3DuF ROUNDED CHANNEL). JSON stores this as crossSection=1; MINT writes RoundedChannel=1.',
         },
         tree: {
           leafspace: 'Leaf spacing of the TREE. Same role as MUX leafSpace.',

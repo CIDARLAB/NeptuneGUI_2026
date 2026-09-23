@@ -10,7 +10,7 @@
         "0"
       ],
       "params": {
-        "componentSpacing": 2000.0,
+        "componentSpacing": 1000.0,
         "portRadius": 1000.0,
         "height": 1100.0,
         "position": [
@@ -40,7 +40,7 @@
         "0"
       ],
       "params": {
-        "componentSpacing": 2000.0,
+        "componentSpacing": 1000.0,
         "portRadius": 1000.0,
         "height": 1100.0,
         "position": [
@@ -70,7 +70,7 @@
         "1"
       ],
       "params": {
-        "componentSpacing": 2000.0,
+        "componentSpacing": 1000.0,
         "portRadius": 1000.0,
         "height": 1100.0,
         "position": [
@@ -99,7 +99,7 @@
         "1"
       ],
       "params": {
-        "componentSpacing": 2000.0,
+        "componentSpacing": 1000.0,
         "portRadius": 1000.0,
         "height": 1100.0,
         "position": [
@@ -128,7 +128,7 @@
         "1"
       ],
       "params": {
-        "componentSpacing": 2000,
+        "componentSpacing": 1000,
         "valveRadius": 1200,
         "gap": 600,
         "width": 2400,
@@ -160,7 +160,7 @@
         "1"
       ],
       "params": {
-        "componentSpacing": 2000,
+        "componentSpacing": 1000,
         "valveRadius": 1200,
         "gap": 600,
         "width": 2400,

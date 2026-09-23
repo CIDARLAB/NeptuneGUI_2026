@@ -1611,7 +1611,7 @@ const DIY_PARAM_DEFAULTS = {
     rotation: 0,
     mirrorByX: 0,
     mirrorByY: 0,
-    componentSpacing: 2000,
+    componentSpacing: 1000,
   },
 }
 

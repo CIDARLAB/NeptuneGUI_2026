@@ -77,7 +77,12 @@ CONNECTION c1 from p1 1 to ma1 1;
 - portRadius
 
 8) LFR -> MINT intuition
-- assign out = in1 + in2      often maps to mixer + channels
+- assign out = in1 + in2      maps to mixer + channels (no #MAP)
+- #CONSTRAIN "+" …            sets that mixer's geometry (numberOfBends, …)
+- #CONSTRAIN "CHANNEL" …      FLOW-pipe keys (channelWidth, RoundedChannel=0|1)
+- #MAP "MIXER" "~"            extra unary mixer stage (not needed for +)
+- MIXER defaults              channelWidth=600 bendSpacing=1400
+                              bendLength=2000 numberOfBends=1
 - distribute@(control)         often maps to valves + control channels
 - storage declarations          often map to chambers/traps
 

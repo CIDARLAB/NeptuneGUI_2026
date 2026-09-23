@@ -24,8 +24,13 @@ For all `*/en2lfr_system.txt` files, keep these invariant blocks semantically co
    - metering uses `%` only (never `@`),
    - ports are only `finput`/`foutput`/`control` (never `cinput`),
    - control routing uses `distribute@(ctrl)` (never ternary `?:`),
-   - `#MAP` is `#MAP "<TECH>" "<op>"` with both args quoted, or omitted (`~` alone is enough).
+   - `#MAP` is `#MAP "<TECH>" "<op>"` with both args quoted. Ordinary `+` mix
+     needs no `#MAP`. Unary `~` is not a mixer unless `#MAP "MIXER" "~"`.
    - `#MAP` placement: inside the module body, immediately above the `assign` that uses `~` — never before `module`.
+   - `#CONSTRAIN "<op>" …` writes geometry on the next matching assign; it
+     does not choose a primitive. `#MAP` and `#CONSTRAIN` may appear together,
+     in either order, only when a mapped unary mixer also needs non-default
+     geometry (`numberOfBends`, `channelWidth`, `bendSpacing`, `bendLength`).
    - dialect boundaries (`finput`/`foutput`/`control` + `assign` only; no helper functions),
    - brace-split / no tautological assigns,
    - backtick-import + named `.port(net)` maps when reusing modules;

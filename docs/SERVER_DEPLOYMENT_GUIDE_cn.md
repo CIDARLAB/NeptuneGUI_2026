@@ -163,7 +163,7 @@ Editor 在 compile 前拉取 `/api/v1/componentFiles`，组装请求体：
 | `name` | 显示名 |
 | `source` | `default` / `tmp` / `custom` |
 | `sourceType` | 来源类型 |
-| `params` | 用户在 Library DIY 中修改的数值参数（channel：`channelWidth` / `height` / `channelRadius` / JSON `crossSection`，下拉框为 **Channel type**；mux/tree：`leafSpace` / `stageSpace` 等 — 旧字段 `leafPitch`/`spacing`/`stageLength` 会迁移；mux 另有 `valveWidthX`/`valveWidthY`；BANK 的 `spacing` 是实例间距；mixer：`edgeBend*`；多数类型可编辑 keepout **`componentSpacing`**，内置默认 **2000** µm）。表单排序见 `src/lib/paramDisplayOrder.js`。 |
+| `params` | 用户在 Library DIY 中修改的数值参数（channel：`channelWidth` / `height` / `channelRadius` / JSON `crossSection`，下拉框为 **Channel type**；mux/tree：`leafSpace` / `stageSpace` 等 — 旧字段 `leafPitch`/`spacing`/`stageLength` 会迁移；mux 另有 `valveWidthX`/`valveWidthY`；BANK 的 `spacing` 是实例间距；mixer：`channelWidth` / `bendSpacing` / `bendLength` / `numberOfBends` / `edgeBend*`，默认 **600 / 1400 / 2000 / 1**；多数类型可编辑 keepout **`componentSpacing`**，内置默认 **1000** µm）。表单排序见 `src/lib/paramDisplayOrder.js`。 |
 | `jsonScript` | 完整 3DuF/ParchMint JSON 字符串 |
 | `lfrScript` | 组件 LFR 模块文本（LFR import 用） |
 | `mintScript` | 组件 MINT 片段 |

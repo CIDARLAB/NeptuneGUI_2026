@@ -9,7 +9,7 @@
         "0"
       ],
       "params": {
-        "componentSpacing": 2000,
+        "componentSpacing": 1000,
         "flowChannelWidth": 600,
         "in": 1,
         "out": 8,
@@ -35,49 +35,49 @@
         },
         {
           "x": 35400,
-          "y": 18400,
+          "y": 18100,
           "label": "2",
           "layer": "FLOW"
         },
         {
           "x": 30400,
-          "y": 18400,
+          "y": 18100,
           "label": "3",
           "layer": "FLOW"
         },
         {
           "x": 25400,
-          "y": 18400,
+          "y": 18100,
           "label": "4",
           "layer": "FLOW"
         },
         {
           "x": 20400,
-          "y": 18400,
+          "y": 18100,
           "label": "5",
           "layer": "FLOW"
         },
         {
           "x": 15400,
-          "y": 18400,
+          "y": 18100,
           "label": "6",
           "layer": "FLOW"
         },
         {
           "x": 10400,
-          "y": 18400,
+          "y": 18100,
           "label": "7",
           "layer": "FLOW"
         },
         {
           "x": 5400,
-          "y": 18400,
+          "y": 18100,
           "label": "8",
           "layer": "FLOW"
         },
         {
           "x": 400,
-          "y": 18400,
+          "y": 18100,
           "label": "9",
           "layer": "FLOW"
         }

@@ -58,6 +58,7 @@ Be specific about:
 - input / output ports
 - mixing, splitting, control logic
 - timing constraints, layer info, naming rules
+- mixer geometry only when it is not the default (`#CONSTRAIN "+" numberOfBends = N`; ordinary mix is `+` with no `#MAP`)
 
 You can add: **“Output only valid LFR in one ` ```lfr ` fence.”**
 

@@ -165,7 +165,7 @@ Editor fetches `/api/v1/componentFiles` first, then posts:
 | `name` | Display name |
 | `source` | `default` / `tmp` / `custom` |
 | `sourceType` | Origin type |
-| `params` | User-edited numeric params from Library DIY (channel: `channelWidth` / `height` / `channelRadius` / JSON `crossSection` from **Channel type**; mux/tree: `leafSpace` / `stageSpace` / … — legacy `leafPitch`/`spacing`/`stageLength` migrate; mux also `valveWidthX`/`valveWidthY`; BANK `spacing` is instance pitch; mixer: `edgeBend*`; most types expose keepout **`componentSpacing`**, default **2000** µm). Display order: `src/lib/paramDisplayOrder.js`. |
+| `params` | User-edited numeric params from Library DIY (channel: `channelWidth` / `height` / `channelRadius` / JSON `crossSection` from **Channel type**; mux/tree: `leafSpace` / `stageSpace` / … — legacy `leafPitch`/`spacing`/`stageLength` migrate; mux also `valveWidthX`/`valveWidthY`; BANK `spacing` is instance pitch; mixer: `channelWidth` / `bendSpacing` / `bendLength` / `numberOfBends` / `edgeBend*` — defaults **600 / 1400 / 2000 / 1**; most types expose keepout **`componentSpacing`**, default **1000** µm). Display order: `src/lib/paramDisplayOrder.js`. |
 | `jsonScript` | Full 3DuF/ParchMint JSON string |
 | `lfrScript` | Component LFR module (for LFR `import`) |
 | `mintScript` | Component MINT snippet |

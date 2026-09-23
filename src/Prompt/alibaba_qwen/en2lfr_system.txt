@@ -46,6 +46,7 @@ Use this section together with the library-path sentence above — do not invent
   - Ordinary multi-inlet mix uses binary `+` only — `assign mid = a + b;` or `assign mid = a + b + c;`.
   - Do **not** wrap mixes as `~(a + b)` and do **not** invent `#MAP "MIXER" "~"` unless the English explicitly asks for a named technology map / extra unary process step on an already-merged stream.
   - When English does require `#MAP`: form is `#MAP "<TECH>" "~"` (both arguments quoted). Put it inside the module body, immediately above the `assign` that uses that unary `~`. Never place `#MAP` before `module`.
+  - `#CONSTRAIN "<op>" …` writes geometry on the next matching assign (e.g. `#CONSTRAIN "+" numberOfBends = 3`); it does not choose a primitive. Use `#MAP` and `#CONSTRAIN` together, in either order, only when a mapped unary mixer also needs non-default geometry.
   - Example only when English names MIXER/`~`:
     #MAP "MIXER" "~"
     assign incubated = ~merged;
