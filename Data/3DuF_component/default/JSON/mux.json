@@ -23,14 +23,14 @@
                 "out": 8,
                 "componentSpacing": 1000.0,
                 "rotation": 0,
-                "height": 250.0,
                 "mirrorByX": 0,
                 "mirrorByY": 0.0,
                 "position": [
                     40000.0,
                     40000.0
                 ],
-                "ID": "mux_8"
+                "ID": "mux_8",
+                "depth": 250.0
             },
             "ports": [
                 {
@@ -137,14 +137,14 @@
             "params": {
                 "portRadius": 1000,
                 "componentSpacing": 1000.0,
-                "height": 1100.0,
                 "position": [
                     40000.0,
                     21250.0
                 ],
                 "ID": "port_out",
                 "rotation": 0,
-                "mirrorByX": 0
+                "mirrorByX": 0,
+                "depth": 1100.0
             },
             "ports": [
                 {
@@ -167,14 +167,14 @@
             "params": {
                 "portRadius": 1000,
                 "componentSpacing": 1000.0,
-                "height": 1100.0,
                 "position": [
                     54000.0,
                     58750.0
                 ],
                 "ID": "port_in_1",
                 "rotation": 0,
-                "mirrorByX": 0
+                "mirrorByX": 0,
+                "depth": 1100.0
             },
             "ports": [
                 {
@@ -197,14 +197,14 @@
             "params": {
                 "portRadius": 1000,
                 "componentSpacing": 1000.0,
-                "height": 1100.0,
                 "position": [
                     50000.0,
                     58750.0
                 ],
                 "ID": "port_in_2",
                 "rotation": 0,
-                "mirrorByX": 0
+                "mirrorByX": 0,
+                "depth": 1100.0
             },
             "ports": [
                 {
@@ -227,14 +227,14 @@
             "params": {
                 "portRadius": 1000,
                 "componentSpacing": 1000.0,
-                "height": 1100.0,
                 "position": [
                     46000.0,
                     58750.0
                 ],
                 "ID": "port_in_3",
                 "rotation": 0,
-                "mirrorByX": 0
+                "mirrorByX": 0,
+                "depth": 1100.0
             },
             "ports": [
                 {
@@ -257,14 +257,14 @@
             "params": {
                 "portRadius": 1000,
                 "componentSpacing": 1000.0,
-                "height": 1100.0,
                 "position": [
                     42000.0,
                     58750.0
                 ],
                 "ID": "port_in_4",
                 "rotation": 0,
-                "mirrorByX": 0
+                "mirrorByX": 0,
+                "depth": 1100.0
             },
             "ports": [
                 {
@@ -287,14 +287,14 @@
             "params": {
                 "portRadius": 1000,
                 "componentSpacing": 1000.0,
-                "height": 1100.0,
                 "position": [
                     38000.0,
                     58750.0
                 ],
                 "ID": "port_in_5",
                 "rotation": 0,
-                "mirrorByX": 0
+                "mirrorByX": 0,
+                "depth": 1100.0
             },
             "ports": [
                 {
@@ -317,14 +317,14 @@
             "params": {
                 "portRadius": 1000,
                 "componentSpacing": 1000.0,
-                "height": 1100.0,
                 "position": [
                     34000.0,
                     58750.0
                 ],
                 "ID": "port_in_6",
                 "rotation": 0,
-                "mirrorByX": 0
+                "mirrorByX": 0,
+                "depth": 1100.0
             },
             "ports": [
                 {
@@ -347,14 +347,14 @@
             "params": {
                 "portRadius": 1000,
                 "componentSpacing": 1000.0,
-                "height": 1100.0,
                 "position": [
                     30000.0,
                     58750.0
                 ],
                 "ID": "port_in_7",
                 "rotation": 0,
-                "mirrorByX": 0
+                "mirrorByX": 0,
+                "depth": 1100.0
             },
             "ports": [
                 {
@@ -377,14 +377,14 @@
             "params": {
                 "portRadius": 1000,
                 "componentSpacing": 1000.0,
-                "height": 1100.0,
                 "position": [
                     26000.0,
                     58750.0
                 ],
                 "ID": "port_in_8",
                 "rotation": 0,
-                "mirrorByX": 0
+                "mirrorByX": 0,
+                "depth": 1100.0
             },
             "ports": [
                 {
@@ -407,12 +407,12 @@
             "params": {
                 "portRadius": 1000,
                 "componentSpacing": 1000.0,
-                "height": 1100.0,
                 "position": [
                     12600.0,
                     38000.0
                 ],
-                "ID": "cp1"
+                "ID": "cp1",
+                "depth": 1100.0
             },
             "ports": [
                 {
@@ -435,12 +435,12 @@
             "params": {
                 "portRadius": 1000,
                 "componentSpacing": 1000.0,
-                "height": 1100.0,
                 "position": [
                     67400.0,
                     38500.0
                 ],
-                "ID": "cp2"
+                "ID": "cp2",
+                "depth": 1100.0
             },
             "ports": [
                 {
@@ -463,12 +463,12 @@
             "params": {
                 "portRadius": 1000,
                 "componentSpacing": 1000.0,
-                "height": 1100.0,
                 "position": [
                     9600.0,
                     41500.0
                 ],
-                "ID": "cp3"
+                "ID": "cp3",
+                "depth": 1100.0
             },
             "ports": [
                 {
@@ -491,12 +491,12 @@
             "params": {
                 "portRadius": 1000,
                 "componentSpacing": 1000.0,
-                "height": 1100.0,
                 "position": [
                     70400.0,
                     42000.0
                 ],
-                "ID": "cp4"
+                "ID": "cp4",
+                "depth": 1100.0
             },
             "ports": [
                 {
@@ -519,12 +519,12 @@
             "params": {
                 "portRadius": 1000,
                 "componentSpacing": 1000.0,
-                "height": 1100.0,
                 "position": [
                     6600.0,
                     45000.0
                 ],
-                "ID": "cp5"
+                "ID": "cp5",
+                "depth": 1100.0
             },
             "ports": [
                 {
@@ -547,12 +547,12 @@
             "params": {
                 "portRadius": 1000,
                 "componentSpacing": 1000.0,
-                "height": 1100.0,
                 "position": [
                     73400.0,
                     45500.0
                 ],
-                "ID": "cp6"
+                "ID": "cp6",
+                "depth": 1100.0
             },
             "ports": [
                 {

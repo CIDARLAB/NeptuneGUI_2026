@@ -1,93 +1,93 @@
 {
-  "name": "reaction_chamber",
-  "components": [
-    {
-      "name": "reaction_chamber_1",
-      "id": "reaction_chamber_1",
-      "entity": "REACTION CHAMBER",
-      "layers": [
-        "0"
-      ],
-      "params": {
-        "componentSpacing": 1000,
-        "width": 5000,
-        "length": 5000.0,
-        "height": 250,
-        "cornerRadius": 200,
-        "rotation": 0.0,
-        "mirrorByX": 0.0,
-        "mirrorByY": 0.0,
-        "position": [
-          20000.0,
-          20000.0
-        ],
-        "ID": "reaction_chamber_1"
-      },
-      "ports": [
+    "name": "reaction_chamber",
+    "components": [
         {
-          "x": 2500,
-          "y": 0,
-          "label": "1",
-          "layer": "FLOW"
-        },
-        {
-          "x": 5000,
-          "y": 2500,
-          "label": "2",
-          "layer": "FLOW"
-        },
-        {
-          "x": 2500,
-          "y": 5000,
-          "label": "3",
-          "layer": "FLOW"
-        },
-        {
-          "x": 0,
-          "y": 2500,
-          "label": "4",
-          "layer": "FLOW"
+            "name": "reaction_chamber_1",
+            "id": "reaction_chamber_1",
+            "entity": "REACTION CHAMBER",
+            "layers": [
+                "0"
+            ],
+            "params": {
+                "componentSpacing": 1000,
+                "width": 5000,
+                "length": 5000.0,
+                "cornerRadius": 200,
+                "rotation": 0.0,
+                "mirrorByX": 0.0,
+                "mirrorByY": 0.0,
+                "position": [
+                    20000.0,
+                    20000.0
+                ],
+                "ID": "reaction_chamber_1",
+                "depth": 250
+            },
+            "ports": [
+                {
+                    "x": 2500,
+                    "y": 0,
+                    "label": "1",
+                    "layer": "FLOW"
+                },
+                {
+                    "x": 5000,
+                    "y": 2500,
+                    "label": "2",
+                    "layer": "FLOW"
+                },
+                {
+                    "x": 2500,
+                    "y": 5000,
+                    "label": "3",
+                    "layer": "FLOW"
+                },
+                {
+                    "x": 0,
+                    "y": 2500,
+                    "label": "4",
+                    "layer": "FLOW"
+                }
+            ],
+            "x-span": 5000,
+            "y-span": 5000
         }
-      ],
-      "x-span": 5000,
-      "y-span": 5000
-    }
-  ],
-  "connections": [],
-  "params": {
-    "x-span": 40000.0,
-    "y-span": 40000.0,
-    "length": 40000.0,
-    "flowPortCount": 0,
-    "controlPortCount": 0,
-    "width": 40000.0
-  },
-  "layers": [
-    {
-      "name": "FLOW_0",
-      "id": "0",
-      "type": "FLOW",
-      "params": {
-        "z_offset": 0,
-        "flip": false
-      },
-      "group": "0"
+    ],
+    "connections": [],
+    "params": {
+        "x-span": 40000.0,
+        "y-span": 40000.0,
+        "length": 40000.0,
+        "flowPortCount": 0,
+        "controlPortCount": 0,
+        "width": 40000.0
     },
-    {
-      "id": "1",
-      "name": "CONTROL_0",
-      "type": "CONTROL",
-      "params": {
-        "z_offset": 0,
-        "flip": false
-      },
-      "group": "0"
-    }
-  ],
-  "features": [],
-  "version": "1.2",
-  "valves": [],
-  "isPnR": false,
-  "layoutConstraints": [],
-  "IsPlacedAndRouted": true
+    "layers": [
+        {
+            "name": "FLOW_0",
+            "id": "0",
+            "type": "FLOW",
+            "params": {
+                "z_offset": 0,
+                "flip": false
+            },
+            "group": "0"
+        },
+        {
+            "id": "1",
+            "name": "CONTROL_0",
+            "type": "CONTROL",
+            "params": {
+                "z_offset": 0,
+                "flip": false
+            },
+            "group": "0"
+        }
+    ],
+    "features": [],
+    "version": "1.2",
+    "valves": [],
+    "isPnR": false,
+    "layoutConstraints": [],
+    "IsPlacedAndRouted": true
 }

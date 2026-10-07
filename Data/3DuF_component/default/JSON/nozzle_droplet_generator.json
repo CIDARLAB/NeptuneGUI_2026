@@ -1,95 +1,95 @@
 {
-  "name": "nozzle_droplet_generator",
-  "components": [
-    {
-      "name": "nozzle_droplet_generator_1",
-      "id": "nozzle_droplet_generator_1",
-      "entity": "NOZZLE DROPLET GENERATOR",
-      "layers": [
-        "0"
-      ],
-      "params": {
-        "componentSpacing": 1000,
-        "orificeSize": 200,
-        "orificeLength": 400,
-        "oilInputWidth": 800,
-        "waterInputWidth": 600,
-        "outputWidth": 600,
-        "outputLength": 600,
-        "height": 250,
-        "rotation": 90.0,
-        "mirrorByX": 0.0,
-        "mirrorByY": 0.0,
-        "position": [
-          20000.0,
-          20000.0
-        ],
-        "ID": "nozzle_droplet_generator_1"
-      },
-      "ports": [
+    "name": "nozzle_droplet_generator",
+    "components": [
         {
-          "x": 400,
-          "y": 0,
-          "label": "1",
-          "layer": "FLOW"
-        },
-        {
-          "x": 1800,
-          "y": 300,
-          "label": "2",
-          "layer": "FLOW"
-        },
-        {
-          "x": 400,
-          "y": 600,
-          "label": "3",
-          "layer": "FLOW"
-        },
-        {
-          "x": 0,
-          "y": 300,
-          "label": "4",
-          "layer": "FLOW"
+            "name": "nozzle_droplet_generator_1",
+            "id": "nozzle_droplet_generator_1",
+            "entity": "NOZZLE DROPLET GENERATOR",
+            "layers": [
+                "0"
+            ],
+            "params": {
+                "componentSpacing": 1000,
+                "orificeSize": 200,
+                "orificeLength": 400,
+                "oilInputWidth": 800,
+                "waterInputWidth": 600,
+                "outputWidth": 600,
+                "outputLength": 600,
+                "rotation": 90.0,
+                "mirrorByX": 0.0,
+                "mirrorByY": 0.0,
+                "position": [
+                    20000.0,
+                    20000.0
+                ],
+                "ID": "nozzle_droplet_generator_1",
+                "depth": 250
+            },
+            "ports": [
+                {
+                    "x": 400,
+                    "y": 0,
+                    "label": "1",
+                    "layer": "FLOW"
+                },
+                {
+                    "x": 1800,
+                    "y": 300,
+                    "label": "2",
+                    "layer": "FLOW"
+                },
+                {
+                    "x": 400,
+                    "y": 600,
+                    "label": "3",
+                    "layer": "FLOW"
+                },
+                {
+                    "x": 0,
+                    "y": 300,
+                    "label": "4",
+                    "layer": "FLOW"
+                }
+            ],
+            "x-span": 1800.0,
+            "y-span": 600.0
         }
-      ],
-      "x-span": 1800.0,
-      "y-span": 600.0
-    }
-  ],
-  "connections": [],
-  "params": {
-    "x-span": 40000.0,
-    "y-span": 40000.0,
-    "length": 40000.0,
-    "flowPortCount": 0,
-    "controlPortCount": 0,
-    "width": 40000.0
-  },
-  "layers": [
-    {
-      "name": "FLOW_0",
-      "id": "0",
-      "type": "FLOW",
-      "params": {
-        "z_offset": 0,
-        "flip": false
-      },
-      "group": "0"
+    ],
+    "connections": [],
+    "params": {
+        "x-span": 40000.0,
+        "y-span": 40000.0,
+        "length": 40000.0,
+        "flowPortCount": 0,
+        "controlPortCount": 0,
+        "width": 40000.0
     },
-    {
-      "id": "1",
-      "name": "CONTROL_0",
-      "type": "CONTROL",
-      "group": "0",
-      "params": {
-        "z_offset": 0,
-        "flip": false
-      }
-    }
-  ],
-  "version": "1.2",
-  "valves": [],
-  "isPnR": false,
-  "layoutConstraints": [],
-  "IsPlacedAndRouted": true
+    "layers": [
+        {
+            "name": "FLOW_0",
+            "id": "0",
+            "type": "FLOW",
+            "params": {
+                "z_offset": 0,
+                "flip": false
+            },
+            "group": "0"
+        },
+        {
+            "id": "1",
+            "name": "CONTROL_0",
+            "type": "CONTROL",
+            "group": "0",
+            "params": {
+                "z_offset": 0,
+                "flip": false
+            }
+        }
+    ],
+    "version": "1.2",
+    "valves": [],
+    "isPnR": false,
+    "layoutConstraints": [],
+    "IsPlacedAndRouted": true
 }

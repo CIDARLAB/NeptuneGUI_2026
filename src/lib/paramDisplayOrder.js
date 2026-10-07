@@ -32,6 +32,7 @@ const PARAMETER_RANK = {
   edgeBend1: 53,
   edgeBend2: 54,
   portRadius: 60,
+  depth: 61,
   height: 61,
   radius: 62,
   rotation: 80,

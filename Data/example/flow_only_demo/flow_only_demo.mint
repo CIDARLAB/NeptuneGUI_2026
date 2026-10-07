@@ -8,10 +8,10 @@ DEVICE flow_only_demo
 
 LAYER FLOW
 
-MIXER mixer_1 componentSpacing=1000.0 channelWidth=600.0 bendSpacing=1230.0 numberOfBends=1.0 rotation=0.0 bendLength=2460.0 height=250.0 mirrorByX=0.0 mirrorByY=0.0 ;
-PORT port_1 componentSpacing=1000.0 portRadius=1000.0 height=1100.0 ;
-PORT port_2 componentSpacing=1000.0 portRadius=1000.0 height=1100.0 ;
-PORT port_3 componentSpacing=1000.0 portRadius=1000.0 height=1100.0 ;
+MIXER mixer_1 componentSpacing=1000.0 channelWidth=600.0 bendSpacing=1230.0 numberOfBends=1.0 rotation=0.0 bendLength=2460.0 depth=250.0 mirrorByX=0.0 mirrorByY=0.0 ;
+PORT port_1 componentSpacing=1000.0 portRadius=1000.0 depth=1100.0 ;
+PORT port_2 componentSpacing=1000.0 portRadius=1000.0 depth=1100.0 ;
+PORT port_3 componentSpacing=1000.0 portRadius=1000.0 depth=1100.0 ;
 
 CHANNEL channel_1 from mixer_1 2 to port_1 1 RoundedChannel=1 connectionSpacing=1000 channelWidth=600 ;
 CHANNEL channel_2 from port_2 1 to mixer_1 1 RoundedChannel=1 connectionSpacing=1000 channelWidth=600 ;

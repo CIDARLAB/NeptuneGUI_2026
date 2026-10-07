@@ -1,92 +1,92 @@
 {
-  "name": "picoinjector",
-  "components": [
-    {
-      "name": "picoinjector_1",
-      "id": "picoinjector_1",
-      "entity": "PICOINJECTOR",
-      "layers": [
-        "0"
-      ],
-      "params": {
-        "componentSpacing": 1000,
-        "height": 250,
-        "width": 10000,
-        "injectorWidth": 2000,
-        "injectorLength": 3000,
-        "dropletWidth": 800,
-        "nozzleWidth": 400,
-        "nozzleLength": 400,
-        "electrodeDistance": 800,
-        "electrodeWidth": 800,
-        "electrodeLength": 3000,
-        "rotation": 0.0,
-        "mirrorByX": 0.0,
-        "mirrorByY": 0.0,
-        "position": [
-          20000.0,
-          20000.0
-        ],
-        "ID": "picoinjector_1"
-      },
-      "ports": [
+    "name": "picoinjector",
+    "components": [
         {
-          "x": 0,
-          "y": 3800,
-          "label": "1",
-          "layer": "FLOW"
-        },
-        {
-          "x": 10000,
-          "y": 3800,
-          "label": "2",
-          "layer": "FLOW"
-        },
-        {
-          "x": 5000,
-          "y": 0,
-          "label": "3",
-          "layer": "FLOW"
+            "name": "picoinjector_1",
+            "id": "picoinjector_1",
+            "entity": "PICOINJECTOR",
+            "layers": [
+                "0"
+            ],
+            "params": {
+                "componentSpacing": 1000,
+                "width": 10000,
+                "injectorWidth": 2000,
+                "injectorLength": 3000,
+                "dropletWidth": 800,
+                "nozzleWidth": 400,
+                "nozzleLength": 400,
+                "electrodeDistance": 800,
+                "electrodeWidth": 800,
+                "electrodeLength": 3000,
+                "rotation": 0.0,
+                "mirrorByX": 0.0,
+                "mirrorByY": 0.0,
+                "position": [
+                    20000.0,
+                    20000.0
+                ],
+                "ID": "picoinjector_1",
+                "depth": 250
+            },
+            "ports": [
+                {
+                    "x": 0,
+                    "y": 3800,
+                    "label": "1",
+                    "layer": "FLOW"
+                },
+                {
+                    "x": 10000,
+                    "y": 3800,
+                    "label": "2",
+                    "layer": "FLOW"
+                },
+                {
+                    "x": 5000,
+                    "y": 0,
+                    "label": "3",
+                    "layer": "FLOW"
+                }
+            ],
+            "x-span": 10000.0,
+            "y-span": 7600.0
         }
-      ],
-      "x-span": 10000.0,
-      "y-span": 7600.0
-    }
-  ],
-  "connections": [],
-  "params": {
-    "x-span": 40000.0,
-    "y-span": 40000.0,
-    "length": 40000.0,
-    "flowPortCount": 0,
-    "controlPortCount": 0,
-    "width": 40000.0
-  },
-  "layers": [
-    {
-      "name": "FLOW_0",
-      "id": "0",
-      "type": "FLOW",
-      "params": {
-        "z_offset": 0,
-        "flip": false
-      },
-      "group": "0"
+    ],
+    "connections": [],
+    "params": {
+        "x-span": 40000.0,
+        "y-span": 40000.0,
+        "length": 40000.0,
+        "flowPortCount": 0,
+        "controlPortCount": 0,
+        "width": 40000.0
     },
-    {
-      "id": "1",
-      "name": "CONTROL_0",
-      "type": "CONTROL",
-      "group": "0",
-      "params": {
-        "z_offset": 0,
-        "flip": false
-      }
-    }
-  ],
-  "version": "1.2",
-  "valves": [],
-  "isPnR": false,
-  "layoutConstraints": [],
-  "IsPlacedAndRouted": true
+    "layers": [
+        {
+            "name": "FLOW_0",
+            "id": "0",
+            "type": "FLOW",
+            "params": {
+                "z_offset": 0,
+                "flip": false
+            },
+            "group": "0"
+        },
+        {
+            "id": "1",
+            "name": "CONTROL_0",
+            "type": "CONTROL",
+            "group": "0",
+            "params": {
+                "z_offset": 0,
+                "flip": false
+            }
+        }
+    ],
+    "version": "1.2",
+    "valves": [],
+    "isPnR": false,
+    "layoutConstraints": [],
+    "IsPlacedAndRouted": true
 }

@@ -76,6 +76,7 @@ CONNECTION c1 from p1 1 to ma1 1;
 - connectionSpacing
 - channelWidth
 - portRadius
+- depth                 (etch / extrusion z; prefer over legacy height)
 
 8) LFR -> MINT intuition
 - assign out = in1 + in2      maps to mixer + channels (no #MAP)

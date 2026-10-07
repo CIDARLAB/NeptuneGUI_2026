@@ -1,125 +1,124 @@
 {
-  "name": "tree",
-  "components": [
-    {
-      "name": "tree_1",
-      "id": "tree_1",
-      "entity": "TREE",
-      "layers": [
-        "0"
-      ],
-      "params": {
-        "componentSpacing": 1000,
-        "flowChannelWidth": 600,
-        "in": 1,
-        "out": 8,
-        "width": 2460,
-        "height": 250,
-        "rotation": 0.0,
-        "mirrorByX": 0.0,
-        "mirrorByY": 0.0,
-        "position": [
-          40000.0,
-          40000.0
-        ],
-        "ID": "tree_1",
-        "leafSpace": 4000.0,
-        "stageSpace": 4000
-      },
-      "ports": [
+    "name": "tree",
+    "components": [
         {
-          "x": 17900,
-          "y": 0,
-          "label": "1",
-          "layer": "FLOW"
-        },
-        {
-          "x": 35400,
-          "y": 18100,
-          "label": "2",
-          "layer": "FLOW"
-        },
-        {
-          "x": 30400,
-          "y": 18100,
-          "label": "3",
-          "layer": "FLOW"
-        },
-        {
-          "x": 25400,
-          "y": 18100,
-          "label": "4",
-          "layer": "FLOW"
-        },
-        {
-          "x": 20400,
-          "y": 18100,
-          "label": "5",
-          "layer": "FLOW"
-        },
-        {
-          "x": 15400,
-          "y": 18100,
-          "label": "6",
-          "layer": "FLOW"
-        },
-        {
-          "x": 10400,
-          "y": 18100,
-          "label": "7",
-          "layer": "FLOW"
-        },
-        {
-          "x": 5400,
-          "y": 18100,
-          "label": "8",
-          "layer": "FLOW"
-        },
-        {
-          "x": 400,
-          "y": 18100,
-          "label": "9",
-          "layer": "FLOW"
+            "name": "tree_1",
+            "id": "tree_1",
+            "entity": "TREE",
+            "layers": [
+                "0"
+            ],
+            "params": {
+                "componentSpacing": 1000,
+                "flowChannelWidth": 600,
+                "in": 1,
+                "out": 8,
+                "rotation": 0.0,
+                "mirrorByX": 0.0,
+                "mirrorByY": 0.0,
+                "position": [
+                    40000.0,
+                    40000.0
+                ],
+                "ID": "tree_1",
+                "leafSpace": 4000.0,
+                "stageSpace": 4000,
+                "depth": 250
+            },
+            "ports": [
+                {
+                    "x": 17900,
+                    "y": 0,
+                    "label": "1",
+                    "layer": "FLOW"
+                },
+                {
+                    "x": 35400,
+                    "y": 18100,
+                    "label": "2",
+                    "layer": "FLOW"
+                },
+                {
+                    "x": 30400,
+                    "y": 18100,
+                    "label": "3",
+                    "layer": "FLOW"
+                },
+                {
+                    "x": 25400,
+                    "y": 18100,
+                    "label": "4",
+                    "layer": "FLOW"
+                },
+                {
+                    "x": 20400,
+                    "y": 18100,
+                    "label": "5",
+                    "layer": "FLOW"
+                },
+                {
+                    "x": 15400,
+                    "y": 18100,
+                    "label": "6",
+                    "layer": "FLOW"
+                },
+                {
+                    "x": 10400,
+                    "y": 18100,
+                    "label": "7",
+                    "layer": "FLOW"
+                },
+                {
+                    "x": 5400,
+                    "y": 18100,
+                    "label": "8",
+                    "layer": "FLOW"
+                },
+                {
+                    "x": 400,
+                    "y": 18100,
+                    "label": "9",
+                    "layer": "FLOW"
+                }
+            ],
+            "x-span": 35800.0,
+            "y-span": 18400.0
         }
-      ],
-      "x-span": 35800.0,
-      "y-span": 18400.0
-    }
-  ],
-  "connections": [],
-  "params": {
-    "x-span": 80000.0,
-    "y-span": 80000.0,
-    "length": 80000.0,
-    "flowPortCount": 0,
-    "controlPortCount": 0,
-    "width": 80000.0
-  },
-  "layers": [
-    {
-      "name": "FLOW_0",
-      "id": "0",
-      "type": "FLOW",
-      "params": {
-        "z_offset": 0,
-        "flip": false
-      },
-      "group": "0"
+    ],
+    "connections": [],
+    "params": {
+        "x-span": 80000.0,
+        "y-span": 80000.0,
+        "length": 80000.0,
+        "flowPortCount": 0,
+        "controlPortCount": 0,
+        "width": 80000.0
     },
-    {
-      "id": "1",
-      "name": "CONTROL_0",
-      "type": "CONTROL",
-      "group": "0",
-      "params": {
-        "z_offset": 0,
-        "flip": false
-      }
-    }
-  ],
-  "version": "1.2",
-  "valves": [],
-  "isPnR": false,
-  "layoutConstraints": [],
-  "IsPlacedAndRouted": true
+    "layers": [
+        {
+            "name": "FLOW_0",
+            "id": "0",
+            "type": "FLOW",
+            "params": {
+                "z_offset": 0,
+                "flip": false
+            },
+            "group": "0"
+        },
+        {
+            "id": "1",
+            "name": "CONTROL_0",
+            "type": "CONTROL",
+            "group": "0",
+            "params": {
+                "z_offset": 0,
+                "flip": false
+            }
+        }
+    ],
+    "version": "1.2",
+    "valves": [],
+    "isPnR": false,
+    "layoutConstraints": [],
+    "IsPlacedAndRouted": true
 }

@@ -16,14 +16,14 @@
                 "numberOfBends": 1.0,
                 "rotation": 0,
                 "bendLength": 2460.0,
-                "height": 250.0,
                 "mirrorByX": 1,
                 "mirrorByY": 0.0,
                 "position": [
                     7030.0,
                     13230.0
                 ],
-                "ID": "mixer_1"
+                "ID": "mixer_1",
+                "depth": 250.0
             },
             "ports": [
                 {
@@ -52,14 +52,14 @@
             "params": {
                 "componentSpacing": 1000.0,
                 "portRadius": 1000.0,
-                "height": 1100.0,
                 "position": [
                     7030.0,
                     20460.0
                 ],
                 "ID": "port_1",
                 "rotation": 0,
-                "mirrorByX": 0
+                "mirrorByX": 0,
+                "depth": 1100.0
             },
             "ports": [
                 {
@@ -82,14 +82,14 @@
             "params": {
                 "componentSpacing": 1000.0,
                 "portRadius": 1000.0,
-                "height": 1100.0,
                 "position": [
                     7030.0,
                     6000.0
                 ],
                 "ID": "port_2",
                 "rotation": 0,
-                "mirrorByX": 0
+                "mirrorByX": 0,
+                "depth": 1100.0
             },
             "ports": [
                 {
@@ -112,14 +112,14 @@
             "params": {
                 "componentSpacing": 1000.0,
                 "portRadius": 1000.0,
-                "height": 1100.0,
                 "position": [
                     11030.0,
                     6000.0
                 ],
                 "ID": "port_3",
                 "rotation": 0,
-                "mirrorByX": 0
+                "mirrorByX": 0,
+                "depth": 1100.0
             },
             "ports": [
                 {

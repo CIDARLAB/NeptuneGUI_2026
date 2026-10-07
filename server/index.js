@@ -1548,7 +1548,7 @@ function findDiySourceNode (syntax, jsonObj) {
 // Derived from each corresponding 3DuF component class render2D()/transformRender().
 const DIY_RENDER_PARAM_ALLOWLIST = {
   // crossSection is set via the CHANNEL / ROUNDED CHANNEL type UI (not shown as a raw field).
-  channel: new Set(['channelWidth', 'height', 'crossSection']),
+  channel: new Set(['channelWidth', 'depth', 'crossSection']),
   mixer: new Set(['channelWidth', 'bendLength', 'bendSpacing', 'numberOfBends', 'edgeBend', 'edgeBend1', 'edgeBend2', 'rotation', 'mirrorByX', 'mirrorByY', 'componentSpacing']),
   mux: new Set([
     'in',
@@ -1591,7 +1591,7 @@ const DIY_RENDER_PARAM_ALLOWLIST = {
     'mirrorByY',
     'componentSpacing',
   ]),
-  port: new Set(['portRadius', 'height', 'rotation', 'componentSpacing']),
+  port: new Set(['portRadius', 'depth', 'rotation', 'componentSpacing']),
   reaction_chamber: new Set(['width', 'length', 'cornerRadius', 'rotation', 'mirrorByX', 'mirrorByY', 'componentSpacing']),
   tree: new Set(['in', 'out', 'flowChannelWidth', 'leafSpace', 'stageSpace', 'rotation', 'mirrorByX', 'mirrorByY', 'componentSpacing']),
   valve3d: new Set(['gap', 'valveRadius', 'rotation', 'componentSpacing']),
@@ -1662,6 +1662,11 @@ function pickEditableParams (syntax, jsonObj) {
     delete params.leafPitch
     delete params.stageLength
   }
+
+  if (Number.isFinite(params.height) && !Number.isFinite(params.depth)) {
+    params.depth = params.height
+  }
+  delete params.height
   return filterDiyParamsByRenderImpact(syntax, params)
 }
 

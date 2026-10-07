@@ -401,7 +401,7 @@ export default {
         { text: 'CHANNEL', value: 'CHANNEL' },
         { text: 'ROUNDED CHANNEL', value: 'ROUNDED CHANNEL' },
       ],
-      channelRectParamKeys: ['channelWidth', 'height'],
+      channelRectParamKeys: ['channelWidth', 'depth'],
       guestSessionBootstrapped: false,
       removeBusySyntax: null,
       namingSpecUrl: LFR_NAMING_SPEC_URL,
@@ -412,8 +412,8 @@ export default {
       defaultComponentDescriptions: {
         channel: 'Microfluidic channel that conveys fluid between components.',
         valve: 'Pneumatically actuated valve that gates flow on a channel.',
-        valve3d: '3D valve primitive with editable gap, radius, height, and rotation for flow-control geometry.',
-        valve_3d: '3D valve primitive with editable gap, radius, height, and rotation for flow-control geometry.',
+        valve3d: '3D valve primitive with editable gap, radius, and rotation for flow-control geometry.',
+        valve_3d: '3D valve primitive with editable gap, radius, and rotation for flow-control geometry.',
         mixer: 'Serpentine mixer that combines two or more input streams via diffusion.',
         mux: 'Super_MUX_8: eight-input horizontal MUX (leafSpace=4000) with I/O ports and control pads.',
         port: 'External I/O port for connecting tubing or pressure lines to the chip.',
@@ -435,7 +435,7 @@ export default {
         channelRadius: 'μm',
         width: 'μm',
         length: 'μm',
-        height: 'μm',
+        depth: 'μm',
         stageSpace: 'μm',
         stageLength: 'μm',
         spacing: 'μm',
@@ -467,7 +467,7 @@ export default {
         },
         channel: {
           channelwidth: 'Drawn width of the channel in the flow-layer plane (same as 3DuF CHANNEL).',
-          height: 'Extruded depth of the rectangular channel cross-section (same as 3DuF CHANNEL).',
+          depth: 'Etch / extrusion depth of the rectangular channel cross-section (same as 3DuF CHANNEL).',
           channelradius: 'Radius of a circular channel cross-section; width and depth follow this radius (same as 3DuF ROUNDED CHANNEL). JSON stores this as crossSection=1; MINT writes RoundedChannel=1.',
         },
         tree: {
@@ -484,23 +484,21 @@ export default {
           valveradius: 'Valve body radius; larger values create a larger circular valve footprint.',
           width: 'Valve body width in the rendered geometry.',
           length: 'Valve body length in the rendered geometry.',
-          height: 'Extrusion height (z dimension) used for valve rendering/manufacturing layers.',
+          depth: 'Etch / extrusion depth (z) used for valve rendering/manufacturing layers.',
           componentspacing: 'Keepout halo around the valve body (µm). Place-and-route keeps other components and channel bodies outside this band.',
         },
         valve3d: {
           rotation: 'Valve orientation in degrees; rotates the valve geometry around its insertion point.',
           gap: 'Flow-gap opening used by the valve geometry; larger values increase the open passage size.',
           valveradius: 'Valve body radius; larger values create a larger circular valve footprint.',
-          width: 'Valve body width in the rendered geometry.',
-          length: 'Valve body length in the rendered geometry.',
-          height: 'Extrusion height (z dimension) used for valve rendering/manufacturing layers.',
+          depth: 'Etch / extrusion depth (z) used for valve rendering/manufacturing layers.',
           componentspacing: 'Keepout halo around the valve body (µm). Place-and-route keeps other components and channel bodies outside this band.',
         },
       },
       diyParamDescriptionsGeneric: {
         width: 'Overall width of the feature/component geometry in layout units.',
         length: 'Overall length of the feature/component geometry in layout units.',
-        height: 'Feature height (z dimension) used in multilayer/3D rendering context.',
+        depth: 'Etch / extrusion depth (z) used in multilayer/3D rendering context.',
         radius: 'Radius used to construct circular geometry elements.',
         channelradius: 'Radius of a circular channel cross-section; width and depth follow this radius (same as 3DuF).',
         valveradius: 'Valve radius used to construct the valve body geometry.',
@@ -881,12 +879,12 @@ export default {
     },
     /**
      * Map stored channel params into the DIY form the same way 3DuF does:
-     * rectangular → channelWidth + height; rounded → channelRadius (half width).
+     * rectangular → channelWidth + depth; rounded → channelRadius (half width).
      */
     populateChannelDiyForm (params) {
       const src = (params && typeof params === 'object') ? params : {}
       const channelWidth = Number(src.channelWidth)
-      const height = Number(src.height)
+      const depth = Number(src.depth !== undefined ? src.depth : src.height)
       const crossSection = Number(src.crossSection)
       const rounded = !Number.isFinite(crossSection) || crossSection >= 0.5
       this.diyChannelProfile = rounded ? 'ROUNDED CHANNEL' : 'CHANNEL'
@@ -896,7 +894,7 @@ export default {
       } else {
         this.diyForm = {
           channelWidth: Number.isFinite(channelWidth) ? String(channelWidth) : '',
-          height: Number.isFinite(height) ? String(height) : '',
+          depth: Number.isFinite(depth) ? String(depth) : '',
         }
       }
     },
@@ -930,10 +928,7 @@ export default {
     onChannelProfileChange (newProfile) {
       if (newProfile === 'ROUNDED CHANNEL') {
         const width = Number(this.diyForm.channelWidth)
-        const height = Number(this.diyForm.height)
-        const baseWidth = Number.isFinite(width)
-          ? width
-          : (Number.isFinite(height) ? height : NaN)
+        const baseWidth = Number.isFinite(width) ? width : NaN
         // Match 3DuF: switching to rounded makes depth follow width, then edit radius.
         if (Number.isFinite(baseWidth)) {
           this.diyForm = { channelRadius: String(baseWidth / 2) }
@@ -947,10 +942,10 @@ export default {
         const diameter = radius * 2
         this.diyForm = {
           channelWidth: String(diameter),
-          height: String(diameter),
+          depth: String(diameter),
         }
       } else {
-        this.diyForm = { channelWidth: '', height: '' }
+        this.diyForm = { channelWidth: '', depth: '' }
       }
     },
     openDiyDialog (item) {
@@ -995,7 +990,7 @@ export default {
           return {
             params: {
               channelWidth: diameter,
-              height: diameter,
+              depth: diameter,
               crossSection: 1,
             },
           }
