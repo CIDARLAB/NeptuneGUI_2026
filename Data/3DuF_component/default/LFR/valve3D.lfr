@@ -1,26 +1,16 @@
-// Minimal VALVE3D showcase matching valve3D.mint / valve3D.json:
-// FLOW: Port_1 --CHANNEL_1--> Port_2 with two VALVE3D on CHANNEL_1.
-// CONTROL: Port_3 --> Valve3D_control_3, Port_5 --> Valve3D_control_1.
+// Single VALVE3D matching valve3D.mint / valve3D.json.
+// FLOW: Port_1 --CHANNEL_1--> Port_2, one VALVE3D on CHANNEL_1.
+// CONTROL: Port_3 --> Valve3D_1.
 module valve3D(
     finput Port_1,
     foutput Port_2,
-    control Port_3, Port_5
+    control Port_3
 );
-    flow mid;
-
     distribute@(Port_3)
     begin
         if (Port_3 == 1)
         begin
-            mid <= Port_1;
-        end
-    end
-
-    distribute@(Port_5)
-    begin
-        if (Port_5 == 1)
-        begin
-            Port_2 <= mid;
+            Port_2 <= Port_1;
         end
     end
 endmodule

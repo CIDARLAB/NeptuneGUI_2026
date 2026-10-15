@@ -1,7 +1,7 @@
 import { normalizeDeviceJsonFor3DuF } from '@/lib/normalizeDeviceJsonFor3DuF'
 
 /** 3DuF app opened by Neptune “open in 3DuF” actions. Temporary local 3DuF. */
-export const THREE_DUF_APP_URL = 'http://localhost:8083/'
+export const THREE_DUF_APP_URL = 'http://localhost:8082/'
 
 // Module-level reference to the 3DuF tab we last opened, and the timestamp at
 // which that window finished navigating to the 3DuF app for the first time.
@@ -92,10 +92,10 @@ function normalizeJsonPayload (jsonTextOrObject) {
   return null
 }
 
-function forceCleanReload (win) {
+function forceCleanReload (win, appUrl) {
   if (!isWindowAlive(win)) return
   try {
-    const target = new URL(THREE_DUF_APP_URL)
+    const target = new URL(appUrl || THREE_DUF_APP_URL)
     let current = null
     try { current = new URL(win.location.href) } catch (_) {}
     const sameApp = current &&
@@ -189,14 +189,16 @@ function beginColdStartLoad (win, targetOrigin, root) {
  * it does, so they cannot restore library JSON over user edits.
  *
  * @param {string|object} jsonTextOrObject  device JSON to load
+ * @param {string} [appUrl]  3DuF app URL; defaults to THREE_DUF_APP_URL
  * @returns {{ ok: true, reused: boolean } | { ok: false, reason: string }}
  */
-export function openAndLoadDeviceIn3DuF (jsonTextOrObject) {
+export function openAndLoadDeviceIn3DuF (jsonTextOrObject, appUrl) {
   const root = normalizeJsonPayload(jsonTextOrObject)
   if (!root || typeof root !== 'object') {
     return { ok: false, reason: 'invalid_json' }
   }
-  const targetOrigin = new URL(THREE_DUF_APP_URL).origin
+  const url = (typeof appUrl === 'string' && appUrl.trim()) ? appUrl.trim() : THREE_DUF_APP_URL
+  const targetOrigin = new URL(url).origin
   ensureReadyListener(targetOrigin)
 
   cancelPendingSends()
@@ -212,12 +214,12 @@ export function openAndLoadDeviceIn3DuF (jsonTextOrObject) {
     try { win = window.open('', 'neptune-3duf') } catch (_) {}
     if (!isWindowAlive(win)) win = sharedWin
     if (!isWindowAlive(win)) {
-      win = window.open(THREE_DUF_APP_URL, 'neptune-3duf')
+      win = window.open(url, 'neptune-3duf')
     } else {
-      forceCleanReload(win)
+      forceCleanReload(win, url)
     }
   } else {
-    win = window.open(THREE_DUF_APP_URL, 'neptune-3duf')
+    win = window.open(url, 'neptune-3duf')
   }
 
   if (!win) {

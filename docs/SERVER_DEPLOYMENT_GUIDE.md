@@ -300,7 +300,7 @@ The table **auto-refreshes every 10 s**. **Refresh** runs an immediate reload an
 - Actions:
   - **Download** — download the JSON file
   - **Import to Component Library** — add as custom component
-  - **Open in 3DuF** — load routed `*_PR.json` at the URL in `src/lib/open3DuFPostMessage.js` (`THREE_DUF_APP_URL`; this checkout uses `http://localhost:8083/`)
+  - **Open in 3DuF** — load routed `*_PR.json` via `openAndLoadDeviceIn3DuF` (`THREE_DUF_APP_URL`; this checkout uses `http://localhost:8082/`). Component Library **Go to 3DuF** always uses `https://3duf.org/` instead.
   - **Delete** — remove the job and generated siblings from the workspace, then refresh the jobs list
 
 ### 5.3 Evaluation scores and weight re-apply

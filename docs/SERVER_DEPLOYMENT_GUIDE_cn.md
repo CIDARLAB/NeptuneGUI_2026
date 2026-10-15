@@ -299,7 +299,7 @@ Express 在 job 成功后应：
 - 下方按钮：
   - **Download** — 下载当前 JSON 文件
   - **Import to Component Library** — 作为 custom 组件导入
-  - **Open in 3DuF** — 打开 `THREE_DUF_APP_URL`（本仓库暂为 `http://localhost:8083/`）并加载该 JSON（需使用 routed `*_PR.json`）
+  - **Open in 3DuF** — 打开 `THREE_DUF_APP_URL`（本仓库暂为 `http://localhost:8082/`）并加载该 JSON（需使用 routed `*_PR.json`）。Component Library 的 **Go to 3DuF** 固定打开 `https://3duf.org/`。
   - **Delete** — 从 workspace 删除该 job 及其同次生成文件，并更新 jobs 列表
 
 ### 5.3 Evaluation Score 与权重重算

@@ -37,7 +37,7 @@ These routes are what the **guest UI** exposes today:
 - **Editor** — Monaco editor toolbar: **Save file**; **Save and synthesize** (full place-and-route → MINT + PR JSON + log/eval; appears on **Jobs** / **Alerts**); LFR-only **Compile to MINT** (writes `*_fromLFR.mint` into the workspace only — **no Jobs row**, no PR JSON); **Rename** (Confirm/Cancel; applies immediately, keeps last-saved body); **Move to another workspace** / **Copy to another workspace** (optional new workspace + notes; destination **file name stays the same**; stays in Editor after transfer); per-file **Import** (pick existing or new workspace + notes) / **Export** / **Delete**. Script language is fixed by the file extension (selector disabled). Unsaved buffer edits are discarded when you leave the Editor unless you used Save / Save and synthesize / Rename Confirm / Compile to MINT / Move-Copy. Ordinary **Save file** does **not** bump **Last Edited**; Rename, Move/Copy/Import destinations, and compile generate do. After **Save file**, Dashboard opens with that workspace expanded. Compiling `X.lfr` / `X_fromLFR.mint` never overwrites handwritten `X.mint`. LFR cross-file `` `import "WorkspaceName/file.lfr" `` (missing/circular imports show a dialog and block compile; empty stub `.lfr` modules are allowed); integrated **terminal**; **LLM prompts** sidebar **only** on this route. After a full reload, opening Editor still binds the Example workspace (so “Current workspace” is not None).
 - **Jobs** — Full **Save and synthesize** runs only (**Compile to MINT** is omitted). Columns include **Input File** (stem), **Input Format**, **Workspace** (first three sticky while scrolling), scores, JSON/Log/Visualization, Status, **Delete**. Table auto-refreshes every **10 s**. **Apply** on evaluation weights recomputes **Total** for all rows without a new backend call. Compile outputs are written into the originating workspace (sidecars such as logs/eval stay on the job / backup zip). Reloading or reopening the site **clears jobs** with the rest of the guest session (they are not restored into Example).
 - **Alerts** — Done/fail for **Save and synthesize** jobs; unread count on the bell; open the matching Jobs row.
-- **Component Library** — Component table (syntax is **case-sensitive** in-app); **Import JSON component**; **DIY** overrides with unit suffixes (μm / °) and display order from **`src/lib/paramDisplayOrder.js`** (`componentSpacing` keepout last). **Channel type** **CHANNEL** (`channelWidth`, **`depth`**) or **ROUNDED CHANNEL** (`channelRadius`; JSON `crossSection`; MINT `RoundedChannel=`); default seed is rounded. Etch/extrusion z uses **`depth`** (not `height`); legacy JSON/DIY `height` migrates to `depth` on load. Port DIY exposes `portRadius` / `depth`. **mux** seed is **Super_MUX_8** (8-input H MUX → 1 outlet; DIY **`leafSpace`**, **`stageSpace`**, **`valveWidthX`/`valveWidthY`**; legacy `leafPitch`/`spacing`/`stageLength`/`width`/`length`/`valveWidth` migrate). **TREE** DIY uses the same **`leafSpace`/`stageSpace`** (BANK `spacing` stays instance pitch). Mixer includes `edgeBend` / `edgeBend1` / `edgeBend2` and defaults `channelWidth=600`, `bendSpacing=1400`, `bendLength=2000`, `numberOfBends=1`. LFR binary `+` already maps to MIXER (no `#MAP`); `#CONSTRAIN` writes those geometry keys. See **References** → Compiler Directives. Built-in default **`componentSpacing=1000`** µm keepout. MINT uses **`RoundedChannel=0|1`** (not `True`/`False`). **Go to 3DuF** per row (requires device JSON with `components` / `layers`).
+- **Component Library** — Component table (syntax is **case-sensitive** in-app); **Import JSON component**; **DIY** overrides with unit suffixes (μm / °) and display order from **`src/lib/paramDisplayOrder.js`** (`componentSpacing` keepout last). **Channel type** **CHANNEL** (`channelWidth`, **`depth`**) or **ROUNDED CHANNEL** (`channelRadius`; JSON `crossSection`; MINT `RoundedChannel=`); default seed is rounded. Etch/extrusion z uses **`depth`** (not `height`); legacy JSON/DIY `height` migrates to `depth` on load. Port DIY exposes `portRadius` / `depth`. **mux** seed is **Super_MUX_8** (8-input H MUX → 1 outlet; DIY **`leafSpace`**, **`stageSpace`**, **`valveWidthX`/`valveWidthY`**; legacy `leafPitch`/`spacing`/`stageLength`/`width`/`length`/`valveWidth` migrate). **TREE** DIY uses the same **`leafSpace`/`stageSpace`** (BANK `spacing` stays instance pitch). Mixer includes `edgeBend` / `edgeBend1` / `edgeBend2` and defaults `channelWidth=600`, `bendSpacing=1400`, `bendLength=2000`, `numberOfBends=1`. LFR binary `+` already maps to MIXER (no `#MAP`); `#CONSTRAIN` writes those geometry keys. See **References** → Compiler Directives. Built-in default **`componentSpacing=1000`** µm keepout (valve3D seed keepout **2000**). MINT uses **`RoundedChannel=0|1`** (not `True`/`False`). **Go to 3DuF** per row always opens **[https://3duf.org/](https://3duf.org/)** (not the local `THREE_DUF_APP_URL`); requires device JSON with `components` / `layers`.
 - **References** — LFR / MINT language links into **Neptune_2026** docs on GitHub. Wiki mirrors use underscore paths: `docs/LFR_TestCases_wiki/` and `docs/MINT_TestCases_wiki/` (e.g. `Compiler_Directives.md`, `Fluidic_Operations.md` — not hyphenated `LFR-TestCases-wiki`). Also links the combined **LFR + MINT** manual and the V2 readable LFR spec. Pointers: **[docs/LFR_READABLE_SPEC_LOCATION.md](./docs/LFR_READABLE_SPEC_LOCATION.md)**.
 
 Legacy Material Dashboard demo routes (charts, maps, etc.) still exist under `src/router.js` but are **not** linked from the main drawer.
@@ -92,22 +92,29 @@ With `npm run start`, these ports are used:
 |------|------|-----|
 | Local data API (`server/`) | **8080** | `http://localhost:8080` |
 | Vue GUI (what you open) | **8081** | `http://localhost:8081` |
-| Optional local 3DuF (separate repo) | **8082** / **8083** | e.g. `http://localhost:8083` — see below |
+| Optional local 3DuF (separate repo) | **8082** | `http://localhost:8082` — see below |
 
 If you see `EADDRINUSE: address already in use`, one of these ports is already taken. Stop that process and restart (or change ports in config).
 
 ## 3DuF visualization (one-click)
 
-Open-in-3DuF uses `THREE_DUF_APP_URL` in **[src/lib/open3DuFPostMessage.js](./src/lib/open3DuFPostMessage.js)**. **This checkout temporarily points at local 3DuF `http://localhost:8083/`** (production default is **[https://3duf.org/](https://3duf.org/)**). Neptune opens that URL in a new tab and sends the design JSON with `postMessage` (`loadDeviceFromJSON`).
+Open-in-3DuF uses `openAndLoadDeviceIn3DuF` in **[src/lib/open3DuFPostMessage.js](./src/lib/open3DuFPostMessage.js)** (optional second arg `appUrl`). Defaults:
+
+| Entry point | Target |
+|-------------|--------|
+| **Dashboard** / **Jobs** JSON | `THREE_DUF_APP_URL` — **this checkout: `http://localhost:8082/`** |
+| **Component Library** → **Go to 3DuF** | always **[https://3duf.org/](https://3duf.org/)** |
+
+Neptune opens that URL in a new tab and sends the design JSON with `postMessage` (`loadDeviceFromJSON`).
 
 Before send, Neptune **normalizes** library-scale device JSON (compact board **40 000²**, tree/mux **80 000²**, recenter when needed) via **[src/lib/normalizeDeviceJsonFor3DuF.js](./src/lib/normalizeDeviceJsonFor3DuF.js)**. Prefer `{ type: 'threeduf-ready' }` from 3DuF; timed fallbacks remain for older builds.
 
-If 3DuF’s features do not meet your needs, fork **[CIDARLAB/3DuF](https://github.com/CIDARLAB/3DuF)** into your own GitHub account, customize it there, and point NeptuneGUI at your build (hosted or local) by changing `THREE_DUF_APP_URL`.
+If 3DuF’s features do not meet your needs, fork **[CIDARLAB/3DuF](https://github.com/CIDARLAB/3DuF)** into your own GitHub account, customize it there, and point Dashboard/Jobs at your build by changing `THREE_DUF_APP_URL` (Library still uses 3duf.org unless you change `COMPONENT_LIBRARY_3DUF_URL` in `Library.vue`).
 
 ### Use one-click JSON → 3DuF
 1. Open NeptuneGUI: `http://localhost:8081` (or your deployed GUI URL)
-2. Go to **Dashboard** and select a workspace (or use **Component Library** for a component row)
-3. Click the **3DuF** control on a JSON file or library row
+2. **Dashboard** / **Jobs**: click **3DuF** on a JSON file (uses local `THREE_DUF_APP_URL` when set as above)
+3. **Component Library**: click **Go to 3DuF** on a row (opens **https://3duf.org/**)
 4. Allow popups if the browser blocks the new tab
 
 ### Optional: local 3DuF development
@@ -120,7 +127,7 @@ cd 3DuF
 npm run start3duf            # installs missing deps if needed, then starts the Vue dev server
 ```
 
-Open the URL printed by Vue CLI (often **`http://localhost:8082`**; this Neptune checkout expects **`http://localhost:8083/`** — match `THREE_DUF_APP_URL` to the printed port).
+Open the URL printed by Vue CLI (this Neptune checkout expects **`http://localhost:8082/`** — match `THREE_DUF_APP_URL` to the printed port).
 
 Then refresh (or rebuild) the GUI. More detail: [3DuF README](https://github.com/CIDARLAB/3DuF).
 
@@ -130,7 +137,7 @@ Then refresh (or rebuild) the GUI. More detail: [3DuF README](https://github.com
 - **Run LFR and compile:** see **[RUN_LFR.md](./RUN_LFR.md)** (connect Editor to Neptune_2026 and store output in Data).
 - **Compile modes:** **Save and synthesize** → `fluigi synthesize` (LFR) or `synthesizeFromMINT` (MINT) for full P&R (Jobs + Alerts). LFR **Compile to MINT** → `fluigi compile_lfr` with body `compileMode: "lfrToMint"` (alias `POST /api/v1/lfrToMint`); writes primary `*_fromLFR.mint` into the workspace only (**not** listed on Jobs). Compiling `X.lfr` / `X_fromLFR.mint` never overwrites handwritten `X.mint`. `--pre-load` is added **only** for Editor `` `import `` modules. **3DuF visualization JSON is not passed as `--component-library`** (that lookup hangs P&R on PORT/VALVE3D). Local and Modal fluigi wall clock is **600 s** (Modal function timeout **700 s**).
 - **Compile artifacts:** web synthesize stamps generated JSON / MINT / log / evaluation filenames as `{stem}(YYYYMMDDHHMM).ext` (example seeds in the Editor are not stamped). TREE-PLACE uses **`dump_intermediates=False`** (in `fluigi/place_and_route.py`): it writes only the final `*_PR.json` to the compile output directory and does **not** dump `tree.json` / `result.json` / PNGs or cluster scratch under `Neptune_2026/Benchmarks/`. Set that one argument to `True` to restore the full inspection set; dumps do not change layout geometry.
-- **Bundled library seeds:** `Data/3DuF_component/default/{JSON,MINT,LFR}` ship P&R-style device JSON aligned with default MINT/LFR. Default boards are **40 000²** (tree/mux **80 000²**); default keepout **`componentSpacing=1000`**. Channel seed is **ROUNDED CHANNEL** / MINT **`RoundedChannel=1`** (FLOW `channelWidth`/`depth` **600**). Ports/mixers/chambers/trees/valve3D seeds use **`depth=`** (not `height=`). Mux is **Super_MUX_8** (`leafSpace=4000`, `stageSpace=4000`, `valveWidthX=1800`, `valveWidthY=1000`, flow/control widths **600**). Mixer defaults: `channelWidth=600`, `bendSpacing=1400`, `bendLength=2000`, `numberOfBends=1`, `edgeBend1/2=300`. TREE uses **`leafSpace`/`stageSpace`**. Reaction chamber uses MINT/LFR entity **`REACTION CHAMBER`**; valve3D control ports use layer **CONTROL**.
+- **Bundled library seeds:** `Data/3DuF_component/default/{JSON,MINT,LFR}` ship P&R-style device JSON aligned with default MINT/LFR. Default boards are **40 000²** (tree/mux **80 000²**); default keepout **`componentSpacing=1000`**. Channel seed is **ROUNDED CHANNEL** / MINT **`RoundedChannel=1`** (FLOW `channelWidth`/`depth` **600**). Ports/mixers/chambers/trees/valve3D seeds use **`depth=`** (not `height=`). Mux is **Super_MUX_8** (`leafSpace=4000`, `stageSpace=4000`, `valveWidthX=1800`, `valveWidthY=1000`, flow/control widths **600**). Mixer defaults: `channelWidth=600`, `bendSpacing=1400`, `bendLength=2000`, `numberOfBends=1`, `edgeBend1/2=300`. TREE uses **`leafSpace`/`stageSpace`**. Reaction chamber uses MINT/LFR entity **`REACTION CHAMBER`**. **valve3D** seed is a **single** VALVE3D on FLOW `CHANNEL_1` with one CONTROL port (`Port_3` → `Valve3D_1`; keepout **2000**; `rotation=180`).
 - More details: **TESTING.md**, **Data/README.md**, **docs/SERVER_DEPLOYMENT_GUIDE.md**.
 
 ## About deprecation warnings
