@@ -300,7 +300,7 @@ The table **auto-refreshes every 10 s**. **Refresh** runs an immediate reload an
 - Actions:
   - **Download** — download the JSON file
   - **Import to Component Library** — add as custom component
-  - **Open in 3DuF** — load routed `*_PR.json` via `openAndLoadDeviceIn3DuF` (`THREE_DUF_APP_URL`; this checkout uses `http://localhost:8082/`). Component Library **Go to 3DuF** always uses `https://3duf.org/` instead.
+  - **Open in 3DuF** — load routed `*_PR.json` at `THREE_DUF_APP_URL` (`https://3duf.org/`). Component Library **Go to 3DuF** uses the same URL.
   - **Delete** — remove the job and generated siblings from the workspace, then refresh the jobs list
 
 ### 5.3 Evaluation scores and weight re-apply
@@ -372,7 +372,7 @@ Spec: `docs/EVALUATION_METRIC_SPEC_V1.md`. Implementation: Neptune_2026 `fluigi/
 | `src/lib/workspaceFileTransfer.js` | Dashboard copy/move for lfr/mint/json |
 | `src/lib/normalizeDeviceJsonFor3DuF.js` | Library board framing before 3DuF postMessage |
 | `src/lib/paramDisplayOrder.js` | Library DIY parameter field order |
-| `src/lib/open3DuFPostMessage.js` | `THREE_DUF_APP_URL` + loadDeviceFromJSON handshake |
+| `src/lib/open3DuFPostMessage.js` | `THREE_DUF_APP_URL` (`https://3duf.org/`) + loadDeviceFromJSON handshake |
 | `src/views/dashboard/Editor.vue` | Save / synthesize / Compile to MINT |
 | `src/views/dashboard/Solutions.vue` | Jobs + evaluation weights UI |
 | `fly.toml` | Fly volume and port |

@@ -1,7 +1,7 @@
 import { normalizeDeviceJsonFor3DuF } from '@/lib/normalizeDeviceJsonFor3DuF'
 
-/** 3DuF app opened by Neptune “open in 3DuF” actions. Temporary local 3DuF. */
-export const THREE_DUF_APP_URL = 'http://localhost:8082/'
+/** 3DuF app opened by every Neptune “open in 3DuF” action. */
+export const THREE_DUF_APP_URL = 'https://3duf.org/'
 
 // Module-level reference to the 3DuF tab we last opened, and the timestamp at
 // which that window finished navigating to the 3DuF app for the first time.

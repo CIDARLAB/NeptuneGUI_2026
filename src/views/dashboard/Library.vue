@@ -347,7 +347,6 @@ import {
 } from '@/lib/lfrNaming'
 import { sortParameterNames } from '@/lib/paramDisplayOrder'
 
-const COMPONENT_LIBRARY_3DUF_URL = 'https://3duf.org/'
 const LIBRARY_JSON_COMMENT_KEYS = ['_LFR_filename', '_LFR_source', '_MINT_filename', '_MINT_source']
 
 function cleanLibraryJsonText (raw) {
@@ -1209,7 +1208,7 @@ export default {
           return
         }
 
-        const result = openAndLoadDeviceIn3DuF(root, COMPONENT_LIBRARY_3DUF_URL)
+        const result = openAndLoadDeviceIn3DuF(root)
         if (!result.ok) {
           if (result.reason === 'popup_blocked') {
             this.showSnack('Popup blocked. Please allow popups to open 3DuF.', 'warning')
