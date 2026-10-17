@@ -39,7 +39,7 @@ Keep the 3DuF **primitives** server reachable for fluigi (typically `http://loca
 4. On **Compile to MINT** success the workspace receives / opens `*_fromLFR.mint` (unplaced intermediate JSON is discarded). Built-in example seeds are **not** timestamp-stamped. Compiling `X.lfr` never overwrites handwritten `X.mint`.
 5. **Jobs** / **Alerts** list only **Save and synthesize** runs (auto-refresh every 10 s). **Delete** on the job or the primary JSON removes the job and sibling generated files (JSON / MINT / log / eval).
 
-TREE-PLACE is invoked with `dump_intermediates=False` (hardcoded in `fluigi/place_and_route.py`): only `{stem}_PR.json` is written to the compile output directory. No `Neptune_2026/Benchmarks/` tree / result / PNG / cluster dumps; disconnected clusters stay in memory. Set that one argument to `True` to restore the full inspection set (geometry unchanged). English P&R docs: `Neptune_2026/PRalgorithm/README.md`; Chinese: `readme_cn.md`.
+TREE-PLACE is invoked with `dump_intermediates=False` (hardcoded in `fluigi/place_and_route.py`): only `{stem}_PR.json` is written (pure TREE-PLACE; fluigi polish / `*_PR_polished.json` stay off). No `Neptune_2026/Benchmarks/` tree / result / PNG / cluster dumps; disconnected clusters stay in memory. Set that one argument to `True` to restore the full inspection set (geometry unchanged). English P&R docs: `Neptune_2026/PRalgorithm/README.md`; Chinese: `readme_cn.md`.
 
 ## Editor save, rename, move, and copy
 

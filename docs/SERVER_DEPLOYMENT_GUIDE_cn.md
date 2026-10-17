@@ -201,7 +201,7 @@ Express `proxyCompile` 会补充：
    #   --pre-load <tmp>/import_lfr
    ```
    **不要**把 3DuF 可视化 JSON 当作 `--component-library`。
-4. 收集 `output/` 下文件。完整 synthesize 优先 `*_fromLFR_PR.json` / `*_fromMINT_PR.json`。TREE-PLACE 使用 `dump_intermediates=False`（写死在 `fluigi/place_and_route.py`：只写最终 PR JSON，不写 `Neptune_2026/Benchmarks/` 下 tree/result/PNG，也不为 cluster 落盘）。把该参数改为 `True` 即可恢复全部检查文件。**仅转 MINT** 保留主输出 `*_fromLFR.mint` 并丢弃未布局 JSON。
+4. 收集 `output/` 下文件。完整 synthesize 优先 `*_fromLFR_PR.json` / `*_fromMINT_PR.json`（纯 TREE-PLACE；无 `*_PR_polished.json`）。TREE-PLACE 使用 `dump_intermediates=False`（写死在 `fluigi/place_and_route.py`：只写最终 PR JSON，不写 `Neptune_2026/Benchmarks/` 下 tree/result/PNG，也不为 cluster 落盘）。把该参数改为 `True` 即可恢复全部检查文件。**仅转 MINT** 保留主输出 `*_fromLFR.mint` 并丢弃未布局 JSON。
 5. 对主输出 `*_PR.json` 调用 `compute_layout_evaluation_scores()`（**`lfrToMint` 跳过**）
 6. **删除本 job 的临时目录**；job 元数据保留在 `job_store` 直至 Express 拉取并落盘。Express 将生成文件名加上 `{stem}(YYYYMMDDHHMM).ext` 时间戳，写入发起 compile 的 workspace。
 

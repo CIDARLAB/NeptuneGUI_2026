@@ -202,7 +202,7 @@ Body = enriched payload above. Response = **job UUID** (JSON string).
    #   --pre-load <tmp>/import_lfr
    ```
    Do **not** pass 3DuF visualization JSON as `--component-library`.
-4. Collect files under `output/`. Full synthesize prefers `*_fromLFR_PR.json` / `*_fromMINT_PR.json`. TREE-PLACE uses `dump_intermediates=False` in `fluigi/place_and_route.py` (only the PR JSON; no `Neptune_2026/Benchmarks/` tree/result/PNG or cluster dumps). Set that argument to `True` to restore the full inspection set. **Mint-only** keeps the primary `*_fromLFR.mint` and discards unplaced JSON.
+4. Collect files under `output/`. Full synthesize prefers `*_fromLFR_PR.json` / `*_fromMINT_PR.json` (pure TREE-PLACE; no `*_PR_polished.json`). TREE-PLACE uses `dump_intermediates=False` in `fluigi/place_and_route.py` (only the PR JSON; no `Neptune_2026/Benchmarks/` tree/result/PNG or cluster dumps). Set that argument to `True` to restore the full inspection set. **Mint-only** keeps the primary `*_fromLFR.mint` and discards unplaced JSON.
 5. Run `compute_layout_evaluation_scores()` on primary `*_PR.json` (**skipped** for `lfrToMint`)
 6. **Remove this job’s temp directory**; keep job metadata in `job_store` until Express fetches and persists. Express then stamps generated names `{stem}(YYYYMMDDHHMM).ext` and writes them into the originating workspace.
 
