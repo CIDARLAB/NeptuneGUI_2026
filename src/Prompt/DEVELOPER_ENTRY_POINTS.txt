@@ -15,6 +15,8 @@ compiler behavior, and package-level data models.
 2) MINT language behavior
 - pyMINT implementation: Neptune_2026/pylfr/pymint/
 - Common reference manual: Neptune_2026/docs/LFR_MINT_LANGUAGE_MANUAL.md
+  (IMPORT / UF-module: §3.1.1 — declaration-level only, not .mint file include;
+  unresolved entity → UnsupportedComponentGeometry)
 
 3) Neptune 2026 wiki mirrors (current behavior)
 - LFR wiki: Neptune_2026/docs/LFR_TestCases_wiki/

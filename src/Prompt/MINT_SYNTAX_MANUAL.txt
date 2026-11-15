@@ -25,13 +25,24 @@ Notes:
 2) IMPORT / UF-module declarations
 IMPORT TESTMOD
 DEVICE demo
-TESTMOD u0;
+TESTMOD u0, u1;
 
-Current behavior:
-- IMPORT <MODULE> records module availability intent (validation intent).
-- UFMODULE instance; materializes components with entity=<MODULE>.
-- UF-module declarations before layer blocks attach when the first layer is created.
-- This is declaration-level reuse in one parse/compile pass, not external file include/link loading.
+LAYER FLOW
+PORT in;
+PORT out;
+CHANNEL c1 from in 1 to u0 1;
+END LAYER
+
+Rules:
+- IMPORT lines precede DEVICE (uppercase module name). Instances sit between
+  DEVICE and the first LAYER (comma-separated; empty params).
+- Each instance becomes a component with entity=<MODULE>, attached when the
+  first layer opens. Missing IMPORT still creates the component and warns.
+- Not an external .mint include/link. Entity must resolve as a known primitive,
+  DIYCOMPONENT / BLACK BOX, or component-library <Entity>.json — otherwise
+  UnsupportedComponentGeometry (no invented box). TREE-PLACE recomputes
+  position; IMPORT does not keep a prior layout.
+- Full rules: Neptune_2026/docs/LFR_MINT_LANGUAGE_MANUAL.md §3.1.1
 
 3) Structural generators (BANK / GRID)
 - BANK declarations and generated banks (... BANK b of N ...) are supported.
